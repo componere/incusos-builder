@@ -1,0 +1,8 @@
+# Built binaries and anything bulky from this throwaway spike.
+/typeimport
+/main
+*.exe
+*.test
+*.out
+*.prof
+vendor/
