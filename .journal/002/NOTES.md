@@ -18,3 +18,13 @@ Done: full template rename pass on branch `feat/phase-0-rename` (worktree `.wt/f
 Learned: one agent corrupted `.golangci.yml` by writing grep output as file content — restored from master + re-applied the one-line change; watch for this failure mode in future fan-outs.
 Gates: `moon run root:check` green; placeholder grep clean except intentional `meigma-release-please` app slug (org-specific, flagged for owner in PR); `./bin/incusos-builder --version` prints.
 Next: PR https://github.com/componere/incusos-builder/pull/7 awaiting owner review; after merge run the release dry-run workflow (plan risk note); then Phase 1 spikes.
+
+## 2026-08-15 13:52 — Secrets applied, PR merged, pipeline verified
+Done:
+- Found rename miss: `release-please.yml` used `MEIGMA_RELEASE_APP_ID`/`MEIGMA_RELEASE_APP_PRIVATE_KEY` (uppercase escaped the lowercase `meigma` gate grep) — renamed to `COMPONERE_RELEASE_APP_*`; bypass slug set to `componere-release-please` in repository-settings.toml.
+- Credentials from 1Password `Development/componere-release-please`: `app_id` → repo variable `COMPONERE_RELEASE_APP_ID` (4551177), `key.pem` attachment → secret `COMPONERE_RELEASE_APP_PRIVATE_KEY` (values piped, never in argv).
+- PR #7 squash-merged as `chore: rename template-go scaffold to incusos-builder` (master 673e247); worktree removed.
+- Release Please run green on master — app token minted OK (prior runs failed auth). No release PR: only chore/docs commits, expected.
+- Release dry-run workflow green end-to-end: melange amd64+arm64 apks, GoReleaser binary + ghd asset validation + smoke test, apko image assemble + smoke test.
+Note for later: `actions/create-github-app-token` deprecates `app-id` input in favor of `client-id`; the op item carries `client_id` — switch when next touching the workflow.
+Next: Phase 1 de-risking spikes (1.A splice+boot first).
