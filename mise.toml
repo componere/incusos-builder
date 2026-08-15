@@ -1,4 +1,4 @@
-# mise: tool + environment management for template-go.
+# mise: tool + environment management for incusos-builder.
 #
 # mise REPLACES Proto (the former .prototools + .moon/proto/*). The committed
 # mise.lock records per-platform download URLs + checksums; for aqua-backed tools
@@ -23,6 +23,7 @@ python = "3.14.3"
 # cosign/SLSA/GitHub-attestation recorded in mise.lock); it must never fall back to
 # a version-only backend (asdf/npm/cargo/pipx), which records no checksum.
 "aqua:golangci/golangci-lint" = "2.12.2"
+"aqua:vektra/mockery"         = "3.7.3"
 
 # Docs (MkDocs) toolchain — moved off moon's former unstable_python/unstable_uv.
 "aqua:astral-sh/uv" = "0.11.0"
@@ -52,7 +53,7 @@ locked = true
 # equivalent. melange needs Linux, so `--runner docker` makes `image-local` work on
 # macOS too (Docker Desktop runs the Linux build container).
 [tasks.image-local]
-description = "Build the apko image for the host arch and load it into Docker as template-go:dev"
+description = "Build the apko image for the host arch and load it into Docker as incusos-builder:dev"
 run = '''
 set -euo pipefail
 arch="$(go env GOARCH)"
@@ -63,8 +64,8 @@ printf 'version: "dev"\ncommit: "%s"\ndate: "%s"\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .melange-vars.local.yaml
 melange build melange.yaml --arch "$arch" --signing-key melange.rsa --runner docker \
   --source-dir . --vars-file .melange-vars.local.yaml
-apko build apko.yaml template-go:dev image.tar --arch "$arch" --keyring-append ./melange.rsa.pub
+apko build apko.yaml incusos-builder:dev image.tar --arch "$arch" --keyring-append ./melange.rsa.pub
 docker load < image.tar
-docker tag "template-go:dev-$arch" template-go:dev
-echo "loaded template-go:dev (host arch $arch)"
+docker tag "incusos-builder:dev-$arch" incusos-builder:dev
+echo "loaded incusos-builder:dev (host arch $arch)"
 '''

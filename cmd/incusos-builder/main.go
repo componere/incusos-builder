@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/meigma/template-go/internal/cli"
+	"github.com/componere/incusos-builder/internal/cli"
 )
 
 //nolint:gochecknoglobals // GoReleaser injects these values with ldflags during releases.
@@ -17,10 +17,12 @@ var (
 	date    = "unknown"
 )
 
+// main starts the incusos-builder process.
 func main() {
 	os.Exit(run())
 }
 
+// run constructs the root command and executes it until completion or interrupt.
 func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

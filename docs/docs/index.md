@@ -1,16 +1,9 @@
 ---
-title: template-go Docs
+title: incusos-builder Docs
 slug: /
-description: Starting point for Meigma Go projects.
+description: Build seeded IncusOS installation media from a YAML config
 ---
 
-# template-go Docs
+# incusos-builder Docs
 
-This repository is the starting point for Meigma Go projects.
-
-Generated projects should replace this page with project-specific documentation after bootstrapping:
-
-- project summary
-- quick start
-- operating notes
-- support and security paths
+incusos-builder builds seeded IncusOS installation media from a YAML config. It is a local CLI alternative to the IncusOS web customizer at https://incusos-customizer.linuxcontainers.org/ui/. These docs are under construction.

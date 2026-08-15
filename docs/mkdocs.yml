@@ -1,8 +1,8 @@
-site_name: template-go
-site_description: Meigma Go repository template
-site_url: https://meigma.github.io/template-go/
-repo_name: meigma/template-go
-repo_url: https://github.com/meigma/template-go
+site_name: incusos-builder
+site_description: Build seeded IncusOS installation media from a YAML config
+site_url: https://componere.github.io/incusos-builder/
+repo_name: componere/incusos-builder
+repo_url: https://github.com/componere/incusos-builder
 edit_uri: edit/master/docs/docs/
 docs_dir: docs
 site_dir: build
