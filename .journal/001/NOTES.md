@@ -27,3 +27,6 @@ Next: template rename pass, then prototype spikes named in ARCHITECTURE.md open 
 
 ## 2026-08-15 10:12 — Architecture doc relocated
 Correction to earlier note: ARCHITECTURE.md does not live on master. It now lives at .journal/001/ARCHITECTURE.md on journal/jmgilman (master commits cc1df8b/39214f3/86f7bf7 added then removed it; master is clean of it).
+
+## 2026-08-15 10:25 — E2E implementation plan composed
+Planner agent produced .journal/001/PLAN.md from ARCHITECTURE.md + brief + AGENTS.md + cli/charmbracelet skills. Agile ordering: Phase 1 front-loads the risky spikes (seed splice + boot test, pure-Go rescue media) before dependent build-out; later phases cover template rename, domain core/ports, adapters (acquisition+cache, SOPS, seed tar/splice, rescue media, publication), config schema/validation, CLI surface, charm UX, mockery/test pyramid, docs, release wiring.
