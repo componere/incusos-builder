@@ -424,7 +424,10 @@ func head(client *http.Client, rawURL string) (status int, contentLength string,
 	return resp.StatusCode, resp.Header.Get("Content-Length"), nil
 }
 
-func rangeGET(client *http.Client, rawURL, byteRange string) (status int, contentLength, contentRange string, n int, err error) {
+func rangeGET(
+	client *http.Client,
+	rawURL, byteRange string,
+) (status int, contentLength, contentRange string, n int, err error) {
 	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 	if err != nil {
 		return 0, "", "", 0, err

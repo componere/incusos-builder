@@ -19,20 +19,20 @@ import (
 	"github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/partition/gpt"
 	"github.com/klauspost/pgzip"
+	"github.com/lxc/incus-os/incus-osd/api"
 	apicustomizer "github.com/lxc/incus-os/incus-osd/api/customizer"
 	apiseed "github.com/lxc/incus-os/incus-osd/api/seed"
-	"github.com/lxc/incus-os/incus-osd/api"
 	"go.yaml.in/yaml/v4"
 )
 
 const (
-	bufSize            = 4 * 1024 * 1024
-	customizerSeedOff  = int64(2148532224) // image-customizer hardcoded splice offset
-	defaultVersion     = "202608102114"
-	defaultArch        = "aarch64"
-	defaultServer      = "https://images.linuxcontainers.org/os"
-	defaultGZName      = "IncusOS_202608102114.img.gz"
-	defaultSHA256      = "4ac7328bbac7e2445048294c83de23a913dd6696f1c2c291494e486e65fefb75"
+	bufSize           = 4 * 1024 * 1024
+	customizerSeedOff = int64(2148532224) // image-customizer hardcoded splice offset
+	defaultVersion    = "202608102114"
+	defaultArch       = "aarch64"
+	defaultServer     = "https://images.linuxcontainers.org/os"
+	defaultGZName     = "IncusOS_202608102114.img.gz"
+	defaultSHA256     = "4ac7328bbac7e2445048294c83de23a913dd6696f1c2c291494e486e65fefb75"
 )
 
 func main() {
@@ -301,7 +301,9 @@ func cmdAll(args []string) error {
 
 	fmt.Println("\n######## splice ########")
 	tSplice := time.Now()
-	if err := cmdSplice([]string{"-in", img, "-tar", seedTar, "-out", seeded, "-offset", fmt.Sprintf("%d", customizerSeedOff)}); err != nil {
+	if err := cmdSplice(
+		[]string{"-in", img, "-tar", seedTar, "-out", seeded, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
+	); err != nil {
 		return err
 	}
 	spliceWall := time.Since(tSplice)
@@ -309,7 +311,9 @@ func cmdAll(args []string) error {
 
 	fmt.Println("\n######## verify ########")
 	tVer := time.Now()
-	if err := cmdVerify([]string{"-in", seeded, "-expect", seedTar, "-offset", fmt.Sprintf("%d", customizerSeedOff)}); err != nil {
+	if err := cmdVerify(
+		[]string{"-in", seeded, "-expect", seedTar, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
+	); err != nil {
 		return err
 	}
 	verWall := time.Since(tVer)
@@ -319,10 +323,14 @@ func cmdAll(args []string) error {
 	if err := cmdSeed([]string{"-out", seedKS, "-ks"}); err != nil {
 		return err
 	}
-	if err := cmdSplice([]string{"-in", img, "-tar", seedKS, "-out", seededKS, "-offset", fmt.Sprintf("%d", customizerSeedOff)}); err != nil {
+	if err := cmdSplice(
+		[]string{"-in", img, "-tar", seedKS, "-out", seededKS, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
+	); err != nil {
 		return err
 	}
-	if err := cmdVerify([]string{"-in", seededKS, "-expect", seedKS, "-offset", fmt.Sprintf("%d", customizerSeedOff)}); err != nil {
+	if err := cmdVerify(
+		[]string{"-in", seededKS, "-expect", seedKS, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
+	); err != nil {
 		return err
 	}
 
@@ -447,7 +455,7 @@ func handParseGPT(path string) ([]partInfo, int, error) {
 		}
 		first := binary.LittleEndian.Uint64(e[32:40])
 		last := binary.LittleEndian.Uint64(e[40:48])
-		name := gptName(e[56:56+72])
+		name := gptName(e[56 : 56+72])
 		out = append(out, partInfo{
 			Name:      name,
 			FirstLBA:  first,
