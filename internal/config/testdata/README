@@ -1,0 +1,15 @@
+SOPS fixtures for internal/config tests.
+
+age.key / age.pub is a throwaway age keypair checked in so CI can decrypt
+without operator secrets. Do not use it for real secrets.
+
+Regenerate encrypted fixtures (requires the sops CLI on PATH):
+
+	cd internal/config/testdata && go run gen.go
+
+gen.go is tagged //go:build ignore so it is not part of the test binary.
+encrypted-mac-mismatch.yaml is encrypted.yaml with one ciphertext byte flipped.
+encrypted-wrong-key.yaml is valid.yaml encrypted to wrong-age.pub so the
+checked-in age.key cannot decrypt it.
+stray-sops.yaml is a plain config with a top-level sops key; that was never
+valid and must fail as ErrDecrypt, not a decode error.
