@@ -1,0 +1,6 @@
+/out/
+/splice
+/spike-splice
+*.img
+*.img.gz
+*.tar

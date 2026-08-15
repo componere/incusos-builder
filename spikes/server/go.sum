@@ -1,0 +1,4 @@
+github.com/lxc/incus-os/incus-osd v0.0.0-20260815030500-0f5b8057f2fc h1:rqaB8S8vjar+9kZDKLGt2Kz1rfVsiu5Sfm9cCF6spDY=
+github.com/lxc/incus-os/incus-osd v0.0.0-20260815030500-0f5b8057f2fc/go.mod h1:MlQ6QAk4H3uLRA+6gmTsr6NxJpi93ruzIXZCMaVv5CE=
+github.com/smallstep/pkcs7 v0.2.3 h1:bhoQ3TeZmdoXTatcwxCbk+FMcdsyr0gYrrW2Xq2qr+s=
+github.com/smallstep/pkcs7 v0.2.3/go.mod h1:7STkdKhZaZe4xNEXTtY4j1NGeST1gYM4GA40kC5iqr8=
