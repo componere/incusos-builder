@@ -67,7 +67,7 @@ func usage() {
   splice gpt    -gz FILE -img FILE
   splice seed   -out FILE [-ks]
   splice splice -in IMG -tar TAR -out IMG -offset N
-  splice verify -in IMG -offset N -expect TAR
+  splice verify -in IMG -src IMG -offset N -expect TAR
   splice all    [-dir out]
 `)
 }
@@ -236,11 +236,12 @@ func cmdSplice(args []string) error {
 func cmdVerify(args []string) error {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 	inPath := fs.String("in", "", "spliced image")
+	srcPath := fs.String("src", "", "source image (untouched-region digests)")
 	tarPath := fs.String("expect", "", "expected tar")
 	offset := fs.Int64("offset", customizerSeedOff, "seed-data start byte")
 	_ = fs.Parse(args)
-	if *inPath == "" || *tarPath == "" {
-		return fmt.Errorf("need -in -expect")
+	if *inPath == "" || *tarPath == "" || *srcPath == "" {
+		return fmt.Errorf("need -in -src -expect")
 	}
 	expect, err := os.ReadFile(*tarPath)
 	if err != nil {
@@ -267,6 +268,11 @@ func cmdVerify(args []string) error {
 		}
 		fmt.Printf("    strict-decode OK into upstream type\n")
 	}
+	tReg := time.Now()
+	if err := verifyUntouchedRegions(*srcPath, *inPath, *offset, int64(len(expect))); err != nil {
+		return err
+	}
+	fmt.Printf("untouched-region digests: %s\n", time.Since(tReg).Round(time.Millisecond))
 	fmt.Println("round-trip: PASS")
 	return nil
 }
@@ -312,7 +318,7 @@ func cmdAll(args []string) error {
 	fmt.Println("\n######## verify ########")
 	tVer := time.Now()
 	if err := cmdVerify(
-		[]string{"-in", seeded, "-expect", seedTar, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
+		[]string{"-in", seeded, "-src", img, "-expect", seedTar, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
 	); err != nil {
 		return err
 	}
@@ -329,7 +335,7 @@ func cmdAll(args []string) error {
 		return err
 	}
 	if err := cmdVerify(
-		[]string{"-in", seededKS, "-expect", seedKS, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
+		[]string{"-in", seededKS, "-src", img, "-expect", seedKS, "-offset", fmt.Sprintf("%d", customizerSeedOff)},
 	); err != nil {
 		return err
 	}
@@ -414,21 +420,21 @@ func handParseGPT(path string) ([]partInfo, int, error) {
 	}
 	defer f.Close()
 
-	hdrOff := int64(512)
-	secsz := 512
+	// GPT header is at LBA1. Probe the logical sector sizes IncusOS actually
+	// ships: 512 (raw), 2048 (ISO via losetup --sector-size 2048), 4096.
 	hdr := make([]byte, 92)
-	if _, err := f.ReadAt(hdr, hdrOff); err != nil {
-		return nil, 0, err
+	secsz := 0
+	for _, sz := range []int{512, 2048, 4096} {
+		if _, err := f.ReadAt(hdr, int64(sz)); err != nil {
+			continue
+		}
+		if string(hdr[:8]) == "EFI PART" {
+			secsz = sz
+			break
+		}
 	}
-	if string(hdr[:8]) != "EFI PART" {
-		hdrOff = 4096
-		secsz = 4096
-		if _, err := f.ReadAt(hdr, hdrOff); err != nil {
-			return nil, 0, err
-		}
-		if string(hdr[:8]) != "EFI PART" {
-			return nil, 0, fmt.Errorf("no EFI PART signature at LBA1 (512 or 4096)")
-		}
+	if secsz == 0 {
+		return nil, 0, fmt.Errorf("no EFI PART signature at LBA1 (512, 2048, or 4096)")
 	}
 	partLBA := binary.LittleEndian.Uint64(hdr[72:80])
 	nparts := binary.LittleEndian.Uint32(hdr[80:84])
@@ -914,6 +920,82 @@ func hexDumpDiff(a, b []byte) {
 		}
 	}
 	fmt.Printf("common prefix %d; lens %d vs %d\n", n, len(a), len(b))
+}
+
+func verifyUntouchedRegions(srcPath, outPath string, offset, tarLen int64) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	out, err := os.Open(outPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	srcSt, err := src.Stat()
+	if err != nil {
+		return err
+	}
+	outSt, err := out.Stat()
+	if err != nil {
+		return err
+	}
+	if srcSt.Size() != outSt.Size() {
+		return fmt.Errorf("size mismatch src=%d out=%d", srcSt.Size(), outSt.Size())
+	}
+	suffixStart := offset + tarLen
+	if suffixStart > srcSt.Size() {
+		return fmt.Errorf("offset+tarLen %d exceeds image size %d", suffixStart, srcSt.Size())
+	}
+	suffixLen := srcSt.Size() - suffixStart
+	buf := make([]byte, bufSize)
+
+	srcPrefix, err := digestRange(src, 0, offset, buf)
+	if err != nil {
+		return fmt.Errorf("src prefix: %w", err)
+	}
+	outPrefix, err := digestRange(out, 0, offset, buf)
+	if err != nil {
+		return fmt.Errorf("out prefix: %w", err)
+	}
+	srcSuffix, err := digestRange(src, suffixStart, suffixLen, buf)
+	if err != nil {
+		return fmt.Errorf("src suffix: %w", err)
+	}
+	outSuffix, err := digestRange(out, suffixStart, suffixLen, buf)
+	if err != nil {
+		return fmt.Errorf("out suffix: %w", err)
+	}
+
+	fmt.Printf("untouched regions (sha256, streamed, reused %d-byte buffer):\n", bufSize)
+	fmt.Printf("  [0, %d) len=%d\n", offset, offset)
+	fmt.Printf("    src=%s\n", srcPrefix)
+	fmt.Printf("    out=%s\n", outPrefix)
+	if srcPrefix != outPrefix {
+		return fmt.Errorf("prefix region mismatch")
+	}
+	fmt.Println("    PREFIX: identical")
+	fmt.Printf("  [%d, EOF) len=%d\n", suffixStart, suffixLen)
+	fmt.Printf("    src=%s\n", srcSuffix)
+	fmt.Printf("    out=%s\n", outSuffix)
+	if srcSuffix != outSuffix {
+		return fmt.Errorf("suffix region mismatch")
+	}
+	fmt.Println("    SUFFIX: identical")
+	return nil
+}
+
+func digestRange(r io.ReaderAt, start, n int64, buf []byte) (string, error) {
+	h := sha256.New()
+	copied, err := io.CopyBuffer(h, io.NewSectionReader(r, start, n), buf)
+	if err != nil {
+		return "", err
+	}
+	if copied != n {
+		return "", fmt.Errorf("short digest read: got %d want %d", copied, n)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func sha256File(path string) (string, error) {

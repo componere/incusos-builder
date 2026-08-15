@@ -257,6 +257,12 @@ func run() error {
 	fmt.Printf("empty-architecture files: %d\n", emptyArch)
 
 	fmt.Println()
+	fmt.Println("--- 4b. three-way (Filename, Sha256, Size) binding ---")
+	fmt.Println("entry-by-entry across index.Updates[0].Files / update.json / sjson payload")
+	fmt.Println("(UpdateFull embeds Update; all three are []UpdateFile)")
+	reportThreeWayBinding(newest.Files, fromJSON.Files, fromSJSON.Files)
+
+	fmt.Println()
 	fmt.Println("--- 5. structural validation (every file: parseable sha256 hex + positive size) ---")
 	anomalies := validateFiles(fromSJSON.Files)
 	if len(anomalies) == 0 {
@@ -370,6 +376,64 @@ func parseSJSON(raw []byte) (payload, sigDER []byte, info mimeInfo, err error) {
 		return nil, nil, info, fmt.Errorf("base64-decode pkcs7: %w", err)
 	}
 	return payload, sigDER, info, nil
+}
+
+func reportThreeWayBinding(indexFiles, jsonFiles, sjsonFiles []apiimages.UpdateFile) {
+	fmt.Printf("counts: index=%d update.json=%d sjson=%d\n",
+		len(indexFiles), len(jsonFiles), len(sjsonFiles))
+
+	n := len(indexFiles)
+	if len(jsonFiles) > n {
+		n = len(jsonFiles)
+	}
+	if len(sjsonFiles) > n {
+		n = len(sjsonFiles)
+	}
+
+	agree := 0
+	diverge := 0
+	for i := 0; i < n; i++ {
+		idx, idxOK := fileAt(indexFiles, i)
+		js, jsOK := fileAt(jsonFiles, i)
+		sj, sjOK := fileAt(sjsonFiles, i)
+		if idxOK && jsOK && sjOK && sameBinding(idx, js) && sameBinding(js, sj) {
+			agree++
+			continue
+		}
+		diverge++
+		fmt.Printf("  diverge[%d]:\n", i)
+		printBindingSide("index", idxOK, idx)
+		printBindingSide("update.json", jsOK, js)
+		printBindingSide("sjson", sjOK, sj)
+	}
+
+	countsEqual := len(indexFiles) == len(jsonFiles) && len(jsonFiles) == len(sjsonFiles)
+	if diverge == 0 && countsEqual {
+		fmt.Printf("positional: %d/%d agree (index == update.json == sjson)\n", agree, n)
+		fmt.Println("verdict: AGREE")
+		return
+	}
+	fmt.Printf("positional: %d agree, %d diverge (of %d slots)\n", agree, diverge, n)
+	fmt.Println("verdict: DIVERGE")
+}
+
+func fileAt(files []apiimages.UpdateFile, i int) (apiimages.UpdateFile, bool) {
+	if i < 0 || i >= len(files) {
+		return apiimages.UpdateFile{}, false
+	}
+	return files[i], true
+}
+
+func sameBinding(a, b apiimages.UpdateFile) bool {
+	return a.Filename == b.Filename && a.Sha256 == b.Sha256 && a.Size == b.Size
+}
+
+func printBindingSide(name string, ok bool, f apiimages.UpdateFile) {
+	if !ok {
+		fmt.Printf("    %s: <missing>\n", name)
+		return
+	}
+	fmt.Printf("    %s: filename=%s sha256=%s size=%d\n", name, f.Filename, f.Sha256, f.Size)
 }
 
 func validateFiles(files []apiimages.UpdateFile) []string {

@@ -1,6 +1,6 @@
 # Spike 1.A — seed splice mechanics + local verification
 
-Date: 2026-08-15.
+Date: 2026-08-15. Revised after review (`FindingsReview`): GPT probe 512/2048/4096; untouched-region digests; yaml verdict scoped; go-diskfs dep-weight struck; `sendOSImage` citation.
 Scratch: `spikes/splice/` (`module spike-splice`; `go run .` from that directory).
 Worktree: `.wt/feat-phase-1-spikes` (`feat/phase-1-spikes`).
 Non-goals honored: no VM boot; no root `go.mod` / `internal/` / `cmd/` / other `spikes/*` changes.
@@ -36,7 +36,7 @@ $ shasum -a 256 out/IncusOS_202608102114.img.gz
 
 ## Splice arithmetic (end-to-end)
 
-Customizer hardcodes the seed-data start (`remainder := int64(2148532224)` in `sendImage`) and overwrites `len(tar)` bytes there, then copies the rest.
+Customizer `sendOSImage` (`incus-osd/cmd/image-customizer/main.go:399`) hardcodes the seed-data start (`remainder := int64(2148532224)` at :507), overwrites `len(tar)` bytes there (`writeSeed` at :529), then `rc.Seek(int64(seedSize), 1)` at :535 and copies the remainder (:540–:549). Sibling is `sendRescueImage` (:554).
 
 GPT on this release:
 
@@ -45,7 +45,7 @@ GPT on this release:
 
 **OFFSET MATCH: no drift vs 2,148,532,224.**
 
-Splice: stream `[0, offset)` → tar bytes → skip `len(tar)` from the source → remainder. Single 4 MiB buffer. Output size equals input size (3432026112). Verify: bytes at `offset..offset+len(tar)` are exactly the input tar; tar entries strict-decode with `yaml.WithKnownFields()` into upstream seed types.
+Splice: stream `[0, offset)` → tar bytes → skip `len(tar)` from the source → remainder. Single 4 MiB buffer. Output size equals input size (3432026112). Verify: bytes at `offset..offset+len(tar)` are exactly the input tar; sha256 of `[0, offset)` and `[offset+len(tar), EOF)` match source vs spliced (streamed, reused 4 MiB buffer); tar entries strict-decode with `yaml.WithKnownFields()` into upstream seed types.
 
 ```
 ######## splice ########
@@ -62,9 +62,22 @@ untar + strict yaml.WithKnownFields():
   network.yaml mode=0600 size=13
     decoded {"version":"1"}
     strict-decode OK into upstream type
+untouched regions (sha256, streamed, reused 4194304-byte buffer):
+  [0, 2148532224) len=2148532224
+    src=ce355d34b335ae3d26affadd701abfcd10ed4c9998f643cdc0e54f97d7e55c57
+    out=ce355d34b335ae3d26affadd701abfcd10ed4c9998f643cdc0e54f97d7e55c57
+    PREFIX: identical
+  [2148535296, EOF) len=1283490816
+    src=7276168192d692f5ff75bf4271dc34d004eb6b556abf84ed398ae52142aa0df7
+    out=7276168192d692f5ff75bf4271dc34d004eb6b556abf84ed398ae52142aa0df7
+    SUFFIX: identical
+untouched-region digests: 2.725s
 round-trip: PASS
-TIMING verify: 0s
 ```
+
+Re-run of `verify` against the existing `out/` artifacts (source `IncusOS_202608102114.img` already decompressed; not re-downloaded). Both untouched regions are byte-identical source vs spliced. Equal total size alone would not have caught a compensated skip.
+
+Spike 1.E booted this same `seeded.img` through UEFI → systemd-boot → UKI → kernel → systemd PID 1, which exercises the ESP (before the offset) and the dm-verity root partitions (after it). That is corroboration, not a substitute for the region digests.
 
 Second splice+verify with CLI-exclusive `kernel.yaml` + `security.yaml`:
 
@@ -92,6 +105,16 @@ untar + strict yaml.WithKnownFields():
   security.yaml mode=0600 size=72
     decoded {"custom_ca_certs":["spike-ca"],"encryption_recovery_keys":[],"version":"1"}
     strict-decode OK into upstream type
+untouched regions (sha256, streamed, reused 4194304-byte buffer):
+  [0, 2148532224) len=2148532224
+    src=ce355d34b335ae3d26affadd701abfcd10ed4c9998f643cdc0e54f97d7e55c57
+    out=ce355d34b335ae3d26affadd701abfcd10ed4c9998f643cdc0e54f97d7e55c57
+    PREFIX: identical
+  [2148537344, EOF) len=1283488768
+    src=d3e44a7cf42b34537386e66d4efffa8960b5a8016d8a9979b29c2f597f30f534
+    out=d3e44a7cf42b34537386e66d4efffa8960b5a8016d8a9979b29c2f597f30f534
+    SUFFIX: identical
+untouched-region digests: 2.612s
 round-trip: PASS
 ```
 
@@ -132,9 +155,21 @@ OFFSET MATCH: seed-data start == 2148532224 (no drift)
 
 API fit: `diskfs.Open(path, diskfs.WithOpenMode(diskfs.ReadOnly))` + `GetPartitionTable()` → `*gpt.Table` with `Partitions []*gpt.Partition` (`Start`/`End` sectors, `Size` bytes, `Name`). Usable. Default open mode is `ReadWriteExclusive` (`O_RDWR|O_EXCL`) — must pass `ReadOnly` for a shared image file.
 
-Dep weight: `github.com/diskfs/go-diskfs v1.9.4` pulls logrus, google/uuid, klauspost/compress, lz4, xz, lzo, xattr, times. That is a lot of surface for reading 34 sectors.
+go-diskfs v1.9.4 is already a required product dependency: spike 1.B adopted it as the rescue-media library, ARCHITECTURE §6 has `internal/media` depend on it, and Phase 3b writes GPT with it. The transitive surface is already in the graph; there is no marginal-dependency argument against using it to *read* a partition table. That earlier rationale is struck.
 
-**Phase 2: hand-parse GPT** (signature at LBA1, entry array at `PartitionEntryLBA`). Enough to assert `seed-data` and compute start/length. Do not hardcode `2148532224` without that assert — it matches this release, but the customizer's hardcoded offset is a footgun if the layout moves. Skip go-diskfs unless Phase 2 starts *writing* GPT.
+**Scope:** only the 512-byte raw layout was measured live (this `image-raw` artifact). The CLI's other first-class type is `iso`. That was **not** downloaded or probed here.
+
+**ISO layout (from source, not measured):** upstream `scripts/convert-img-to-iso.sh` does `losetup --sector-size 2048` then `sgdisk -n 1::+2GiB` / `-n 2::+100MiB -c 2:seed-data`. On that image the GPT header lives at byte 2048 (LBA1). The seed-data *byte* offset is unchanged: 1 MiB alignment at 2048 B/sector puts ESP at LBA 512 and seed-data at LBA 1049088 = 2,148,532,224. Only the sector arithmetic differs.
+
+The hand parser now tries logical sector sizes **512, 2048, 4096** (locate `EFI PART` at those LBA1 offsets) and derives `secsz` from the match. Synthetic headers at each offset reach the post-signature parse (so the probe finds them); the live raw still reports sector 512.
+
+**Phase 2: still hand-parse GPT**, on the surviving grounds:
+
+1. **Explicit multi-sector-size probe control.** We need 512 (raw) and 2048 (ISO) before asserting `seed-data`. A 20-line loop over three offsets is the whole policy.
+2. **go-diskfs read path defaults to 512 for regular files** unless `WithSectorSize` is passed (`initDisk` in `diskfs.go`: default `defaultBlocksize`; `getSectorSizes` runs only for block devices). Exported constants stop at `SectorSize512` / `SectorSize4k` — 2048 is not a named size. Using go-diskfs for this read would still mean wrapping it in the same 512/2048/4096 probe plus `WithSectorSize(SectorSize(n))`. That is not simpler than reading 92 bytes at three offsets.
+3. **Parse cost is noise either way** (61 µs hand / 49 µs diskfs against 2.4 s of decompression). Cost does not pick a winner.
+
+Those are enough to keep the hand parse for *locating* `seed-data` on a regular file. They would not be enough if we were writing GPT — 1.B already does that with go-diskfs, and this spike should not pretend otherwise. Do not hardcode `2148532224` without the GPT assert — it matches this release, but the customizer's hardcoded offset is a footgun if the layout moves.
 
 ---
 
@@ -147,7 +182,7 @@ Dep weight: `github.com/diskfs/go-diskfs v1.9.4` pulls logrus, google/uuid, klau
 - `tar.NewWriter` + `Close()` (end-of-archive blocks included in the returned size)
 - order, nil-skipped: applications, incus, operations-center, migration-manager, install, network, provider, services, update
 
-Spike renderer uses the same dump + header fields. Independent clone of `writeSeed` for install+network compared with `cmp`:
+Spike renderer uses the same dump + header fields. The `cmp` below is the spike renderer vs the spike's own `writeSeed` copy (`spikes/splice/main.go`), not vs an upstream-built customizer binary — tautological with respect to the yaml library. Only `install` + `network` of the nine `writeSeed` sections were compared (65 and 13 bytes).
 
 ```
 wrote out/seed-install-network.tar (3072 bytes) ks=false
@@ -163,7 +198,9 @@ $ cmp -l out/cmp/writeseed.tar out/cmp/ours.tar && echo 'cmp: identical (exit 0)
 cmp: identical (exit 0)
 ```
 
-**Verdict: byte-compatible.** Phase 2 should dump with `yaml.Dump(..., yaml.WithV2Defaults())` and the same tar headers. Do not switch to v4 dump defaults (`WithV4Defaults` uses compact seq indent + single quotes).
+**Verdict:** same `yaml.Dump` call + tar header fields as upstream source (`cmd/image-customizer/main.go:1000-1120`). Byte-equality vs an upstream-built binary is unproven. Phase 2 should dump with `yaml.Dump(..., yaml.WithV2Defaults())` and the same tar headers. Do not switch to v4 dump defaults (`WithV2Defaults` = indent 2 + `CompactSeqIndent(false)` + `QuoteLegacy`; `WithV4Defaults` = indent 2 + `CompactSeqIndent(true)` + `QuoteSingle` — `go.yaml.in/yaml/v4@v4.0.0-rc.6` `yaml.go:38-73`).
+
+ARCHITECTURE §9 T1's fully-populated nine-section golden remains **open for Phase 2**. Pin it by building the upstream customizer once, generating the tar, and committing its digest.
 
 ---
 
@@ -215,7 +252,8 @@ Host: Darwin arm64, Apple M4 Max. Sequential `go run` / compiled `all` against l
 | decompress + GPT | **2.437 s** | pgzip 2.436 s; GPT parse 49–61 µs |
 | seed tar | **< 1 ms** | 3072 bytes |
 | splice | **1.728 s** | 3.2 GiB stream copy, 4 MiB buffer |
-| verify | **< 1 ms** | `ReadAt` 3072 bytes + untar + YAML |
+| verify (tar + yaml) | **< 1 ms** | `ReadAt` 3072 bytes + untar + YAML |
+| verify (untouched-region sha256) | **2.725 s** | streamed sha256 of `[0, offset)` + `[offset+tarLen, EOF)` vs source; both identical |
 | second splice (kernel+security) | **1.318 s** | same image, 5120-byte tar |
 
 gzip CLI decompress of the same file was 2 s (pre-check); pgzip in-process is in the same band.

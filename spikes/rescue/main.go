@@ -20,6 +20,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -38,6 +40,11 @@ var staged = map[string]int64{
 	"update/IncusOS_test.efi.gz":            3 << 20,
 	"update/IncusOS_test.usr-x86-64.raw.gz": 5 << 20,
 	"update/debug.raw.gz":                   2 << 20,
+	// Live release assets carry an architecture directory segment
+	// (e.g. aarch64/incus.raw.gz); upstream buildImage recreates it under
+	// update/ and recovery joins update/<Filename>. Exercise the nested dir.
+	"update/aarch64/incus.raw.gz": 4 << 20,
+	"update/aarch64/debug.raw.gz": 1 << 20,
 }
 
 func main() {
@@ -187,8 +194,23 @@ func buildRaw(target string) error {
 
 // stage writes the fake update tree into fs.
 func stage(fs filesystem.FileSystem) error {
-	if err := fs.Mkdir("/update"); err != nil {
-		return fmt.Errorf("mkdir /update: %w", err)
+	// Collect and create parent directories shallow-to-deep (go-diskfs Mkdir
+	// is single-level; iso9660 tolerates re-creation, fat32 needs ordering).
+	dirs := map[string]bool{}
+	for name := range staged {
+		for d := path.Dir(name); d != "." && d != "/"; d = path.Dir(d) {
+			dirs[d] = true
+		}
+	}
+	var order []string
+	for d := range dirs {
+		order = append(order, d)
+	}
+	sort.Slice(order, func(i, j int) bool { return len(order[i]) < len(order[j]) })
+	for _, d := range order {
+		if err := fs.Mkdir("/" + d); err != nil {
+			return fmt.Errorf("mkdir /%s: %w", d, err)
+		}
 	}
 	for name, size := range staged {
 		f, err := fs.OpenFile("/"+name, os.O_CREATE|os.O_RDWR)
@@ -254,14 +276,38 @@ func verify(target string, isISO bool) error {
 		return fmt.Errorf("fs label = %q, want RESCUE_DATA", label)
 	}
 
-	// go-diskfs LIMITATION (v1.9.4): ReadDir on its own written iso9660 AND
-	// fat32 output fails with EINVAL (iso: RockRidge with or without Joliet), even
-	// though hdiutil/the kernel mount the image fine and OpenFile by exact
-	// path works. Record the probe result but verify via known paths.
-	if ents, err := fs.ReadDir("/update"); err != nil {
-		fmt.Printf("  note: ReadDir(/update) = %v (go-diskfs read-side ReadDir limitation; OpenFile works)\n", err)
-	} else {
-		fmt.Printf("  ReadDir(/update): %d entries\n", len(ents))
+	// go-diskfs ReadDir validates with io/fs.ValidPath, which rejects rooted
+	// paths ("/update" -> "invalid argument"); OpenFile does NOT validate,
+	// which produced a false read-asymmetry in the first pass of this spike.
+	// Use unrooted fs-style paths for ReadDir.
+	files := 0
+	var walk func(dir string) error
+	walk = func(dir string) error {
+		ents, err := fs.ReadDir(dir)
+		if err != nil {
+			return fmt.Errorf("readdir %s: %w", dir, err)
+		}
+		fmt.Printf("  ReadDir(%s): %d entries:", dir, len(ents))
+		for _, e := range ents {
+			fmt.Printf(" %s", e.Name())
+		}
+		fmt.Println()
+		for _, e := range ents {
+			if e.IsDir() {
+				if err := walk(path.Join(dir, e.Name())); err != nil {
+					return err
+				}
+			} else {
+				files++
+			}
+		}
+		return nil
+	}
+	if err := walk("update"); err != nil {
+		return err
+	}
+	if files != len(staged) {
+		return fmt.Errorf("walked %d files, want %d", files, len(staged))
 	}
 
 	want := wantHashes()

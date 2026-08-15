@@ -133,9 +133,9 @@ Checked `go.mod` of every compiled-in module: **no `replace` directives** in `in
 
 ## Verdict
 
-**PASS** — type-only / type-adjacent closure; safe to import in Phase 2.
+**PASS** — no incus-osd `internal/` or `cmd/` packages; third-party tail limited to the enumerated allowlist; linked-but-unreferenced JOSE/OAuth2 code accepted. Safe to import in Phase 2.
 
-Not ESCALATE: nothing from `incus-osd/internal` or `incus-osd/cmd` is compiled in. The extras beyond the three named type surfaces are small API/config packages and the OIDC/JOSE stack that migration-manager's API types already require.
+Not ESCALATE: nothing from `incus-osd/internal` or `incus-osd/cmd` is compiled in. The extras beyond the three named type surfaces are small API/config packages plus the OIDC/JOSE stack that migration-manager's API types already require. `zitadel/oidc/v3/pkg/oidc`, `pkg/crypto`, `go-jose/v4`, and `x/oauth2` are functional libraries (JWT/JOSE parsing, an OAuth2 HTTP client) — linked but unreferenced, not type declarations. "Type-only" describes the incus-osd surface; a later reader taking PASS as "type-only" at face value would be surprised by `net/http` and `crypto/tls` in the closure.
 
 Borderline, named so Phase 2 can write the gate precisely:
 
@@ -153,10 +153,10 @@ stdlib `net/http` and `crypto/tls` appear in the 194-package stdlib closure via 
 
 1. Pin `github.com/lxc/incus-os/incus-osd v0.0.0-20260815030500-0f5b8057f2fc`. `--version` prints that string.
 2. Import `api/seed`, `api/images`, `api/customizer` (and parent `api` as needed). Do not mirror types.
-3. CI type-only gate: `go list -deps` of the production packages that import incus-osd, assert:
-   - no `github.com/lxc/incus-os/incus-osd/internal/`
-   - no `github.com/lxc/incus-os/incus-osd/cmd/`
-   - allowlist the 27-ish non-stdlib set above (plus our own packages). Do **not** assert on `go list -m all`.
+3. CI type-only gate: `go list -deps` of the production packages that import incus-osd. Scoped assertion, **not** an absolute 27-package allowlist (the measured 27 included this spike's own `main`; production additionally pulls SOPS, go-diskfs, pgzip, Cobra/Viper, and the Charm libraries, so a 27-count fails the moment the gate is pointed at `./...`):
+   - deny `github.com/lxc/incus-os/incus-osd/internal/` anywhere in the closure
+   - deny `github.com/lxc/incus-os/incus-osd/cmd/` anywhere in the closure
+   - assert the incus-osd-attributable delta equals the enumerated **26** (the table above minus this spike's `main`). Do **not** assert on `go list -m all`.
 4. `go.yaml.in/yaml/v4 v4.0.0-rc.6` is already selected by this pin; seed rendering should use this version (with `WithV2Defaults()`) so it cannot drift from the type module.
 5. Next pin bump: wait for a date tag **after** `0f5b805`, or deliberately move the pseudo-version. The latest date tag today is schema-behind HEAD.
 

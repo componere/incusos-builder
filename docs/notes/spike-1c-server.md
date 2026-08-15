@@ -158,6 +158,19 @@ This is extraction + structural validation, not signature authentication (that r
 - file-count 55 = 55
 - every file: parseable sha256 hex (32 bytes) + positive size: **OK, 0 anomalies**
 - one empty-architecture file (`IncusOS_2026_R1.tar.gz`) — expected, not an anomaly
+- three-way `(Filename, Sha256, Size)` binding on newest release `202608102114` (index entry / `update.json` body / sjson payload; `UpdateFull` embeds `Update`, all three are `[]UpdateFile`): **AGREE**
+  - counts: index=55, update.json=55, sjson=55
+  - positional: 55/55 agree (index == update.json == sjson)
+  - live program output:
+
+```
+--- 4b. three-way (Filename, Sha256, Size) binding ---
+entry-by-entry across index.Updates[0].Files / update.json / sjson payload
+(UpdateFull embeds Update; all three are []UpdateFile)
+counts: index=55 update.json=55 sjson=55
+positional: 55/55 agree (index == update.json == sjson)
+verdict: AGREE
+```
 
 Extracted payload after `bytes.TrimSpace` is 11858 bytes vs 11859-byte `update.json` (trailing newline on the unsigned twin). Structurally equal; Phase 3a must copy the **HTTP body of `update.sjson` verbatim**, not the extracted JSON.
 
@@ -213,7 +226,14 @@ Index stays on the planned **64 MiB** `LimitReader` (ARCHITECTURE §6). Three up
 
 **DECISION for Phase 3a:** cap `update.json` and `update.sjson` reads at **1 MiB**.
 
-Rationale: the plan's 8 MiB default was only for the unmeasurable case. Live size is ~14 KiB. 1 MiB matches the “expected ≪ 1 MiB” note, leaves ~70× room for file-list growth, and is a tighter DoS bound than the placeholder. Revisit only if a release's metadata approaches a few hundred KiB.
+Rationale: the plan's 8 MiB default was only for the unmeasurable case. Live size is ~14 KiB. 1 MiB matches the “expected ≪ 1 MiB” note, leaves ~70× room for file-list growth, and is a tighter DoS bound than the placeholder.
+
+Checkable arithmetic (recheck the cap without re-running the spike):
+
+- ~216 B per file entry (11,859 B / 55 files)
+- sjson fixed overhead ~2.4 KiB (14,268 − 11,859 = 2,409 B of MIME envelope + PKCS#7)
+- 1 MiB ceiling ≈ (1,048,576 − 2,400) / 216 ≈ **4,800 file entries**, vs 55 today across two architectures
+- Revisit trigger: a release's metadata approaching a few hundred KiB
 
 No `spikes/server/.gitignore`: nothing persisted to disk, and both metadata documents are well under 1 MiB.
 
@@ -301,6 +321,13 @@ file-count match: sjson=55 json=55 equal=true
 sjson channels: [testing stable]
 empty-architecture file: filename=IncusOS_2026_R1.tar.gz type=update-secureboot size=1638
 empty-architecture files: 1
+
+--- 4b. three-way (Filename, Sha256, Size) binding ---
+entry-by-entry across index.Updates[0].Files / update.json / sjson payload
+(UpdateFull embeds Update; all three are []UpdateFile)
+counts: index=55 update.json=55 sjson=55
+positional: 55/55 agree (index == update.json == sjson)
+verdict: AGREE
 
 --- 5. structural validation (every file: parseable sha256 hex + positive size) ---
 validation: OK (55 files, no anomalies)
