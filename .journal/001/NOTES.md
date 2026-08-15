@@ -24,3 +24,6 @@ Key grounded findings from reference/incus-os:
 - Design: hexagonal; ports ImageSource/Decrypter/RescueWriter/ProgressSink etc.; pinned upstream seed types for byte-compatible YAML; SOPS via getsops decrypt in-memory (any top-level `sops` key → decrypt path, failures = ErrDecrypt exit 4); charm log/lipgloss/huh with --interactive/--color/--progress=auto|always|never; digest-keyed download cache; no-clobber atomic two-artifact publication.
 Review trail (rounds 1-3) and design versions live in the omp session local:// artifacts.
 Next: template rename pass, then prototype spikes named in ARCHITECTURE.md open questions (splice + boot test first).
+
+## 2026-08-15 10:12 — Architecture doc relocated
+Correction to earlier note: ARCHITECTURE.md does not live on master. It now lives at .journal/001/ARCHITECTURE.md on journal/jmgilman (master commits cc1df8b/39214f3/86f7bf7 added then removed it; master is clean of it).
