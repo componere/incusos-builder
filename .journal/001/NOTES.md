@@ -30,3 +30,6 @@ Correction to earlier note: ARCHITECTURE.md does not live on master. It now live
 
 ## 2026-08-15 10:25 — E2E implementation plan composed
 Planner agent produced .journal/001/PLAN.md from ARCHITECTURE.md + brief + AGENTS.md + cli/charmbracelet skills. Agile ordering: Phase 1 front-loads the risky spikes (seed splice + boot test, pure-Go rescue media) before dependent build-out; later phases cover template rename, domain core/ports, adapters (acquisition+cache, SOPS, seed tar/splice, rescue media, publication), config schema/validation, CLI surface, charm UX, mockery/test pyramid, docs, release wiring.
+
+## 2026-08-15 10:40 — Close
+Session closed. No PRs: all work was pre-protection bootstrap commits pushed directly to master (424e764..86f7bf7) plus journal content on journal/jmgilman. Handoff state: architecture (.journal/001/ARCHITECTURE.md) and plan (.journal/001/PLAN.md) are final; implementation starts next session at PLAN.md Phase 0 (template rename), then Phase 1 spikes (seed splice + boot first). Durable context promoted to .journal/TECH_NOTES.md. Open threads listed in SUMMARY.md.
