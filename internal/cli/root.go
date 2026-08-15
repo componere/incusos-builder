@@ -7,9 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/meigma/template-go/internal/config"
-	"github.com/meigma/template-go/internal/templateinfo"
 )
 
 // BuildInfo describes linker-injected build metadata printed by --version.
@@ -36,7 +33,7 @@ type Options struct {
 	Viper *viper.Viper
 }
 
-// NewRootCommand creates the template-go Cobra command tree.
+// NewRootCommand creates the incusos-builder Cobra command tree.
 func NewRootCommand(options Options) *cobra.Command {
 	if options.In == nil {
 		options.In = strings.NewReader("")
@@ -53,8 +50,8 @@ func NewRootCommand(options Options) *cobra.Command {
 	options.Build = options.Build.withDefaults()
 
 	root := &cobra.Command{
-		Use:           "template-go",
-		Short:         "Meigma Go repository template application",
+		Use:           "incusos-builder",
+		Short:         "Build seeded IncusOS installation media from a YAML config",
 		Version:       options.Build.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -62,13 +59,12 @@ func NewRootCommand(options Options) *cobra.Command {
 			return initializeConfig(cmd, options.Viper)
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := config.Load(options.Viper)
-			return printLine(options.Out, cfg.Message)
+			return nil
 		},
 	}
 	root.SetVersionTemplate(
 		fmt.Sprintf(
-			"template-go %s (%s) built %s\n",
+			"incusos-builder %s (%s) built %s\n",
 			options.Build.Version,
 			options.Build.Commit,
 			options.Build.Date,
@@ -77,10 +73,10 @@ func NewRootCommand(options Options) *cobra.Command {
 	root.SetIn(options.In)
 	root.SetOut(options.Out)
 	root.SetErr(options.Err)
-	root.PersistentFlags().String("message", templateinfo.Summary(), "message to print")
 	return root
 }
 
+// withDefaults fills empty build metadata fields with placeholder values.
 func (b BuildInfo) withDefaults() BuildInfo {
 	if strings.TrimSpace(b.Version) == "" {
 		b.Version = "dev"
@@ -94,8 +90,9 @@ func (b BuildInfo) withDefaults() BuildInfo {
 	return b
 }
 
+// initializeConfig binds Cobra flags into Viper and enables automatic environment lookup.
 func initializeConfig(cmd *cobra.Command, vp *viper.Viper) error {
-	vp.SetEnvPrefix("TEMPLATE_GO")
+	vp.SetEnvPrefix("INCUSOS_BUILDER")
 	vp.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 	vp.AutomaticEnv()
 
@@ -104,14 +101,6 @@ func initializeConfig(cmd *cobra.Command, vp *viper.Viper) error {
 	}
 	if err := vp.BindPFlags(cmd.Flags()); err != nil {
 		return fmt.Errorf("bind flags: %w", err)
-	}
-
-	return nil
-}
-
-func printLine(w io.Writer, line string) error {
-	if _, err := fmt.Fprintln(w, line); err != nil {
-		return fmt.Errorf("write output: %w", err)
 	}
 
 	return nil

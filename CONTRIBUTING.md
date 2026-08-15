@@ -41,7 +41,7 @@ moon run root:format
 moon run root:lint
 moon run root:build
 moon run root:test
-go run ./cmd/template-go --version
+go run ./cmd/incusos-builder --version
 ```
 
 ## Release Changes
