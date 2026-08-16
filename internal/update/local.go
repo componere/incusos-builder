@@ -66,7 +66,7 @@ func NewLocalSource(dir, cacheDir string, reporter build.Reporter) (*LocalSource
 	}, nil
 }
 
-// Index reads <dir>/index.json, capped at 64 MiB, and strict-decodes it
+// Index reads <dir>/index.json, capped at 64 MiB, and decodes it
 // as [apiimages.Index].
 func (s *LocalSource) Index(ctx context.Context) (apiimages.Index, error) {
 	if err := ctx.Err(); err != nil {
@@ -80,7 +80,7 @@ func (s *LocalSource) Index(ctx context.Context) (apiimages.Index, error) {
 	}
 	s.reporter.Progress(int64(len(body)), int64(len(body)))
 	var index apiimages.Index
-	if err := strictDecode(body, &index, indexName); err != nil {
+	if err := decodeJSON(body, &index, indexName); err != nil {
 		return apiimages.Index{}, err
 	}
 	return index, nil

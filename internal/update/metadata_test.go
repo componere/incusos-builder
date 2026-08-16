@@ -20,7 +20,8 @@ func TestReleaseMetadataFetchesBothAndReturnsVerbatim(t *testing.T) {
 		"/" + testVersion + "/" + updateJSONName:  updateJSON,
 		"/" + testVersion + "/" + updateSJSONName: sjson,
 	})
-	src := ts.newHTTPS(t, nil)
+	rep := &recordingReporter{}
+	src := ts.newHTTPS(t, rep)
 
 	meta, err := src.ReleaseMetadata(t.Context(), testVersion, []apiimages.UpdateFile{file})
 	require.NoError(t, err)
@@ -28,6 +29,9 @@ func TestReleaseMetadataFetchesBothAndReturnsVerbatim(t *testing.T) {
 	require.True(t, bytes.Equal(sjson, meta.UpdateSJSON), "verbatim update.sjson")
 	assert.False(t, bytes.Equal(meta.UpdateJSON, meta.UpdateSJSON))
 	require.Equal(t, int64(2), ts.hits.Load())
+	done, total := rep.lastProgressPair()
+	assert.Equal(t, int64(len(sjson)), done)
+	assert.Equal(t, int64(len(sjson)), total)
 	assert.ElementsMatch(t, []string{
 		"/" + testVersion + "/" + updateJSONName,
 		"/" + testVersion + "/" + updateSJSONName,
@@ -114,4 +118,28 @@ func TestReleaseMetadataStructuralFailures(t *testing.T) {
 		_, err := ts.newHTTPS(t, nil).ReleaseMetadata(t.Context(), testVersion, []apiimages.UpdateFile{file})
 		require.ErrorIs(t, err, ErrFetch)
 	})
+}
+
+func TestReleaseMetadataMissingSJSON(t *testing.T) {
+	t.Parallel()
+	file := testFile([]byte("app"))
+	updateJSON := testUpdateJSON(t, testVersion, file)
+	ts := newTestServer(t, map[string][]byte{
+		"/" + testVersion + "/" + updateJSONName: updateJSON,
+	})
+	_, err := ts.newHTTPS(t, nil).ReleaseMetadata(t.Context(), testVersion, []apiimages.UpdateFile{file})
+	require.ErrorIs(t, err, ErrFetch)
+	assert.Contains(t, err.Error(), "404")
+}
+
+func TestReleaseMetadataZeroByteSJSON(t *testing.T) {
+	t.Parallel()
+	file := testFile([]byte("app"))
+	updateJSON := testUpdateJSON(t, testVersion, file)
+	ts := newTestServer(t, map[string][]byte{
+		"/" + testVersion + "/" + updateJSONName:  updateJSON,
+		"/" + testVersion + "/" + updateSJSONName: []byte{},
+	})
+	_, err := ts.newHTTPS(t, nil).ReleaseMetadata(t.Context(), testVersion, []apiimages.UpdateFile{file})
+	require.ErrorIs(t, err, ErrFetch)
 }

@@ -53,10 +53,21 @@ func writeRaw(ctx context.Context, tmpPath string, files []treeFile, buf []byte)
 	return stage(ctx, fs, files, buf)
 }
 
-// rawSizes returns the FAT partition length and the full disk image length.
-// The partition is max(content+fatSlack, fat32Floor), aligned to 512 bytes.
+// rawSizes returns the FAT partition length and the full disk image length
+// for the staged tree. See [rawSizesFor].
 func rawSizes(files []treeFile) (int64, int64) {
-	partSize := max(contentBytes(files)+fatSlack, fat32Floor)
-	partSize = alignUp(partSize, rawSector)
+	return rawSizesFor(contentBytes(files))
+}
+
+// rawSizesFor is the pure sizing function: partition length and full disk
+// length from content bytes alone. The partition is
+// max(content+fatSlack, fat32Floor), then grown by 1/fatTableOverheadDivisor
+// (~2%) so the two FAT tables and reserved sectors that live inside it
+// still leave room for the payload. go-diskfs v1.9.4 (fat32.go:112-150)
+// sizes each FAT as ceil(4*(totalSectors-32)/(512*SPC+8)), i.e. ~1.54% of
+// the partition at 512-byte clusters (≤260 MiB) and ~0.195% at 4 KiB.
+func rawSizesFor(content int64) (int64, int64) {
+	partSize := max(content+fatSlack, fat32Floor)
+	partSize = alignUp(partSize+partSize/fatTableOverheadDivisor, rawSector)
 	return partSize, gptHead + partSize + gptTail
 }

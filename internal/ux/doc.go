@@ -24,4 +24,10 @@
 // Phase 4 and should theme from the same palette. charm.land/log/v2 is
 // the only logger; [NewLogger] styles it from the palette and follows
 // [ColorMode].
+//
+// [Summary] and [VersionsTable] take the same [ColorMode] and write to an
+// [io.Writer]. They never call lipgloss.Fprint, which would re-detect the
+// writer and ignore the flag both ways. Styled output goes through
+// [colorWriter]; --color=never (even on a TTY) uses plain fmt and emits
+// zero ANSI; --color=always into a capture buffer still emits CSI.
 package ux

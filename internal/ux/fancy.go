@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/table"
 )
 
 const (
@@ -20,26 +19,6 @@ const (
 	// percentScale is 100%, used for both renderers.
 	percentScale = 100
 )
-
-// SummaryRow is one label/value pair in a [Summary] block.
-type SummaryRow struct {
-	// Label is the left-hand field name.
-	Label string
-	// Value is the right-hand field value.
-	Value string
-}
-
-// VersionRow is one release row for [VersionsTable].
-type VersionRow struct {
-	// Version is the update version name.
-	Version string
-	// Channel is the release channel.
-	Channel string
-	// Architecture is the CPU architecture.
-	Architecture string
-	// Type is the image type (iso or raw).
-	Type string
-}
 
 // fancy is the Lip Gloss reporter used when color is resolved on.
 type fancy struct {
@@ -148,46 +127,4 @@ func progressParts(done, total int64) (int, int) {
 		filled = progressBarSize
 	}
 	return pct, filled
-}
-
-// Summary writes a bordered label/value block to w. Lip Gloss v2 downsamples
-// colors from the writer and environment via [lipgloss.Fprintln].
-func Summary(w io.Writer, rows []SummaryRow) {
-	if w == nil {
-		return
-	}
-	pal := DefaultPalette()
-	lines := make([]string, 0, len(rows)+1)
-	lines = append(lines, pal.SummaryTitle.Render("summary"))
-	for _, row := range rows {
-		key := pal.SummaryKey.Render(row.Label)
-		val := pal.SummaryValue.Render(row.Value)
-		lines = append(lines, key+"  "+val)
-	}
-	block := pal.SummaryBox.Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
-	_, err := lipgloss.Fprintln(w, block)
-	if err != nil {
-		return
-	}
-}
-
-// VersionsTable renders rows as a Lip Gloss table for the Phase 4 versions
-// command. The returned string is full-fidelity ANSI; callers print it with
-// [lipgloss.Fprint] so the writer-based color profile can downsample.
-func VersionsTable(rows []VersionRow) string {
-	pal := DefaultPalette()
-	tbl := table.New().
-		Border(lipgloss.NormalBorder()).
-		BorderStyle(pal.TableBorder).
-		StyleFunc(func(row, _ int) lipgloss.Style {
-			if row == table.HeaderRow {
-				return pal.TableHeader
-			}
-			return pal.TableCell
-		}).
-		Headers("Version", "Channel", "Architecture", "Type")
-	for _, row := range rows {
-		tbl.Row(row.Version, row.Channel, row.Architecture, row.Type)
-	}
-	return tbl.String()
 }

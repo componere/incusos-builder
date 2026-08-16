@@ -97,6 +97,11 @@ func TestModeMatrixAutoResolvesOff(t *testing.T) {
 			assert.NotContains(t, got, ansiCSI)
 			assert.NotContains(t, got, "\r")
 			assert.False(t, colorAutoEnabled(&buf))
+
+			var extra bytes.Buffer
+			writeSummaryAndVersions(ColorModeAuto, &extra)
+			assertSummaryAndVersionsShape(t, extra.String())
+			assert.NotContains(t, extra.String(), ansiCSI)
 		})
 	}
 }
@@ -119,6 +124,11 @@ func TestColorAlwaysForcesANSI(t *testing.T) {
 	assert.Contains(t, got, ansiCSI)
 	assert.Contains(t, got, "\r")
 	assert.Contains(t, got, "resolve")
+
+	var extra bytes.Buffer
+	writeSummaryAndVersions(ColorModeAlways, &extra)
+	assertSummaryAndVersionsShape(t, extra.String())
+	assert.Contains(t, extra.String(), ansiCSI)
 }
 
 // TestColorNeverStrips has no CSI even when progress is forced on.
@@ -135,6 +145,11 @@ func TestColorNeverStrips(t *testing.T) {
 	assert.Contains(t, got, "==> seed\n")
 	assert.Contains(t, got, "progress 25% (25/100)\n")
 	assert.Contains(t, got, "done seed\n")
+
+	var extra bytes.Buffer
+	writeSummaryAndVersions(ColorModeNever, &extra)
+	assertSummaryAndVersionsShape(t, extra.String())
+	assert.NotContains(t, extra.String(), ansiCSI)
 }
 
 // TestProgressResolvedOffEmitsNoANSI checks Progress is a no-op when off.
@@ -186,31 +201,46 @@ func TestNewLoggerColorMode(t *testing.T) {
 	})
 }
 
-// TestSummaryAndVersionsTable render expected labels without panicking.
+// TestSummaryAndVersionsTableColorMode follows the same always/never/auto matrix.
+func TestSummaryAndVersionsTableColorMode(t *testing.T) {
+	t.Run("never strips", func(t *testing.T) {
+		var buf bytes.Buffer
+		writeSummaryAndVersions(ColorModeNever, &buf)
+		assertSummaryAndVersionsShape(t, buf.String())
+		assert.NotContains(t, buf.String(), ansiCSI)
+	})
+	t.Run("always forces ANSI", func(t *testing.T) {
+		t.Setenv("NO_COLOR", "1")
+		t.Setenv("TERM", "dumb")
+		var buf bytes.Buffer
+		writeSummaryAndVersions(ColorModeAlways, &buf)
+		assertSummaryAndVersionsShape(t, buf.String())
+		assert.Contains(t, buf.String(), ansiCSI)
+	})
+	t.Run("auto on buffer is unstyled", func(t *testing.T) {
+		t.Setenv("NO_COLOR", "")
+		t.Setenv("TERM", "xterm-256color")
+		var buf bytes.Buffer
+		writeSummaryAndVersions(ColorModeAuto, &buf)
+		assertSummaryAndVersionsShape(t, buf.String())
+		assert.NotContains(t, buf.String(), ansiCSI)
+	})
+}
+
+// TestSummaryAndVersionsTable goldens the unstyled writer output.
 func TestSummaryAndVersionsTable(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	Summary(&buf, []SummaryRow{
-		{Label: "version", Value: "202608102114"},
-		{Label: "type", Value: "iso"},
-	})
-	got := buf.String()
-	assert.Contains(t, got, "summary")
-	assert.Contains(t, got, "version")
-	assert.Contains(t, got, "202608102114")
-	assert.Contains(t, got, "iso")
-
-	table := VersionsTable([]VersionRow{{
-		Version:      "202608102114",
-		Channel:      "stable",
-		Architecture: "x86_64",
-		Type:         "iso",
-	}})
-	assert.Contains(t, table, "Version")
-	assert.Contains(t, table, "202608102114")
-	assert.Contains(t, table, "stable")
-	assert.Contains(t, table, "x86_64")
+	writeSummaryAndVersions(ColorModeNever, &buf)
+	want := "" +
+		"summary\n" +
+		"version  202608102114\n" +
+		"type  iso\n" +
+		"Version  Channel  Architecture  Type\n" +
+		"202608102114  stable  x86_64  iso\n"
+	assert.Equal(t, want, buf.String())
+	assert.NotContains(t, buf.String(), ansiCSI)
 }
 
 // TestNilWriterDoesNotPanic treats a nil writer as discard.
@@ -222,9 +252,38 @@ func TestNilWriterDoesNotPanic(t *testing.T) {
 	rep.Step("resolve")
 	rep.Progress(1, 1)
 	rep.Done("resolve")
-	Summary(nil, []SummaryRow{{Label: "k", Value: "v"}})
+	Summary(ColorModeAlways, nil, []SummaryRow{{Label: "k", Value: "v"}})
+	VersionsTable(ColorModeNever, nil, []VersionRow{{
+		Version: "1", Channel: "stable", Architecture: "x86_64", Type: "iso",
+	}})
 	require.NotNil(t, NewLogger(ColorModeNever, nil))
 	require.NotNil(t, New(ColorModeNever, ProgressModeNever, io.Discard))
+}
+
+// writeSummaryAndVersions exercises both Phase 4 surfaces against w.
+func writeSummaryAndVersions(color ColorMode, w io.Writer) {
+	Summary(color, w, []SummaryRow{
+		{Label: "version", Value: "202608102114"},
+		{Label: "type", Value: "iso"},
+	})
+	VersionsTable(color, w, []VersionRow{{
+		Version:      "202608102114",
+		Channel:      "stable",
+		Architecture: "x86_64",
+		Type:         "iso",
+	}})
+}
+
+// assertSummaryAndVersionsShape checks labels both surfaces must emit.
+func assertSummaryAndVersionsShape(t *testing.T, got string) {
+	t.Helper()
+	assert.Contains(t, got, "summary")
+	assert.Contains(t, got, "version")
+	assert.Contains(t, got, "202608102114")
+	assert.Contains(t, got, "iso")
+	assert.Contains(t, got, "Version")
+	assert.Contains(t, got, "stable")
+	assert.Contains(t, got, "x86_64")
 }
 
 func nonEmptyLines(s string) []string {

@@ -41,9 +41,13 @@ const (
 	gptHead int64 = 1 << 20
 	// gptTail leaves room for the secondary GPT.
 	gptTail int64 = 1 << 20
-	// fatSlack is extra space inside the partition for FAT tables,
-	// directory clusters, and rounding. Distinct from gptHead.
+	// fatSlack is extra space inside the partition for directory
+	// clusters and rounding. Distinct from gptHead. FAT tables scale
+	// with the partition and are reserved separately in rawSizesFor.
 	fatSlack int64 = 1 << 20
+	// fatTableOverheadDivisor grows the partition by 1/50 (~2%) to cover
+	// the two FAT tables that live inside it. See rawSizesFor.
+	fatTableOverheadDivisor int64 = 50
 	// fat32Floor is the partition size that yields ≥65525 clusters even
 	// at 4 KiB/cluster (65525×4096 plus FAT/reserved overhead ≈ 256 MiB).
 	// go-diskfs uses 512-byte clusters below 260 MiB, so this is
@@ -130,10 +134,15 @@ func prepareTree(in build.RescueInput) ([]treeFile, error) {
 		{rel: updateJSONPath, size: int64(len(in.UpdateJSON)), bytes: in.UpdateJSON},
 		{rel: updateSJSONPath, size: int64(len(in.UpdateSJSON)), bytes: in.UpdateSJSON},
 	}
+	seen := map[string]struct{}{updateJSONPath: {}, updateSJSONPath: {}}
 	for i, a := range in.Assets {
 		if err := validateRelPath(a.RelPath); err != nil {
 			return nil, err
 		}
+		if _, dup := seen[a.RelPath]; dup {
+			return nil, outputf("asset %d: RelPath %q duplicates an already staged file", i, a.RelPath)
+		}
+		seen[a.RelPath] = struct{}{}
 		if a.Asset == nil {
 			return nil, outputf("asset %d (%s): nil handle", i, a.RelPath)
 		}
@@ -160,9 +169,13 @@ func validateRelPath(rel string) error {
 	return nil
 }
 
-// replaceFile removes tmpPath if it exists so diskfs.Create can O_EXCL-create
-// it. The CLI's exclusive temp is an empty placeholder; go-diskfs refuses an
-// already-existing path (gotcha encoded from spike 1.B's [os.Remove]).
+// replaceFile unlinks tmpPath so diskfs.Create can O_EXCL-create a new inode
+// at the same path. The CLI's exclusive temp is an empty placeholder;
+// go-diskfs refuses an already-existing path (gotcha encoded from spike
+// 1.B's [os.Remove]). Callers must reopen tmpPath by path after WriteRescue
+// returns: a file descriptor opened before the call refers to the unlinked
+// empty placeholder (mode 0600 from [os.CreateTemp]). The replacement is
+// created 0666 masked by umask.
 func replaceFile(tmpPath string) error {
 	err := os.Remove(tmpPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

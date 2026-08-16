@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	apiimages "github.com/lxc/incus-os/incus-osd/api/images"
@@ -73,6 +74,17 @@ func (r *recordingReporter) lastProgressTotal() int64 {
 		return -1
 	}
 	return r.progress[len(r.progress)-1][1]
+}
+
+// lastProgressPair returns the last Progress (done, total), or (-1, -1).
+func (r *recordingReporter) lastProgressPair() (int64, int64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.progress) == 0 {
+		return -1, -1
+	}
+	p := r.progress[len(r.progress)-1]
+	return p[0], p[1]
 }
 
 // testServer is an httptest TLS server that records hits and serves a fixture tree.
@@ -239,7 +251,31 @@ func hexOf(p []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// testFileNamed returns an UpdateFile for payload under filename.
+func testFileNamed(payload []byte, filename string) apiimages.UpdateFile {
+	file := testFile(payload)
+	file.Filename = filename
+	return file
+}
+
 // assetPath is the server path for version/filename.
 func assetPath(filename string) string {
 	return "/" + testVersion + "/" + filename
+}
+
+// assertNoCacheBlobs reports that cache holds no digest file and no fetch temps.
+func assertNoCacheBlobs(t *testing.T, cache *assetCache) {
+	t.Helper()
+	entries, err := os.ReadDir(cache.dir)
+	require.NoError(t, err)
+	for _, e := range entries {
+		name := e.Name()
+		require.False(t, strings.HasPrefix(name, ".fetch"), "leftover temp %s", name)
+		if name != digestDirName {
+			continue
+		}
+		digests, err := os.ReadDir(filepath.Join(cache.dir, digestDirName))
+		require.NoError(t, err)
+		assert.Empty(t, digests)
+	}
 }

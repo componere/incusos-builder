@@ -49,7 +49,7 @@ func (s *HTTPSSource) ReleaseMetadata(
 		if err != nil {
 			return nil, err
 		}
-		s.reporter.Progress(int64(len(body)), s.metaLimit)
+		s.reporter.Progress(int64(len(body)), int64(len(body)))
 		return body, nil
 	})
 }
@@ -72,7 +72,7 @@ func (s *LocalSource) ReleaseMetadata(
 		if err != nil {
 			return nil, err
 		}
-		s.reporter.Progress(int64(len(body)), s.metaLimit)
+		s.reporter.Progress(int64(len(body)), int64(len(body)))
 		return body, nil
 	})
 }
@@ -102,10 +102,10 @@ func loadReleaseMetadata(
 	return build.ReleaseMetadata{UpdateJSON: jsonBytes, UpdateSJSON: sjsonBytes}, nil
 }
 
-// validateUpdateJSON strict-decodes data as apiimages.Update with Version==version.
+// validateUpdateJSON decodes data as apiimages.Update with Version==version.
 func validateUpdateJSON(data []byte, version string) error {
 	var doc apiimages.Update
-	if err := strictDecode(data, &doc, updateJSONName); err != nil {
+	if err := decodeJSON(data, &doc, updateJSONName); err != nil {
 		return err
 	}
 	if doc.Version != version {
@@ -115,7 +115,7 @@ func validateUpdateJSON(data []byte, version string) error {
 }
 
 // validateUpdateSJSON requires a multipart/signed S/MIME message whose
-// clear-text payload strict-decodes as apiimages.Update with Version==version
+// clear-text payload decodes as apiimages.Update with Version==version
 // and Files covering every selected Filename+Sha256 pair.
 func validateUpdateSJSON(data []byte, version string, selected []apiimages.UpdateFile) error {
 	payload, err := signedCleartext(data)
@@ -123,7 +123,7 @@ func validateUpdateSJSON(data []byte, version string, selected []apiimages.Updat
 		return err
 	}
 	var doc apiimages.Update
-	if err := strictDecode(payload, &doc, updateSJSONName); err != nil {
+	if err := decodeJSON(payload, &doc, updateSJSONName); err != nil {
 		return err
 	}
 	if doc.Version != version {

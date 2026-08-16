@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -82,7 +83,7 @@ func NewHTTPSSource(serverURL, cacheDir string, reporter build.Reporter, client 
 	}, nil
 }
 
-// Index fetches <server>/index.json, capped at 64 MiB, and strict-decodes
+// Index fetches <server>/index.json, capped at 64 MiB, and decodes
 // it as [apiimages.Index].
 func (s *HTTPSSource) Index(ctx context.Context) (apiimages.Index, error) {
 	s.reporter.Step(stepIndex)
@@ -99,7 +100,7 @@ func (s *HTTPSSource) Index(ctx context.Context) (apiimages.Index, error) {
 	s.reporter.Progress(int64(len(body)), int64(len(body)))
 
 	var index apiimages.Index
-	if err := strictDecode(body, &index, indexName); err != nil {
+	if err := decodeJSON(body, &index, indexName); err != nil {
 		return apiimages.Index{}, err
 	}
 	return index, nil
@@ -107,6 +108,9 @@ func (s *HTTPSSource) Index(ctx context.Context) (apiimages.Index, error) {
 
 // Asset validates version/filename/sha256/size, then reuses or downloads
 // the file into the content-addressed cache and returns a VerifiedAsset.
+// Downloads retry the fetch+admit pair (3 attempts, short backoff,
+// ctx-cancellable) so a dropped body is retried; a checksum/size mismatch
+// gets exactly one clean re-download, then fails with the admission wording.
 func (s *HTTPSSource) Asset(
 	ctx context.Context,
 	version string,
@@ -115,9 +119,13 @@ func (s *HTTPSSource) Asset(
 	if err := validateAsset(version, file); err != nil {
 		return nil, err
 	}
-	return s.cache.get(ctx, file, func(ctx context.Context) (io.ReadCloser, error) {
-		return s.openAsset(ctx, version, file)
-	})
+	if handle, ok, err := s.cache.reuse(file); err != nil {
+		return nil, err
+	} else if ok {
+		return handle, nil
+	}
+	s.cache.warnIfLowSpace(file.Size)
+	return s.fetchAndAdmit(ctx, version, file)
 }
 
 // openAsset GETs the asset URL and reports download progress via the cache copy.
@@ -127,7 +135,7 @@ func (s *HTTPSSource) openAsset(ctx context.Context, version string, file apiima
 		return nil, fmt.Errorf("%w: asset URL: %w", ErrFetch, err)
 	}
 	s.reporter.Step(stepDownload)
-	resp, err := s.doGET(ctx, rawURL) //nolint:bodyclose // transferred to doneCloser, closed by cache.get
+	resp, err := s.getOnce(ctx, rawURL) //nolint:bodyclose // transferred to doneCloser, closed by fetchAndAdmit
 	if err != nil {
 		s.reporter.Done(stepDownload)
 		return nil, err
@@ -136,6 +144,46 @@ func (s *HTTPSSource) openAsset(ctx context.Context, version string, file apiima
 		inner: resp.Body,
 		done:  func() { s.reporter.Done(stepDownload) },
 	}, nil
+}
+
+// fetchAndAdmit GETs and admits an asset, retrying transient failures.
+func (s *HTTPSSource) fetchAndAdmit(
+	ctx context.Context,
+	version string,
+	file apiimages.UpdateFile,
+) (*cachedAsset, error) {
+	attempts := max(s.attempts, 1)
+	var lastErr error
+	mismatchTries := 0
+	for attempt := range attempts {
+		if attempt > 0 {
+			if err := sleep(ctx, s.backoff(attempt-1)); err != nil {
+				return nil, err
+			}
+		}
+		handle, err := s.admitOnce(ctx, version, file)
+		if err == nil {
+			return handle, nil
+		}
+		lastErr = err
+		if !shouldRetryDownload(err, &mismatchTries) {
+			return nil, err
+		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("%w: download %q failed", ErrFetch, file.Filename)
+	}
+	return nil, lastErr
+}
+
+// admitOnce fetches one response body and runs cache admission.
+func (s *HTTPSSource) admitOnce(ctx context.Context, version string, file apiimages.UpdateFile) (*cachedAsset, error) {
+	rc, err := s.openAsset(ctx, version, file)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rc.Close() }()
+	return s.cache.admit(ctx, file, rc)
 }
 
 // parseHTTPSBase rejects non-https server URLs.
@@ -171,30 +219,60 @@ func (s *HTTPSSource) doGET(ctx context.Context, rawURL string) (*http.Response,
 				return nil, err
 			}
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrFetch, err)
+		resp, err := s.getOnce(ctx, rawURL)
+		if err == nil {
+			return resp, nil
 		}
-		resp, err := s.client.Do(req)
-		if err != nil {
-			lastErr = fmt.Errorf("%w: %w", ErrFetch, err)
-			continue
+		lastErr = err
+		if !isTransient(err) {
+			return nil, err
 		}
-		if resp.StatusCode >= http.StatusInternalServerError {
-			_ = resp.Body.Close()
-			lastErr = fmt.Errorf("%w: %s", ErrFetch, resp.Status)
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			_ = resp.Body.Close()
-			return nil, fmt.Errorf("%w: %s", ErrFetch, resp.Status)
-		}
-		return resp, nil
 	}
 	if lastErr == nil {
 		lastErr = fmt.Errorf("%w: GET %s failed", ErrFetch, rawURL)
 	}
 	return nil, lastErr
+}
+
+// getOnce performs one GET and requires the final response URL to be https.
+func (s *HTTPSSource) getOnce(ctx context.Context, rawURL string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrFetch, err)
+	}
+	resp, err := s.client.Do(req)
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("%w: %w", ErrFetch, err)
+		}
+		return nil, &transientError{cause: fmt.Errorf("%w: %w", ErrFetch, err)}
+	}
+	if err := requireHTTPSFinal(resp); err != nil {
+		_ = resp.Body.Close()
+		return nil, err
+	}
+	if resp.StatusCode >= http.StatusInternalServerError {
+		_ = resp.Body.Close()
+		return nil, &transientError{cause: fmt.Errorf("%w: %s", ErrFetch, resp.Status)}
+	}
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("%w: %s", ErrFetch, resp.Status)
+	}
+	return resp, nil
+}
+
+// requireHTTPSFinal rejects a response whose effective URL is not https.
+// A redirect downgrade would otherwise yield a plaintext index an attacker
+// can fill with chosen digests.
+func requireHTTPSFinal(resp *http.Response) error {
+	if resp.Request == nil || resp.Request.URL == nil {
+		return fmt.Errorf("%w: missing response URL", ErrFetch)
+	}
+	if !strings.EqualFold(resp.Request.URL.Scheme, httpsScheme) {
+		return fmt.Errorf("%w: redirected to non-https URL", ErrFetch)
+	}
+	return nil
 }
 
 // readCapped reads r up to limit bytes and rejects a body larger than limit.
@@ -209,10 +287,17 @@ func readCapped(r io.Reader, limit int64, name string) ([]byte, error) {
 	return body, nil
 }
 
-// strictDecode JSON-decodes data into v with unknown fields rejected.
-func strictDecode(data []byte, v any, name string) error {
+// decodeJSON JSON-decodes data into v.
+//
+// Unknown fields are ignored on purpose: index.json, update.json, and the
+// update.sjson payload are server-controlled documents. Integrity comes from
+// size caps, content digests, and selected-file binding rather than locking
+// the decoder to the pinned incus-os struct shape — upstream does not
+// strict-decode these either, and DisallowUnknownFields would couple every
+// pin bump to a builder rebuild. Trailing data after the first JSON value
+// is still rejected.
+func decodeJSON(data []byte, v any, name string) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
 		return fmt.Errorf("%w: decode %s: %w", ErrFetch, name, err)
 	}
@@ -253,6 +338,52 @@ func sleep(ctx context.Context, d time.Duration) error {
 	case <-timer.C:
 		return nil
 	}
+}
+
+// shouldRetryDownload reports whether fetchAndAdmit should try again.
+// Admission mismatches get exactly one re-download; other retryable
+// failures use the bounded attempt budget.
+func shouldRetryDownload(err error, mismatchTries *int) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	if isAdmissionFailure(err) {
+		*mismatchTries++
+		return *mismatchTries <= 1
+	}
+	return isTransient(err) || isBodyStreamFailure(err)
+}
+
+// isAdmissionFailure reports a size/digest admission error.
+func isAdmissionFailure(err error) bool {
+	return err != nil && strings.Contains(err.Error(), admissionFailed)
+}
+
+// isBodyStreamFailure reports a mid-body read error during admission.
+func isBodyStreamFailure(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "read asset")
+}
+
+// isTransient reports a 5xx or transport failure marked for retry.
+func isTransient(err error) bool {
+	var trans *transientError
+	return errors.As(err, &trans)
+}
+
+// transientError marks a fetch failure that doGET and Asset may retry.
+type transientError struct {
+	// cause is the wrapped fetch error.
+	cause error
+}
+
+// Error returns the wrapped error text.
+func (e *transientError) Error() string {
+	return e.cause.Error()
+}
+
+// Unwrap returns the wrapped fetch error.
+func (e *transientError) Unwrap() error {
+	return e.cause
 }
 
 // doneCloser closes the inner reader then calls done.

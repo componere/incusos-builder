@@ -34,6 +34,10 @@ func writeISO(ctx context.Context, tmpPath string, files []treeFile, buf []byte)
 	if err != nil {
 		return outputWrap(err, "create iso9660 filesystem")
 	}
+	// Close removes the go-diskfs staging workspace; after Finalize it is a
+	// no-op. Without it, every error path below leaks a full copy of the
+	// staged tree under TMPDIR.
+	defer func() { _ = fs.Close() }()
 	if err := stage(ctx, fs, files, buf); err != nil {
 		return err
 	}
