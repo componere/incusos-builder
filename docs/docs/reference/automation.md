@@ -18,10 +18,10 @@ to stderr unless that write itself fails (exit `1`).
 |------|-----------|
 | `0` | Success |
 | `1` | Unexpected error, including a canceled context that is not an acquisition failure, or a failure writing the error line to stderr |
-| `2` | Usage: unknown flags, missing required flags, invalid `--color` / `--progress`, `--verbose` with `-q`, `--json` with `-o -`, offline `-o -`, bad `--server`, overwrite refused, `init` cancel, and other usage errors |
+| `2` | Usage: unknown flags or commands, extra operands, missing required flags, invalid `--color` / `--progress`, `--verbose` with `-q`, `--json` with `-o -`, offline `-o -`, bad `--server`, overwrite refused, `init` cancel, and other usage errors |
 | `3` | Invalid seed config, including an oversized seed tar at splice time |
 | `4` | SOPS decryption failure after a top-level `sops` key |
-| `5` | Acquisition or version resolution, including GPT-probe drift, empty cache directory, and a canceled fetch |
+| `5` | Acquisition or version resolution, including GPT-probe drift, empty cache directory, a canceled fetch, and a canceled read or splice of an already-verified image |
 | `6` | Failure writing a built artifact: image stream, rescue media, or publication |
 
 Wrapped errors keep the same code.
@@ -85,17 +85,22 @@ Goldens:
 | Field | Type | Meaning |
 |-------|------|---------|
 | `result.output` | string | `-o` path, or `-` when the image was streamed |
-| `result.resources_output` | string | `--resources-output` path; omitted when online |
+| `result.resources_output` | string | Rescue-media path, explicit or derived; omitted when online |
 | `result.type` | string | `iso` or `raw` |
 | `result.architecture` | string | `x86_64` or `aarch64` |
 | `result.version` | string | Resolved update version |
 | `result.channel` | string | Channel the version was selected from |
 | `result.seed_bytes` | integer | Spliced seed-tar size |
 | `result.sha256` | string | Lowercase hex SHA-256 of the stored image bytes |
-| `result.resources_sha256` | string | Lowercase hex SHA-256 of the rescue media; omitted when online |
+| `result.resources_sha256` | string | Lowercase hex SHA-256 of the rescue-media bytes produced by this invocation; omitted when online |
 
 `sha256` matches a second hash of the published file. For a `.gz`
 output it is the compressed stored bytes.
+
+`resources_sha256` authenticates the rescue-media bytes from that
+invocation. Raw rescue media is not byte-reproducible across builds:
+go-diskfs generates a GPT disk GUID and FAT volume serial for each build,
+so identical inputs can produce a different `resources_sha256`.
 
 ### validate
 
@@ -168,6 +173,10 @@ Settings that accept both a flag and an environment variable, highest first:
 
 `--json=false` and `--no-input=false` beat a true environment value.
 
+An empty `INCUSOS_BUILDER_CACHE_DIR` is an explicit value. It has the
+same effect as `--cache-dir ""` and does not fall through to the built-in
+default.
+
 Not in that table:
 
 | Variable | Effect |
@@ -185,14 +194,22 @@ Not in that table:
 | Stream | Content |
 |--------|---------|
 | stdout | Human success (summary, `configuration valid`, versions table, `wrote <path>`), `--json` envelopes, `-o -` image bytes, `init -o -` YAML, `--help`, `--version` |
-| stderr | Error reprint after every failure (including `--json`), overwrite prompt, `init` form, progress, log (`--verbose` debug, default warn and above, `-q` error only) |
+| stderr | Error line after failure (including `--json`), overwrite prompt, `init` form, step headers, percentage or bar updates, and two build-plan debug records when `--verbose` accompanies successful build work |
 
 `-q` suppresses the human success writers. It does not suppress
-`--json`, `-o -` artifact bytes, or `init -o -` YAML.
+`--json`, `-o -` artifact bytes, `init -o -` YAML, or stderr output,
+including step headers and enabled percentage updates.
 
+`--progress` controls percentage or bar updates, not step headers.
 `--progress auto` is pre-resolved to `never` unless both stdout and
 stderr are TTYs. `--json` or `-o -` further forces AUTO progress to
-`never`. Explicit `--progress always` / `never` is unchanged.
+`never`. Explicit `--progress always` / `never` is unchanged. Staged
+work still writes `==> <step>` headers when progress is `never`, and
+writes `done <step>` only after that step succeeds.
+
+`--verbose` adds only two build-plan debug records after `build` work
+succeeds. It has no observable effect on `validate`, `versions`, or
+`init`.
 
 `--color auto` is not pre-resolved by the CLI. The reporter then
 disables color if `NO_COLOR` is set, `TERM` is `dumb`, or the writer
@@ -200,7 +217,8 @@ is not a TTY. `always` and `never` override that.
 
 ## `-`
 
-`-` is the reserved stream sentinel (`-` or a path that cleans to `-`).
+`-` is the reserved stream sentinel. The same rule applies to a path
+that cleans to `-`, such as `./-`.
 
 | Use | Command | Meaning |
 |-----|---------|---------|
@@ -208,8 +226,9 @@ is not a TTY. `always` and `never` override that.
 | `-o -` | `build` | Write image bytes to stdout; no summary; no rescue media |
 | `-o -` | `init` | Write the starter YAML to stdout; no `wrote` line |
 
-`--resources-output -` is a usage error. `-` is not a valid image
-publication path; streaming is handled by `-o -` on `build`.
+`--resources-output -` (or another path that cleans to `-`) is a usage
+error. The sentinel is not a valid image publication path; streaming is
+handled by `-o -` on `build`.
 
 ## TTY, prompts, and `--no-input`
 

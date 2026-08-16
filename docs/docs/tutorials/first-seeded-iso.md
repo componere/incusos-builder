@@ -15,19 +15,26 @@ proving IncusOS consumed the seed is a separate manual check.
 
 ## Prerequisites
 
-- A clone of this repository. The project is not released; we will run
-  the CLI from source.
-- A Go toolchain that can build this module. From the repository root,
-  `go run ./cmd/incusos-builder --version` must work. If it does not,
-  install the pinned toolchain with `mise install` as described in
-  `CONTRIBUTING.md`.
+- A clone of this repository and [mise](https://mise.jdx.dev/) installed. The
+  project is not released, so we will build the CLI from source.
 - Network access to the default update server,
   `https://images.linuxcontainers.org/os`.
 - Enough free disk for the downloaded image, the content-addressed
   cache, and the ISO.
 
-Work from the repository root. In the commands below,
-`incusos-builder` means `go run ./cmd/incusos-builder`.
+From the repository root, install the pinned toolchain, build the binary, and
+create a scratch directory for the generated config and ISO:
+
+```bash
+mise install
+mise x -- moon run root:build
+IOB="$PWD/bin/incusos-builder"
+WORK=$(mktemp -d)
+cd "$WORK"
+```
+
+The commands below use the binary at `$IOB`. They write generated files under
+`$WORK`, not in the source checkout.
 
 ## What we are building
 
@@ -44,22 +51,24 @@ tar into the image's `seed-data` partition, and writes `seeded.iso`.
 ## 1. Confirm the CLI
 
 ```bash
-incusos-builder --version
+"$IOB" --version
 ```
 
 You should see two lines:
 
 ```text
 incusos-builder <version> (<commit>) built <date>
-incus-os API: v0.0.0-20260815030500-0f5b8057f2fc
+incus-os API: <version pinned in go.mod>
 ```
+
+The second line reports the incus-os API version pinned in `go.mod`.
 
 From this checkout the first line is `incusos-builder dev (none) built unknown`.
 
 ## 2. Write a starter config
 
 ```bash
-incusos-builder init --no-input -o config.yaml
+"$IOB" init --no-input -o config.yaml
 ```
 
 You should see:
@@ -99,7 +108,7 @@ rescue media.
 ## 4. Validate the seed config
 
 ```bash
-incusos-builder validate -f config.yaml --color never
+"$IOB" validate -f config.yaml --color never
 ```
 
 You should see:
@@ -118,7 +127,7 @@ path on stderr. For example, `image.type: disk` prints
 ## 5. Build the ISO
 
 ```bash
-incusos-builder build -f config.yaml -o seeded.iso --color never
+"$IOB" build -f config.yaml -o seeded.iso --color never
 ```
 
 `-f` and `-o` are required. The first run downloads the `stable`
@@ -154,8 +163,23 @@ test -f seeded.iso
 The published output is only `seeded.iso`. An online ISO build does not
 write a second resources file and does not build rescue media.
 
-`build` will not replace `seeded.iso` if that path already exists. Re-run
-with `--force`, or choose a new `-o` path.
+At an interactive terminal, an existing `seeded.iso` produces this prompt on
+stderr:
+
+```text
+overwrite existing output? [y/N] 
+```
+
+Enter `y` or `yes` to replace the file. Any other answer refuses the overwrite
+with exit `2`. With `--no-input`, in CI, or when either stdin or stdout is not a
+TTY, `build` does not prompt and prints:
+
+```text
+usage error: refusing to overwrite seeded.iso; re-run with --force
+```
+
+The refusal exits `2` and leaves the file unchanged. To replace it without a
+prompt, re-run with `--force`; otherwise, choose a new `-o` path.
 
 ## 7. Stop at the boot-acceptance boundary
 

@@ -41,10 +41,15 @@ procedure for that observation.
 
 ## Why HTTPS, and why a redirect still has to be HTTPS
 
-`--server` accepts an `https://` URL or an existing local directory. A
-plain `http://` value is rejected as a bad flag before any adapter runs.
-`NewHTTPSSource` also refuses a non-https base URL, so a caller that
-bypasses the flag still cannot construct the network source.
+`build` and `versions` use `--server` to select an `https://` URL or an
+existing local directory. For those commands, a plain `http://` value is
+rejected as a bad flag before any adapter runs. `NewHTTPSSource` also
+refuses a non-https base URL, so a caller that bypasses the flag still
+cannot construct the network source.
+
+`validate` intentionally performs no network or update-source
+validation. It ignores `--server` and validates only the seed config.
+`init` also does not use the flag.
 
 Every GET then checks the *final* response URL. A redirect to `http://`
 is refused. The comment in the client states the failure that matters: a

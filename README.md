@@ -18,7 +18,8 @@ Install [mise](https://mise.jdx.dev/), then:
 git clone https://github.com/componere/incusos-builder.git
 cd incusos-builder
 mise install
-go run ./cmd/incusos-builder --version
+mise x -- moon run root:build
+"$PWD/bin/incusos-builder" --version
 ```
 
 `mise install` provisions the pinned toolchain from `mise.toml` and `mise.lock`, including Go 1.26.4. `moon run root:build` writes `bin/incusos-builder`.
@@ -54,15 +55,25 @@ Replace `vX.Y.Z` with a published tag. No image has been published yet.
 
 ## Quick start
 
-From a source checkout, after `mise install`:
+From a source checkout, after completing the installation above:
 
 ```sh
-go run ./cmd/incusos-builder init --no-input
-go run ./cmd/incusos-builder validate -f config.yaml
-go run ./cmd/incusos-builder build -f config.yaml -o incusos.iso
+IOB="$PWD/bin/incusos-builder"
+WORK=$(mktemp -d)
+cd "$WORK"
+"$IOB" init --no-input
+"$IOB" validate -f config.yaml
+"$IOB" build -f config.yaml -o incusos.iso
 ```
 
-`init --no-input` writes a starter seed config at `config.yaml` (`iso`, `x86_64`, channel `stable`, online). Interactive `init` collects those image settings instead. `build` splices the seed config into a seed-data partition on the installer image. Offline seed configs also produce rescue media; pass `--resources-output` for that path.
+The generated config and ISO are in the scratch directory at `$WORK`, not in
+the source checkout. `init --no-input` writes a starter seed config at
+`config.yaml` (`iso`, `x86_64`, channel `stable`, online). Interactive `init`
+collects those image settings instead. `build` splices the seed config into a
+seed-data partition on the installer image. Offline seed configs also produce
+rescue media at a path derived from `-o`; `--resources-output` overrides that
+path. Passing `--resources-output` for an online config is a usage error (exit
+`2`).
 
 `build` fetches IncusOS images from `https://images.linuxcontainers.org/os` unless `--server` points at another HTTPS update server or a local mirror directory.
 

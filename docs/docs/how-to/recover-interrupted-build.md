@@ -55,14 +55,25 @@ directory can then hold any prefix of steps 2–6 plus
 `.<base>-*.tmp` files in the same directory
 (`os.CreateTemp` with pattern `.<base>-*.tmp`).
 
+In practice, a real `SIGKILL` against a cache-warm build normally
+leaves row 1 of the decision table below: temps are present, both
+finals are unchanged, and there is no `.bak`. The `.bak` restore
+branches describe a narrow crash state. Do not try to time a signal
+to manufacture that state.
+
 On a successful `--force`, leftover `.bak` files that step 6 could
 not delete are harmless. The CLI success envelope does not list
 them. Recovery is a rename or a delete after you accept the new
 finals.
 
-A file that appears at a final path during a non-`--force`
-publish is an output error (`output appeared during the build;
-re-run with --force`) and does not create a `.bak`.
+A file that appears at a final path during a non-`--force` publish
+fails with exit status `6`:
+
+```text
+output write failed: output appeared during the build; re-run with --force
+```
+
+This failure does not create a `.bak`.
 
 ## 1. Confirm the publisher is not running
 
@@ -76,7 +87,16 @@ In the destination directory, list the image path, the rescue-media
 path if this was an offline build, every `*.incusos-builder.bak`,
 and every `.<base>-*.tmp` next to those names.
 
+Use `sha256sum` when it is available (Linux and macOS 26 or later)
+and `shasum -a 256` on older macOS:
+
 ```bash
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256_file() { sha256sum -- "$@"; }
+else
+  sha256_file() { shasum -a 256 -- "$@"; }
+fi
+
 IMAGE=/absolute/path/seeded.img
 RESOURCES=/absolute/path/seeded.resources.img
 
@@ -84,7 +104,7 @@ for path in "$IMAGE" "$IMAGE.incusos-builder.bak" \
   "$RESOURCES" "$RESOURCES.incusos-builder.bak"; do
   if [ -e "$path" ]; then
     ls -l -- "$path"
-    sha256sum -- "$path"
+    sha256_file "$path"
   fi
 done
 ```
@@ -190,8 +210,8 @@ See [How to run incusos-builder in CI](./run-in-ci.md).
 ## Verification
 
 After a restore, each recovered final exists, the matching
-`.incusos-builder.bak` is gone, and `sha256sum` of the final matches
-the digest you recorded from that `.bak` in step 2.
+`.incusos-builder.bak` is gone, and the SHA-256 digest of the final
+matches the digest you recorded from that `.bak` in step 2.
 
 After you accept new finals, each intended output exists, leftover
 `.bak` files you chose to delete are gone, and no `.<base>-*.tmp`

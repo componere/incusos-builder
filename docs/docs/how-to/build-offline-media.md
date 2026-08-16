@@ -121,11 +121,36 @@ success includes:
 - `result.resources_sha256`: lowercase hex digest of the stored
   rescue media
 
-Confirm the published hashes against the files:
+Confirm the published hashes against the files. On Linux and macOS 26
+or later, run:
 
 ```bash
 sha256sum -- /absolute/path/seeded.img /absolute/path/seeded.resources.img
 ```
+
+On older macOS, run:
+
+```bash
+shasum -a 256 -- /absolute/path/seeded.img /absolute/path/seeded.resources.img
+```
+
+`result.resources_sha256` authenticates the rescue-media bytes from
+that invocation. It is not a reproducibility guarantee. Raw rescue
+media is not byte-reproducible across builds because go-diskfs
+generates a random GPT disk GUID and FAT32 volume serial. In five
+builds from one config, the installer digest was identical and all
+five rescue-media digests differed.
+
+On macOS, mount raw rescue media read-only before inspecting it:
+
+```bash
+hdiutil attach -readonly /absolute/path/seeded.resources.img
+```
+
+Alternatively, inspect a copy. A read-write mount makes macOS create
+`.fseventsd/fseventsd-uuid` in the FAT32 volume and changes the
+rescue-media digest. Do not compare a post-mount digest to
+`result.resources_sha256`.
 
 Without `--json`, the same fields print as a human summary
 (`output`, `resources_output`, `type`, `architecture`, `version`,
@@ -195,10 +220,12 @@ Answer `y` or `yes` to replace both artifacts. Any other answer, or
 end of input, refuses the build:
 
 ```text
-usage error: refusing to overwrite /absolute/path/seeded.img; re-run with --force
+usage error: refusing to overwrite /absolute/path/seeded.img, /absolute/path/seeded.resources.img; re-run with --force
 ```
 
-Exit status is `2`. The existing files are left unchanged.
+Exit status is `2`. This example assumes both final paths exist. The
+refusal lists each existing final, with the image first. Existing
+files are left unchanged.
 
 `--no-input`, a non-TTY stdin or stdout, or a set `CI` environment
 variable disables the prompt and uses the same refusal.
@@ -215,8 +242,12 @@ incusos-builder build --json --force \
 `--force` moves each existing final aside to
 `<path>.incusos-builder.bak`, then publishes rescue media first and
 the installer last. A handled failure restores the previous pair.
-Leftover `.incusos-builder.bak` files are harmless; rename them back
-onto the final paths if you need the previous artifacts.
+After a successful publish, best-effort cleanup normally deletes the
+`.bak` files. A backup remains usable only after an interruption in
+the narrow publish window or when that cleanup cannot remove it.
+Follow
+[How to recover an interrupted --force build](./recover-interrupted-build.md)
+before renaming or deleting a leftover backup.
 
 A file that appears at a final path after the pre-check, when
 replacement was not authorized, is refused with exit status `6`:

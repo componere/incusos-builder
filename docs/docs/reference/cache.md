@@ -90,9 +90,11 @@ A size or digest mismatch is
 The temp is deleted. No digest entry is left.
 
 If free space on the cache filesystem is below the declared size, the
-progress reporter emits `warning: cache free space below asset size`
-and continues. A space-query failure is ignored. Low space is never an
-error.
+reporter emits `warning: cache free space below asset size`
+and continues. This check runs before admission creates the cache
+directory. On first use, when the cache directory does not exist, it
+checks the nearest existing ancestor on the same filesystem. A
+space-query failure is ignored. Low space is never an error.
 
 ## Override
 
