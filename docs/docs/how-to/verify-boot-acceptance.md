@@ -6,19 +6,22 @@ description: Run the manual x86_64 Linux Incus boot-acceptance checklist before 
 # How to verify boot acceptance
 
 Run this checklist on an `x86_64` Linux Incus host before every release
-tag until a CI boot gate succeeds. Pass only when you observe install
-completion, a wiped installer seed, `RESCUE_DATA` detection, and the
-signed recovery payload taking effect. Network traffic, a changed file
-size, and source-overlay growth are not seed consumption.
+tag until a CI boot gate succeeds. Phase 5.2 did not observe seed
+consumption or recovery acceptance. Do not treat that probe, network
+traffic, a changed file size, or source-overlay growth as a pass.
+
+Pass only when you observe install completion, a wiped installer
+seed-data partition, `RESCUE_DATA` detection, and the signed recovery
+payload taking effect.
 
 Use one Incus VM for install and recovery. Copy the detached installed
 volume; do not clone the VM.
 
 ## Prerequisites
 
-- An `x86_64` Linux Incus host with `/dev/kvm`, QEMU 8.2 or newer, a
-  managed storage pool, and a managed network. This checklist uses
-  `default` and `incusbr0`.
+- An `x86_64` Linux Incus host with `/dev/kvm`, a managed storage
+  pool, and a managed network. This checklist uses `default` and
+  `incusbr0`.
 - A SPICE client (`remote-viewer` or `spicy`) for VGA.
 - VirtIO-SCSI for every IncusOS disk. VirtIO-BLK does not expose the
   drives IncusOS needs.
@@ -139,11 +142,11 @@ TPM into a VM. Higher `boot.priority` boots first, so the installer
 
 ## 4. Record the seed, then install
 
-The install seed is a tar archive at the start of the installer image's
-second partition.
+The install seed is a tar archive at the start of the installer
+image's seed-data partition.
 
 ```bash
-SEED_PART=$(lsblk -nrpo NAME,PARTN "$SOURCE_BLOCK" | awk '$2 == "2" {print $1; exit}')
+SEED_PART=$(lsblk -nrpo NAME,PARTLABEL "$SOURCE_BLOCK" | awk '$2 == "seed-data" {print $1; exit}')
 test -n "$SEED_PART"
 
 sudo dd if="$SEED_PART" bs=4M status=none \
@@ -186,7 +189,7 @@ test "$BEFORE" != "$AFTER"
 ! grep -Eq '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/seed.after.list"
 ```
 
-Both checks must pass: the second partition changed, and the
+Both checks must pass: the seed-data partition changed, and the
 `install.*` seed recorded before boot is no longer readable. Stop here
 if either check fails. Incus has no seed-consumption command; this
 readback is host-side evidence.

@@ -1,26 +1,23 @@
 # Security Policy
 
-This template expects generated projects to use GitHub private vulnerability reporting.
-Replace this file with the actual support policy before publishing a generated repository.
+## Supported versions
 
-## Supported Versions
+incusos-builder has no published release yet. Until the first GitHub release exists, there is no supported release line; development happens on the default branch.
 
-Do not claim support windows or release lines until the generated project actually maintains them.
-For a brand-new project, a short policy such as "only the latest release is supported" is usually enough.
+After a release is published, only the latest published release receives security fixes. Older tags and arbitrary commits are unsupported.
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-Report vulnerabilities privately through GitHub's private vulnerability reporting flow when it is enabled for the generated repository.
+Report vulnerabilities privately with [GitHub private vulnerability reporting](https://github.com/componere/incusos-builder/security/advisories/new).
 
-Do not use public GitHub issues, pull requests, discussions, chat channels, or other public forums for vulnerability reports.
+Do not use public GitHub issues, pull requests, discussions, or other public forums for vulnerability reports.
 
-When reporting a vulnerability, include as much of the following as possible:
+Include as much of the following as you can:
 
-- affected version, commit, or deployment identifier
+- affected version, commit, or image digest
 - a description of the issue and the security impact
 - steps to reproduce or a minimal proof of concept
-- any relevant logs, screenshots, or traces
-- any suggested mitigations or fixes, if available
+- logs, screenshots, or traces
+- any suggested mitigation
 
-If the project has a documented disclosure timeline, add it here.
-If not, keep the policy short and avoid inventing guarantees.
+There is no response-time or disclosure SLA. Published advisories, if any, appear on the repository's [security advisories](https://github.com/componere/incusos-builder/security/advisories) page.

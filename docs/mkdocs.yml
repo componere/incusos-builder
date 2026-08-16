@@ -35,8 +35,24 @@ theme:
 
 nav:
   - Home: index.md
+  - Tutorials:
+      - Build your first seeded ISO: tutorials/first-seeded-iso.md
   - How-to guides:
+      - Encrypt secrets with SOPS: how-to/sops-encryption.md
+      - Build offline media: how-to/build-offline-media.md
+      - Run in CI: how-to/run-in-ci.md
+      - Use a local mirror: how-to/use-local-mirror.md
+      - Recover an interrupted build: how-to/recover-interrupted-build.md
       - Verify boot acceptance: how-to/verify-boot-acceptance.md
+  - Reference:
+      - Configuration: reference/configuration.md
+      - CLI: reference/cli.md
+      - Automation: reference/automation.md
+      - Cache: reference/cache.md
+  - Explanation:
+      - Trust model: explanation/trust-model.md
+      - Seed injection: explanation/seed-injection.md
+      - Upstream version coupling: explanation/upstream-version-coupling.md
 
 plugins:
   - search
