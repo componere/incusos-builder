@@ -123,3 +123,41 @@ still blocked on this host (arm64, no /dev/kvm, local incus is a Homebrew
 client).
 
 Next: Wave 2 on request.
+
+## 2026-08-16 14:45 — Wave 2 track B executed
+
+Two-stage fan-out, never more than 4 agents live. Stage 1: BImage (SUP-03/04/07)
+and BRehearsal (SUP-12). When BImage messaged that the image was loaded, stage 2
+started: BRuntime (SUP-05/06) and BSbom (SUP-08/09/10).
+
+Result: **9/9 pass, 0 fail, 0 blocked.** Evidence in
+`.journal/005/WAVE2_TRACKB_RESULTS.md`; plan §8 track B table and §5 findings
+updated. Repo clean before and after per all four testers.
+
+Deliberate deviation: `root:e2e` (PRE-07-W2) was not run — it is track A's live
+pre-screen and nothing in track B depends on it. PRE-07-W2 logged as partial.
+
+Highlights:
+- SUP-04 proves the apk signing gate is real: apko fails at index signature
+  verification with the trusted set enumerated as exactly [wolfi-signing.rsa.pub],
+  no apko cache existed, no output tar and no :untrusted tag were produced.
+- SUP-05: container prints `dev (59c268b) built 2026-08-16T20:05:16Z`, byte-exact
+  against HEAD + .melange-vars.local.yaml; Go build info survives strip.
+- SUP-06: shell-less image, so runtime uid was proven with kernel-enforced
+  permission probes plus negative controls rather than a metadata read; gid
+  remains metadata-only and is stated as such.
+- SUP-12: run 31969505600 green, 4/4 jobs, 9 staged assets, 7m03s, and zero hits
+  for gh release upload / apko publish / cosign sign / docker push / ghcr.io.
+
+New findings: F-SUP-3 (image stamped with local offset via `git show -s
+--format=%cI` while binaries are UTC — a published release will be internally
+inconsistent), F-SUP-4 (three rehearsal assertions are silent on success),
+F-SBOM-1 (syft version is not pinned anywhere; only the action SHA is),
+F-SBOM-2/3/4, F-IMG-A/B/C. F-DOC-9 extended: `validate` ignores `--server`
+entirely, not merely tolerating plain http.
+
+Plan corrections D-9..D-12, chiefly: SUP-03 takes ~40 s on a warm OrbStack VM,
+not the 5–12 min budgeted.
+
+Remaining: track A (31 cases, live build chain — the expensive one) and track C
+(boot acceptance, still blocked on an x86_64 Linux Incus host).

@@ -2907,6 +2907,28 @@ Full evidence in `WAVE1_RESULTS.md`. 75/75 Wave 1 cases executed: 64 pass,
 | F-GATE-1 | high (dev workflow) | `root:format`/`root:lint` walk the gitignored `reference/incus-os/` clone and `.wt/` worktrees, so `moon run root:check` — which `CONTRIBUTING.md:57` calls the full local gate — cannot pass in a checkout that follows TECH_NOTES or uses the mandated Worktrunk flow. Scoped `golangci-lint fmt --diff ./cmd/... ./internal/...` is clean. | PRE-06, DOC-09 |
 | F-GATE-2 | advisory | A stale golangci-lint cache reports diagnostics for deleted worktree paths; `golangci-lint cache clean` clears it. | PRE-06 |
 
+### Found during Wave 2 track B execution (2026-08-16, commit 59c268b)
+
+Full evidence in `WAVE2_TRACKB_RESULTS.md`. 9/9 track B cases executed, all pass.
+
+| ID | Severity | Finding | Case |
+|----|----------|---------|------|
+| F-SUP-3 | cosmetic | The rehearsal stamps the **image** with a local-offset timestamp (`built 2026-08-16T11:57:26-07:00`) while the **binaries** carry UTC (`…T18:57:26Z`). `release-dry-run.yml:139` and `release.yml` both use `git show -s --format=%cI`. A published release will be internally inconsistent. | SUP-12 |
+| F-SUP-4 | observability | Three rehearsal assertions (architectures, uid 65532, SBOM count) are silent on success; only the step exit code distinguishes a pass from a regression. | SUP-12 |
+| F-SBOM-1 | supply chain | No file pins the **syft version**: all four `Install Syft` steps pin the action SHA but pass no `syft-version:`, so the attested SBOM can drift with the action's default. | SUP-09 |
+| F-SBOM-3 | informational | The apk purl namespace is `unknown` (`pkg:apk/unknown/incusos-builder@0.1.1-r0`), so scanners keying on namespace will not match Wolfi advisories. | SUP-08 |
+| F-SBOM-2 | plan | The apko **index** SBOM legitimately names no `incusos-builder`; only the per-arch document does. | SUP-08 |
+| F-SBOM-4 | positive | The index SBOM's `versionInfo` is the full HEAD commit — a provenance anchor independent of the ldflags stamp. | SUP-08 |
+| F-IMG-A | informational | `RepoDigests` is `[]` on a `docker load`-ed image; do not attempt digest-based cosign verification against `incusos-builder:dev`. | SUP-06 |
+| F-IMG-B | informational | `org.opencontainers.image.created` is four days before the build — apko reproducibility, not a stamping bug. | SUP-06 |
+| F-IMG-C | positive | The binary is root-owned `0755`, so the runtime uid cannot modify it. | SUP-06 |
+| F-DOC-9 (extended) | medium | `validate` does not merely accept a plain-http `--server`; it **ignores `--server` entirely** — the envelope is byte-identical with and without a bogus server. | SUP-10 |
+
+Track B plan corrections D-9..D-12 (SUP-03 costs ~40 s not 5–12 min; SUP-12's
+greps match only echoed script bodies; SUP-08's expectation must target the
+per-arch SBOM; SUP-09 cannot read a version from a `go install`-ed syft) are
+detailed in `WAVE2_TRACKB_RESULTS.md`.
+
 Plan defects found while executing (D-1..D-8) are listed in `WAVE1_RESULTS.md`;
 the load-bearing one is **D-1**: all eight `configuration.md` line ranges shifted
 +12 at commit 59c268b and must be re-derived, not trusted.
@@ -3139,7 +3161,7 @@ runs days later.
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| PRE-07-W2 |  |  |  |
+| PRE-07-W2 | partial | WAVE2_TRACKB_RESULTS.md | track B portion only; root:e2e deferred to track A |
 | ART-05 |  |  |  |
 | ART-06 |  |  |  |
 | ART-07 |  |  |  |
@@ -3176,15 +3198,15 @@ runs days later.
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| SUP-03 |  |  |  |
-| SUP-04 |  |  |  |
-| SUP-05 |  |  |  |
-| SUP-06 |  |  |  |
-| SUP-07 |  |  |  |
-| SUP-08 |  |  |  |
-| SUP-09 |  |  |  |
-| SUP-10 |  |  |  |
-| SUP-12 |  |  |  |
+| SUP-03 | pass | WAVE2_TRACKB_RESULTS.md | built in 39 s, not 5-12 min (D-9); both tags loaded, image 952969c4a012 |
+| SUP-04 | pass | WAVE2_TRACKB_RESULTS.md | apko exits 1 at index signature verification; no apko cache existed |
+| SUP-05 | pass | WAVE2_TRACKB_RESULTS.md | dev (59c268b) built 2026-08-16T20:05:16Z — byte-exact vs HEAD + vars file |
+| SUP-06 | pass | WAVE2_TRACKB_RESULTS.md | User=65532, entrypoint /usr/bin/incusos-builder; runtime uid proven kernel-side, gid metadata-only |
+| SUP-07 | pass | WAVE2_TRACKB_RESULTS.md | status --untracked-files=all empty; 9 paths each matched by an explicit .gitignore rule |
+| SUP-08 | pass | WAVE2_TRACKB_RESULTS.md | sbom-aarch64.spdx.json 19 pkgs / sbom-index.spdx.json 3 pkgs, both SPDX-2.3 (F-SBOM-2) |
+| SUP-09 | pass | WAVE2_TRACKB_RESULTS.md | syft v1.43.0 (self-reports [not provided]); 174 pkgs; 4 apk pkgs match apko (F-SBOM-1) |
+| SUP-10 | pass | WAVE2_TRACKB_RESULTS.md | envelope cmp-identical to golden; exactly one JSON doc on stdout; empty stdin exit 3 |
+| SUP-12 | pass | WAVE2_TRACKB_RESULTS.md | run 31969505600 success, 4/4 jobs, 9 assets, 0 publishing calls, 7m03s |
 
 ### Wave 2 — track C (boot acceptance, Linux host)
 
