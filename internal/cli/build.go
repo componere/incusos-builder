@@ -26,6 +26,8 @@ import (
 const (
 	// flagOutput is the -o/--output flag shared by build.
 	flagOutput = "output"
+	// cmdNameBuild is the build subcommand name.
+	cmdNameBuild = "build"
 	// flagResourcesOutput is the --resources-output flag.
 	flagResourcesOutput = "resources-output"
 	// flagForce is the --force overwrite flag.
@@ -106,7 +108,7 @@ func newBuildCommand(opts Options) *cobra.Command {
 // collaborators. Production uses [newBuildCommand].
 func newBuildCommandWith(opts Options, deps buildDeps) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "build",
+		Use:   cmdNameBuild,
 		Short: "Build seeded IncusOS installation media from a YAML config",
 		Long:  "Build seeded IncusOS installation media from a YAML config. -f - reads the config from stdin; -o - writes the image to stdout.",
 		Args:  cobra.NoArgs,
@@ -463,7 +465,7 @@ func writeBuildJSON(w io.Writer, payload buildResult) error {
 // writeBuildSummary prints the human-readable result block to w.
 func writeBuildSummary(color ux.ColorMode, w io.Writer, payload buildResult) {
 	rows := []ux.SummaryRow{
-		{Label: "output", Value: payload.Output},
+		{Label: flagOutput, Value: payload.Output},
 	}
 	if payload.ResourcesOutput != "" {
 		rows = append(rows, ux.SummaryRow{Label: "resources_output", Value: payload.ResourcesOutput})

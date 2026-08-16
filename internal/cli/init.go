@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	// cmdNameInit is the init subcommand name.
+	cmdNameInit = "init"
 	// flagInitOutput is the -o/--output flag for init.
 	flagInitOutput = "output"
 	// defaultInitOutput is the default path written by init.
@@ -87,7 +89,7 @@ type initResult struct {
 // the orchestrator wires AddCommand.
 func newInitCommand(opts Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "init",
+		Use:   cmdNameInit,
 		Short: "Write a starter config.yaml",
 		Long:  "Write a starter config.yaml. Interactive mode collects image settings; --no-input writes a commented example generated from the schema.",
 		Args:  cobra.NoArgs,
