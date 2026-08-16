@@ -66,3 +66,6 @@ Contract decision: plain http:// --server = usage error (exit 2), adapter https-
 Process: two agents wrote into main checkout again (Fixture transplanted; MediaAdapter self-caught earlier) — cwd-verification line now standard in contexts.
 Gates: root:check green; go test ./internal/... all ok.
 Next: PR; then Phase 5 (T3 live suite + boot gate attempt on Linux).
+
+## 2026-08-16 02:10 — Close
+Session closed. All five phase PRs squash-merged: #7 (rename), #8 (spikes), #9 (domain core), #11 (adapters), #12 (CLI); master at c755426; implementation worktrees removed; local master fast-forwarded. SUMMARY.md written; INDEX.md row set complete; TECH_NOTES.md refreshed with phase status, pins, invariants, and tooling gotchas. Hand-off: next session starts Phase 5 (T3 live suite + one time-boxed Linux boot-gate run — command line in docs/notes/spike-1e-boot.md attempt C), then Phase 6 (docs/release/v1).
