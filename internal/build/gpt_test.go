@@ -105,4 +105,3 @@ func gzipBytes(t *testing.T, p []byte) []byte {
 
 	return buf.Bytes()
 }
-

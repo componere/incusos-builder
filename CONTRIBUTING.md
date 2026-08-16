@@ -41,6 +41,8 @@ moon run root:format
 moon run root:lint
 moon run root:build
 moon run root:test
+moon run root:check-upstream   # incus-osd must stay a type-only dependency
+moon run root:mocks            # regenerate the mockery mocks in .mockery.yml
 go run ./cmd/incusos-builder --version
 ```
 

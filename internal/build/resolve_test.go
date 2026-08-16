@@ -68,12 +68,16 @@ func TestResolve(t *testing.T) {
 				{Update: apiimages.Update{
 					Version:  "202608102114",
 					Channels: []string{"stable"},
-					Files:    []apiimages.UpdateFile{file("aarch64/IncusOS_202608102114.img.gz", ArchAarch64, apiimages.UpdateFileTypeImageRaw)},
+					Files: []apiimages.UpdateFile{
+						file("aarch64/IncusOS_202608102114.img.gz", ArchAarch64, apiimages.UpdateFileTypeImageRaw),
+					},
 				}},
 				{Update: apiimages.Update{
 					Version:  "202608021451",
 					Channels: []string{"testing"},
-					Files:    []apiimages.UpdateFile{file("aarch64/IncusOS_202608021451.img.gz", ArchAarch64, apiimages.UpdateFileTypeImageRaw)},
+					Files: []apiimages.UpdateFile{
+						file("aarch64/IncusOS_202608021451.img.gz", ArchAarch64, apiimages.UpdateFileTypeImageRaw),
+					},
 				}},
 			}},
 			wantVersion: "202608021451",
@@ -162,7 +166,7 @@ func TestResolve(t *testing.T) {
 			plan, err := Resolve(tt.spec, tt.index)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				assert.ErrorIs(t, err, tt.wantErr)
+				require.ErrorIs(t, err, tt.wantErr)
 				if tt.errContains != "" {
 					assert.Contains(t, err.Error(), tt.errContains)
 				}
@@ -188,7 +192,7 @@ func TestResolveUnknownImageType(t *testing.T) {
 
 	_, err := Resolve(Spec{Type: "qcow2", Architecture: ArchAarch64, Channel: "stable"}, sampleIndex())
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrVersionNotFound)
+	require.ErrorIs(t, err, ErrVersionNotFound)
 	assert.Contains(t, err.Error(), "unknown image type")
 }
 

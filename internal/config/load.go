@@ -74,7 +74,7 @@ func readConfig(path string, stdin io.Reader) ([]byte, error) {
 		}
 		return raw, nil
 	}
-	raw, err := os.ReadFile(path) //nolint:gosec // path is the caller-supplied config file
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: read config: %w", ErrConfig, err)
 	}
@@ -118,13 +118,14 @@ func formatLoadError(le *yaml.LoadError) string {
 	return sanitizeYAMLMessage(le.Message)
 }
 
-// parseUnknownField extracts field and Go type from a KnownFields error message.
-func parseUnknownField(msg string) (field, typeName string, ok bool) {
+// parseUnknownField extracts the YAML field name and Go type from a KnownFields
+// error message. The boolean is false when msg is not a KnownFields diagnostic.
+func parseUnknownField(msg string) (string, string, bool) {
 	rest, found := strings.CutPrefix(msg, unknownPrefix)
 	if !found {
 		return "", "", false
 	}
-	field, typeName, found = strings.Cut(rest, unknownMid)
+	field, typeName, found := strings.Cut(rest, unknownMid)
 	if !found || field == "" || typeName == "" {
 		return "", "", false
 	}
@@ -191,7 +192,7 @@ func unknownFieldMessage(path string) string {
 func sanitizeYAMLMessage(msg string) string {
 	var b strings.Builder
 	inQuote := byte(0)
-	for i := 0; i < len(msg); i++ {
+	for i := range len(msg) {
 		c := msg[i]
 		if inQuote != 0 {
 			if c == inQuote {

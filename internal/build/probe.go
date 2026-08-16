@@ -3,8 +3,11 @@ package build
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/bits"
 	"unicode/utf16"
 
 	"github.com/klauspost/pgzip"
@@ -47,14 +50,10 @@ type seedPartition struct {
 }
 
 // probe opens handle (Open #1), gunzips the decompressed head, and locates
-// the GPT seed-data partition. Drift from [productionSeedStart] or an
-// unreadable table wraps [update.ErrFetch] (read-side, ARCHITECTURE §6).
-func probe(ctx context.Context, handle VerifiedAsset) (seedPartition, error) {
-	return probeAt(ctx, handle, productionSeedStart)
-}
-
-// probeAt is probe with an explicit expected start byte.
-func probeAt(ctx context.Context, handle VerifiedAsset, expectedStart int64) (seedPartition, error) {
+// the GPT seed-data partition. Drift from expectedStart or an unreadable
+// table wraps [update.ErrFetch] (read-side, ARCHITECTURE §6). Production
+// Build passes [productionSeedStart]; tests inject a compact fixture offset.
+func probe(ctx context.Context, handle VerifiedAsset, expectedStart int64) (seedPartition, error) {
 	rc, err := handle.Open(ctx)
 	if err != nil {
 		return seedPartition{}, fmt.Errorf("%w: %w", update.ErrFetch, err)
@@ -107,10 +106,17 @@ func parseGPT(r io.Reader) (seedPartition, error) {
 		return seedPartition{}, fmt.Errorf("implausible GPT: nparts=%d esize=%d", nparts, esize)
 	}
 
-	entriesOff := int(partLBA) * secsz
-	entriesLen := int(nparts) * int(esize)
+	entriesOff, err := gptIndex(partLBA, secsz)
+	if err != nil {
+		return seedPartition{}, err
+	}
 
-	if entriesOff < 0 || entriesOff+entriesLen > len(data) {
+	entriesLen, err := gptEntriesLen(nparts, esize)
+	if err != nil {
+		return seedPartition{}, err
+	}
+
+	if entriesOff < 0 || entriesOff > len(data) || entriesLen > len(data)-entriesOff {
 		return seedPartition{}, fmt.Errorf(
 			"GPT entry array at LBA %d does not fit in the streamed head",
 			partLBA,
@@ -119,7 +125,8 @@ func parseGPT(r io.Reader) (seedPartition, error) {
 
 	entries := data[entriesOff : entriesOff+entriesLen]
 	for i := range int(nparts) {
-		entry := entries[i*int(esize) : (i+1)*int(esize)]
+		off := i * int(esize)
+		entry := entries[off : off+int(esize)]
 		if partitionTypeZero(entry[:gptEntryTypeLen]) {
 			continue
 		}
@@ -131,17 +138,79 @@ func parseGPT(r io.Reader) (seedPartition, error) {
 
 		first := binary.LittleEndian.Uint64(entry[gptEntryFirstOff : gptEntryFirstOff+8])
 		last := binary.LittleEndian.Uint64(entry[gptEntryLastOff : gptEntryLastOff+8])
-		if last < first {
-			return seedPartition{}, fmt.Errorf("seed-data last LBA %d < first LBA %d", last, first)
+		start, length, err := partitionRange(first, last, secsz)
+		if err != nil {
+			return seedPartition{}, err
 		}
 
-		return seedPartition{
-			StartByte: int64(first) * int64(secsz),
-			Length:    int64(last-first+1) * int64(secsz),
-		}, nil
+		return seedPartition{StartByte: start, Length: length}, nil
 	}
 
-	return seedPartition{}, fmt.Errorf("no seed-data partition in GPT")
+	return seedPartition{}, errors.New("no seed-data partition in GPT")
+}
+
+// gptBytes converts an untrusted LBA count to a byte length. Malicious GPT
+// headers can set LBA fields to values whose product with the sector size
+// overflows int64; that must fail closed, not wrap.
+func gptBytes(lba uint64, secsz int) (int64, error) {
+	if secsz <= 0 {
+		return 0, fmt.Errorf("invalid sector size %d", secsz)
+	}
+
+	hi, lo := bits.Mul64(lba, uint64(secsz))
+	if hi != 0 || lo > uint64(math.MaxInt64) {
+		return 0, fmt.Errorf("GPT LBA %d overflows at sector size %d", lba, secsz)
+	}
+
+	return int64(lo), nil
+}
+
+// gptIndex is gptBytes for a slice index into the streamed GPT head.
+func gptIndex(lba uint64, secsz int) (int, error) {
+	off, err := gptBytes(lba, secsz)
+	if err != nil {
+		return 0, err
+	}
+
+	if off > int64(math.MaxInt) {
+		return 0, fmt.Errorf("GPT LBA %d overflows addressable range at sector size %d", lba, secsz)
+	}
+
+	return int(off), nil
+}
+
+// gptEntriesLen is the GPT entry-array size. nparts and esize come from an
+// untrusted header; the product must fit in int because it indexes a slice.
+func gptEntriesLen(nparts, esize uint32) (int, error) {
+	hi, lo := bits.Mul64(uint64(nparts), uint64(esize))
+	if hi != 0 || lo > uint64(math.MaxInt) {
+		return 0, fmt.Errorf("GPT entry array size overflows: nparts=%d esize=%d", nparts, esize)
+	}
+
+	return int(lo), nil
+}
+
+// partitionRange is the seed-data [first, last] LBA span in bytes.
+func partitionRange(first, last uint64, secsz int) (int64, int64, error) {
+	if last < first {
+		return 0, 0, fmt.Errorf("seed-data last LBA %d < first LBA %d", last, first)
+	}
+
+	if last-first == math.MaxUint64 {
+		return 0, 0, fmt.Errorf("seed-data span overflows: first LBA %d last LBA %d", first, last)
+	}
+
+	start, err := gptBytes(first, secsz)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	length, err := gptBytes(last-first+1, secsz)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return start, length, nil
 }
 
 // findGPTHeader returns the logical sector size and header byte offset.
@@ -157,7 +226,7 @@ func findGPTHeader(data []byte) (int, int, error) {
 		}
 	}
 
-	return 0, 0, fmt.Errorf("no EFI PART signature at LBA1 (512, 2048, or 4096)")
+	return 0, 0, errors.New("no EFI PART signature at LBA1 (512, 2048, or 4096)")
 }
 
 // partitionTypeZero reports whether the 16-byte type GUID is unset.

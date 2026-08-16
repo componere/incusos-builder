@@ -88,7 +88,7 @@ func runBuild(
 	rep.Done(stepAcquire)
 	rep.Step(stepProbe)
 
-	part, err := probeAt(ctx, image, expectedStart)
+	part, err := probe(ctx, image, expectedStart)
 	if err != nil {
 		return Result{}, err
 	}
@@ -153,7 +153,7 @@ func runBuild(
 // splice opens handle (Open #2), gunzips, copies [0, offset), writes tar,
 // discards len(tar) from the source, then copies the remainder. Read-side
 // errors wrap [update.ErrFetch]; write-side errors wrap [ErrOutput]. There
-// is no bare io.Copy across ports (ARCHITECTURE §6, P2).
+// is no bare [io.Copy] across ports (ARCHITECTURE §6, P2).
 func splice(
 	ctx context.Context,
 	handle VerifiedAsset,
@@ -188,7 +188,8 @@ func splice(
 		return written, fmt.Errorf("%w: %w", ErrOutput, err)
 	}
 
-	if err := discardN(ctx, zr, int64(len(tarBytes)), buf); err != nil {
+	err = discardN(ctx, zr, int64(len(tarBytes)), buf)
+	if err != nil {
 		return written, err
 	}
 
@@ -241,7 +242,7 @@ func writeRescue(
 // preserving the per-arch prefix (update/aarch64/incus.raw.gz) the way
 // upstream buildImage joins the filename onto update/.
 func rescueRelPath(filename string) string {
-	return rescueTreePrefix + path.Clean("/"+filename)[1:]
+	return rescueTreePrefix + path.Clean("/" + filename)[1:]
 }
 
 // copyN copies exactly n bytes from src to dst using buf. A short source
@@ -359,7 +360,7 @@ func writeAll(dst io.Writer, p []byte) (int64, error) {
 		}
 
 		if n == 0 {
-			return int64(written), fmt.Errorf("short write")
+			return int64(written), errors.New("short write")
 		}
 	}
 

@@ -3,7 +3,9 @@ package build
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"io"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -68,9 +70,9 @@ func TestProbeShiftedPartitionWrapsErrFetch(t *testing.T) {
 	img := makeGPTImage(t, sector512, 8, 15)
 	handle := staticAsset{gz: gzipBytes(t, img.Bytes)}
 
-	_, err := probeAt(context.Background(), handle, img.Start+512)
+	_, err := probe(context.Background(), handle, img.Start+512)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, update.ErrFetch)
 	assert.Contains(t, err.Error(), "seed-data starts at byte")
 }
 
@@ -110,9 +112,33 @@ func TestProbeUnreadableGzipWrapsErrFetch(t *testing.T) {
 	t.Parallel()
 
 	handle := staticAsset{gz: []byte("not-gzip")}
-	_, err := probeAt(context.Background(), handle, 0)
+	_, err := probe(context.Background(), handle, 0)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, update.ErrFetch)
+}
+
+func TestParseGPTRejectsOverflowingEntryLBA(t *testing.T) {
+	t.Parallel()
+
+	img := makeGPTImage(t, sector512, 8, 15)
+	binary.LittleEndian.PutUint64(img.Bytes[sector512+gptPartLBAOff:], math.MaxUint64)
+
+	_, err := parseGPT(bytes.NewReader(img.Bytes))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "overflows")
+}
+
+func TestParseGPTRejectsOverflowingPartitionRange(t *testing.T) {
+	t.Parallel()
+
+	img := makeGPTImage(t, sector512, 8, 15)
+	entry := img.Bytes[2*sector512 : 2*sector512+gptMinEntrySize]
+	binary.LittleEndian.PutUint64(entry[gptEntryFirstOff:], math.MaxUint64)
+	binary.LittleEndian.PutUint64(entry[gptEntryLastOff:], math.MaxUint64)
+
+	_, err := parseGPT(bytes.NewReader(img.Bytes))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "overflows")
 }
 
 // staticAsset is a VerifiedAsset over fixed gzip bytes. Tests use it only as

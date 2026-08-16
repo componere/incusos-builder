@@ -8,67 +8,48 @@ import (
 	"github.com/componere/incusos-builder/internal/build"
 )
 
+// validationCase is one row of the §4 parse-validation matrix.
+type validationCase struct {
+	// name is the subtest name.
+	name string
+	// yaml is the document to parse.
+	yaml string
+	// wantErr is the expected sentinel, or nil on success.
+	wantErr error
+	// path is a field path that must appear in the error.
+	path string
+	// contain is extra error text that must appear.
+	contain string
+	// forbid is text that must not leak into the error.
+	forbid string
+	// check inspects the decoded spec on success.
+	check func(*testing.T, build.Spec)
+}
+
 // TestParseValidationRules covers every §4 check, positive and negative.
 func TestParseValidationRules(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name    string
-		yaml    string
-		wantErr error
-		path    string
-		contain string
-		forbid  string
-		check   func(*testing.T, build.Spec)
-	}{
+	tests := []validationCase{
 		{
-			name: "iso x86_64",
-			yaml: minimalYAML("iso", "x86_64"),
-			check: func(t *testing.T, spec build.Spec) {
-				t.Helper()
-				if spec.Type != build.ImageTypeISO {
-					t.Fatalf("Type = %q, want iso", spec.Type)
-				}
-				if spec.Architecture != build.ArchX8664 {
-					t.Fatalf("Architecture = %q, want x86_64", spec.Architecture)
-				}
-				if spec.Channel != build.DefaultChannel {
-					t.Fatalf("Channel = %q, want %q", spec.Channel, build.DefaultChannel)
-				}
-			},
+			name:  "iso x86_64",
+			yaml:  minimalYAML("iso", "x86_64"),
+			check: assertISOX8664,
 		},
 		{
-			name: "raw aarch64",
-			yaml: minimalYAML("raw", "aarch64"),
-			check: func(t *testing.T, spec build.Spec) {
-				t.Helper()
-				if spec.Type != build.ImageTypeRaw {
-					t.Fatalf("Type = %q, want raw", spec.Type)
-				}
-				if spec.Architecture != build.ArchAarch64 {
-					t.Fatalf("Architecture = %q, want aarch64", spec.Architecture)
-				}
-			},
+			name:  "raw aarch64",
+			yaml:  minimalYAML("raw", "aarch64"),
+			check: assertRawAarch64,
 		},
 		{
-			name: "channel omitted defaults to stable",
-			yaml: "version: 1\nimage:\n  type: iso\n  architecture: x86_64\n",
-			check: func(t *testing.T, spec build.Spec) {
-				t.Helper()
-				if spec.Channel != build.DefaultChannel {
-					t.Fatalf("Channel = %q, want stable", spec.Channel)
-				}
-			},
+			name:  "channel omitted defaults to stable",
+			yaml:  "version: 1\nimage:\n  type: iso\n  architecture: x86_64\n",
+			check: assertDefaultChannel,
 		},
 		{
-			name: "custom channel preserved",
-			yaml: "version: 1\nimage:\n  type: iso\n  architecture: x86_64\n  channel: daily\n",
-			check: func(t *testing.T, spec build.Spec) {
-				t.Helper()
-				if spec.Channel != "daily" {
-					t.Fatalf("Channel = %q, want daily", spec.Channel)
-				}
-			},
+			name:  "custom channel preserved",
+			yaml:  "version: 1\nimage:\n  type: iso\n  architecture: x86_64\n  channel: daily\n",
+			check: assertCustomChannel,
 		},
 		{
 			name:  "seed versions default to 1",
@@ -206,35 +187,7 @@ image:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			spec, err := Parse([]byte(tt.yaml))
-			if tt.wantErr == nil {
-				if err != nil {
-					t.Fatalf("Parse() error = %v", err)
-				}
-				if tt.check != nil {
-					tt.check(t, spec)
-				}
-				return
-			}
-			if err == nil {
-				t.Fatal("Parse() error = nil, want error")
-			}
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("Parse() error = %v, want %v", err, tt.wantErr)
-			}
-			msg := err.Error()
-			if tt.path != "" && !strings.Contains(msg, tt.path) {
-				t.Fatalf("error %q does not name field path %q", msg, tt.path)
-			}
-			if tt.contain != "" && !strings.Contains(msg, tt.contain) {
-				t.Fatalf("error %q does not contain %q", msg, tt.contain)
-			}
-			if tt.forbid != "" && strings.Contains(msg, tt.forbid) {
-				t.Fatalf("error %q leaked secret value %q", msg, tt.forbid)
-			}
-			if errors.Is(err, ErrDecrypt) {
-				t.Fatalf("validation error wrapped ErrDecrypt: %v", err)
-			}
+			runValidationCase(t, tt)
 		})
 	}
 }
@@ -300,6 +253,81 @@ seeds:
     version: "1"
     check_frequency: 6h
 `
+
+// runValidationCase executes one §4 parse-validation matrix row.
+func runValidationCase(t *testing.T, tt validationCase) {
+	t.Helper()
+	spec, err := Parse([]byte(tt.yaml))
+	if tt.wantErr == nil {
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if tt.check != nil {
+			tt.check(t, spec)
+		}
+		return
+	}
+	if err == nil {
+		t.Fatal("Parse() error = nil, want error")
+	}
+	if !errors.Is(err, tt.wantErr) {
+		t.Fatalf("Parse() error = %v, want %v", err, tt.wantErr)
+	}
+	msg := err.Error()
+	if tt.path != "" && !strings.Contains(msg, tt.path) {
+		t.Fatalf("error %q does not name field path %q", msg, tt.path)
+	}
+	if tt.contain != "" && !strings.Contains(msg, tt.contain) {
+		t.Fatalf("error %q does not contain %q", msg, tt.contain)
+	}
+	if tt.forbid != "" && strings.Contains(msg, tt.forbid) {
+		t.Fatalf("error %q leaked secret value %q", msg, tt.forbid)
+	}
+	if errors.Is(err, ErrDecrypt) {
+		t.Fatalf("validation error wrapped ErrDecrypt: %v", err)
+	}
+}
+
+// assertISOX8664 checks the iso/x86_64 happy path including the default channel.
+func assertISOX8664(t *testing.T, spec build.Spec) {
+	t.Helper()
+	if spec.Type != build.ImageTypeISO {
+		t.Fatalf("Type = %q, want iso", spec.Type)
+	}
+	if spec.Architecture != build.ArchX8664 {
+		t.Fatalf("Architecture = %q, want x86_64", spec.Architecture)
+	}
+	if spec.Channel != build.DefaultChannel {
+		t.Fatalf("Channel = %q, want %q", spec.Channel, build.DefaultChannel)
+	}
+}
+
+// assertRawAarch64 checks the raw/aarch64 happy path.
+func assertRawAarch64(t *testing.T, spec build.Spec) {
+	t.Helper()
+	if spec.Type != build.ImageTypeRaw {
+		t.Fatalf("Type = %q, want raw", spec.Type)
+	}
+	if spec.Architecture != build.ArchAarch64 {
+		t.Fatalf("Architecture = %q, want aarch64", spec.Architecture)
+	}
+}
+
+// assertDefaultChannel checks that an omitted channel becomes stable.
+func assertDefaultChannel(t *testing.T, spec build.Spec) {
+	t.Helper()
+	if spec.Channel != build.DefaultChannel {
+		t.Fatalf("Channel = %q, want stable", spec.Channel)
+	}
+}
+
+// assertCustomChannel checks that an explicit channel is preserved.
+func assertCustomChannel(t *testing.T, spec build.Spec) {
+	t.Helper()
+	if spec.Channel != "daily" {
+		t.Fatalf("Channel = %q, want daily", spec.Channel)
+	}
+}
 
 func minimalYAML(imageType, arch string) string {
 	return "version: 1\nimage:\n  type: " + imageType + "\n  architecture: " + arch + "\n"

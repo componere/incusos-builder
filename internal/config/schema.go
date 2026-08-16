@@ -22,7 +22,7 @@ const unknownFieldHint = "unknown to incus-os " + pinnedIncusOS + "; a newer inc
 // diskEncryptionDocs is the upstream page that documents encryption recovery keys.
 const diskEncryptionDocs = "https://linuxcontainers.org/incus-os/docs/main/reference/system/security/"
 
-// stdinPath selects os.Stdin in [Load].
+// stdinPath selects [os.Stdin] in [Load].
 const stdinPath = "-"
 
 // document is the version: 1 config file decoded from YAML.

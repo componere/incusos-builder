@@ -49,38 +49,54 @@ func applyDefaults(doc *document) {
 
 // defaultSeedVersions sets omitted per-seed version fields to "1".
 func defaultSeedVersions(s *seeds) {
-	if s.Applications != nil && s.Applications.Version == "" {
-		s.Applications.Version = defaultSeedVersion
+	for _, version := range presentSeedVersions(s) {
+		setDefaultVersion(version)
 	}
-	if s.Incus != nil && s.Incus.Version == "" {
-		s.Incus.Version = defaultSeedVersion
+}
+
+// presentSeedVersions returns Version fields of every non-nil seed section.
+func presentSeedVersions(s *seeds) []*string {
+	var out []*string
+	if s.Applications != nil {
+		out = append(out, &s.Applications.Version)
 	}
-	if s.Install != nil && s.Install.Version == "" {
-		s.Install.Version = defaultSeedVersion
+	if s.Incus != nil {
+		out = append(out, &s.Incus.Version)
 	}
-	if s.MigrationManager != nil && s.MigrationManager.Version == "" {
-		s.MigrationManager.Version = defaultSeedVersion
+	if s.Install != nil {
+		out = append(out, &s.Install.Version)
 	}
-	if s.Network != nil && s.Network.Version == "" {
-		s.Network.Version = defaultSeedVersion
+	if s.MigrationManager != nil {
+		out = append(out, &s.MigrationManager.Version)
 	}
-	if s.OperationsCenter != nil && s.OperationsCenter.Version == "" {
-		s.OperationsCenter.Version = defaultSeedVersion
+	if s.Network != nil {
+		out = append(out, &s.Network.Version)
 	}
-	if s.Provider != nil && s.Provider.Version == "" {
-		s.Provider.Version = defaultSeedVersion
+	if s.OperationsCenter != nil {
+		out = append(out, &s.OperationsCenter.Version)
 	}
-	if s.Services != nil && s.Services.Version == "" {
-		s.Services.Version = defaultSeedVersion
+	if s.Provider != nil {
+		out = append(out, &s.Provider.Version)
 	}
-	if s.Update != nil && s.Update.Version == "" {
-		s.Update.Version = defaultSeedVersion
+	if s.Services != nil {
+		out = append(out, &s.Services.Version)
 	}
-	if s.Kernel != nil && s.Kernel.Version == "" {
-		s.Kernel.Version = defaultSeedVersion
+	if s.Update != nil {
+		out = append(out, &s.Update.Version)
 	}
-	if s.Security != nil && s.Security.Version == "" {
-		s.Security.Version = defaultSeedVersion
+	if s.Kernel != nil {
+		out = append(out, &s.Kernel.Version)
+	}
+	if s.Security != nil {
+		out = append(out, &s.Security.Version)
+	}
+	return out
+}
+
+// setDefaultVersion fills an omitted seed version with "1".
+func setDefaultVersion(version *string) {
+	if *version == "" {
+		*version = defaultSeedVersion
 	}
 }
 

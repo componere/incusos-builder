@@ -13,15 +13,23 @@ import (
 
 const ageKeyPath = "testdata/age.key"
 
+// sopsCase is one row of the SOPS parse matrix.
+type sopsCase struct {
+	// name is the subtest name.
+	name string
+	// file is the fixture path under testdata/.
+	file string
+	// setKey installs the test age key when true.
+	setKey bool
+	// wantErr is the expected sentinel, or nil on success.
+	wantErr error
+	// check inspects the decoded spec on success.
+	check func(*testing.T, build.Spec)
+}
+
 // TestParseSOPSMatrix covers detection, round-trip, and every decrypt failure.
 func TestParseSOPSMatrix(t *testing.T) {
-	tests := []struct {
-		name    string
-		file    string
-		setKey  bool
-		wantErr error
-		check   func(*testing.T, build.Spec)
-	}{
+	tests := []sopsCase{
 		{
 			name:   "valid encrypted round-trips",
 			file:   "testdata/encrypted.yaml",
@@ -68,33 +76,7 @@ func TestParseSOPSMatrix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isolateSOPS(t)
-			if tt.setKey {
-				setAgeKey(t)
-			}
-			raw, err := os.ReadFile(tt.file)
-			if err != nil {
-				t.Fatalf("read fixture: %v", err)
-			}
-			spec, err := Parse(raw)
-			if tt.wantErr == nil {
-				if err != nil {
-					t.Fatalf("Parse() error = %v", err)
-				}
-				if tt.check != nil {
-					tt.check(t, spec)
-				}
-				return
-			}
-			if err == nil {
-				t.Fatal("Parse() error = nil, want error")
-			}
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("Parse() error = %v, want %v", err, tt.wantErr)
-			}
-			if errors.Is(err, ErrConfig) {
-				t.Fatalf("decrypt-path error fell through to ErrConfig: %v", err)
-			}
+			runSOPSCase(t, tt)
 		})
 	}
 }
@@ -171,6 +153,38 @@ func TestHasTopLevelSOPSDetectsKey(t *testing.T) {
 	}
 }
 
+// runSOPSCase executes one SOPS parse matrix row.
+func runSOPSCase(t *testing.T, tt sopsCase) {
+	t.Helper()
+	isolateSOPS(t)
+	if tt.setKey {
+		setAgeKey(t)
+	}
+	raw, err := os.ReadFile(tt.file)
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	spec, err := Parse(raw)
+	if tt.wantErr == nil {
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if tt.check != nil {
+			tt.check(t, spec)
+		}
+		return
+	}
+	if err == nil {
+		t.Fatal("Parse() error = nil, want error")
+	}
+	if !errors.Is(err, tt.wantErr) {
+		t.Fatalf("Parse() error = %v, want %v", err, tt.wantErr)
+	}
+	if errors.Is(err, ErrConfig) {
+		t.Fatalf("decrypt-path error fell through to ErrConfig: %v", err)
+	}
+}
+
 func isolateSOPS(t *testing.T) {
 	t.Helper()
 	home := t.TempDir()
@@ -182,19 +196,17 @@ func isolateSOPS(t *testing.T) {
 	unsetForTest(t, "SOPS_AGE_KEY_CMD")
 }
 
+// unsetForTest removes key for the rest of the test. [testing.T] has no Unsetenv
+// in this toolchain; [testing.T.Setenv] registers restore of a previously
+// present value, then [os.Unsetenv] drops it for the test body.
 func unsetForTest(t *testing.T, key string) {
 	t.Helper()
-	orig, had := os.LookupEnv(key)
+	if orig, had := os.LookupEnv(key); had {
+		t.Setenv(key, orig)
+	}
 	if err := os.Unsetenv(key); err != nil {
 		t.Fatalf("unset %s: %v", key, err)
 	}
-	t.Cleanup(func() {
-		if !had {
-			_ = os.Unsetenv(key)
-			return
-		}
-		_ = os.Setenv(key, orig)
-	})
 }
 
 func setAgeKey(t *testing.T) {

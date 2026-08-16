@@ -3,8 +3,10 @@ package build_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"io"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,22 +27,23 @@ const (
 	testVersion = "202608102114"
 	testImage   = "aarch64/IncusOS_202608102114.img.gz"
 	testApp     = "aarch64/incus.raw.gz"
+	testTar     = "SEED-TAR-BYTES"
 )
 
-// TestBuildSplicesSeedTar checks prefix/tar/suffix equality and that the
-// image handle is opened exactly twice (probe, then splice).
+// TestBuildSplicesSeedTar checks prefix/tar/suffix equality (by digest) and
+// that the image handle is opened exactly twice (probe, then splice).
 func TestBuildSplicesSeedTar(t *testing.T) {
 	t.Parallel()
 
 	img, gz, index, imageFile := fixtureImage(t)
-	tar := []byte("SEED-TAR-BYTES")
+	tar := []byte(testTar)
 	require.Less(t, int64(len(tar)), img.Length)
 
 	src := updatemocks.NewMockImageSource(t)
 	image := updatemocks.NewMockVerifiedAsset(t)
 	rescue := mediamocks.NewMockRescueWriter(t)
 	rep := uxmocks.NewMockReporter(t)
-	expectReporter(rep)
+	expectReporter(rep, 5, 5)
 
 	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
 	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
@@ -53,17 +56,20 @@ func TestBuildSplicesSeedTar(t *testing.T) {
 		src,
 		rescue,
 		rep,
+		stubRender(tar),
 		&out,
 		"",
-		stubRender(tar),
 		img.Start,
 	)
 	require.NoError(t, err)
 	assert.Equal(t, testVersion, result.Version)
 	assert.Equal(t, int64(len(tar)), result.SeedBytes)
 	assert.False(t, result.Offline)
-	assert.Equal(t, spliced(img.Bytes, img.Start, tar), out.Bytes())
 	assert.Equal(t, int64(len(img.Bytes)), result.BytesWritten)
+
+	want := spliced(img.Bytes, img.Start, tar)
+	assert.Equal(t, sha256.Sum256(want), sha256.Sum256(out.Bytes()), "spliced image digest")
+	assert.Equal(t, want, out.Bytes())
 }
 
 // TestBuildOfflineRescueInput asserts the exact RescueInput (including
@@ -75,17 +81,17 @@ func TestBuildOfflineRescueInput(t *testing.T) {
 	appFile := appUpdateFile()
 	index.Updates[0].Files = append(index.Updates[0].Files, appFile)
 
-	tar := []byte("SEED-TAR-BYTES")
+	tar := []byte(testTar)
 	jsonMeta := []byte(`{"version":"202608102114"}`)
 	sjsonMeta := []byte("-----BEGIN PKCS7-----\nverbatim-sjson\n-----END PKCS7-----")
-	resourcesTmp := t.TempDir() + "/rescue.img"
+	resourcesTmp := filepath.Join(t.TempDir(), "rescue.img")
 
 	src := updatemocks.NewMockImageSource(t)
 	image := updatemocks.NewMockVerifiedAsset(t)
 	app := updatemocks.NewMockVerifiedAsset(t)
 	rescue := mediamocks.NewMockRescueWriter(t)
 	rep := uxmocks.NewMockReporter(t)
-	expectReporter(rep)
+	expectReporter(rep, 6, 6)
 
 	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
 	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
@@ -102,7 +108,6 @@ func TestBuildOfflineRescueInput(t *testing.T) {
 			for _, asset := range in.Assets {
 				rc, err := asset.Asset.Open(ctx)
 				require.NoError(t, err)
-				_, _ = io.Copy(io.Discard, rc)
 				require.NoError(t, rc.Close())
 			}
 		}).Return(nil).Once()
@@ -114,17 +119,18 @@ func TestBuildOfflineRescueInput(t *testing.T) {
 		src,
 		rescue,
 		rep,
+		stubRender(tar),
 		&out,
 		resourcesTmp,
-		stubRender(tar),
 		img.Start,
 	)
 	require.NoError(t, err)
 	assert.True(t, result.Offline)
 	assert.Equal(t, resourcesTmp, result.ResourcesTmp)
-	assert.Equal(t, spliced(img.Bytes, img.Start, tar), out.Bytes())
-	assert.Equal(t, jsonMeta, got.UpdateJSON)
-	assert.Equal(t, sjsonMeta, got.UpdateSJSON)
+	want := spliced(img.Bytes, img.Start, tar)
+	assert.Equal(t, sha256.Sum256(want), sha256.Sum256(out.Bytes()), "spliced image digest")
+	assert.True(t, bytes.Equal(jsonMeta, got.UpdateJSON), "update.json stored verbatim")
+	assert.True(t, bytes.Equal(sjsonMeta, got.UpdateSJSON), "update.sjson stored verbatim")
 	require.Len(t, got.Assets, 1)
 	assert.Equal(t, "update/aarch64/incus.raw.gz", got.Assets[0].RelPath)
 	assert.Equal(t, app, got.Assets[0].Asset)
@@ -142,25 +148,27 @@ func TestBuildOversizedTar(t *testing.T) {
 	image := updatemocks.NewMockVerifiedAsset(t)
 	rescue := mediamocks.NewMockRescueWriter(t)
 	rep := uxmocks.NewMockReporter(t)
-	expectReporter(rep)
+	expectReporter(rep, 4, 3)
 
 	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
 	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
 	expectOpen(image, gz, 1)
 
+	var out bytes.Buffer
 	_, err := build.RunBuild(
 		context.Background(),
 		onlineSpec(),
 		src,
 		rescue,
 		rep,
-		io.Discard,
-		"",
 		stubRender(tar),
+		&out,
+		"",
 		img.Start,
 	)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, build.ErrSeedTooLarge)
+	require.ErrorIs(t, err, build.ErrSeedTooLarge)
+	assert.Empty(t, out.Bytes())
 }
 
 // TestBuildWriteFailure wraps a stream write error as [build.ErrOutput].
@@ -168,13 +176,13 @@ func TestBuildWriteFailure(t *testing.T) {
 	t.Parallel()
 
 	img, gz, index, imageFile := fixtureImage(t)
-	tar := []byte("SEED-TAR-BYTES")
+	tar := []byte(testTar)
 
 	src := updatemocks.NewMockImageSource(t)
 	image := updatemocks.NewMockVerifiedAsset(t)
 	rescue := mediamocks.NewMockRescueWriter(t)
 	rep := uxmocks.NewMockReporter(t)
-	expectReporter(rep)
+	expectReporter(rep, 5, 4)
 
 	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
 	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
@@ -186,14 +194,88 @@ func TestBuildWriteFailure(t *testing.T) {
 		src,
 		rescue,
 		rep,
+		stubRender(tar),
 		errWriter{err: errors.New("disk full")},
 		"",
-		stubRender(tar),
 		img.Start,
 	)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, build.ErrOutput)
+	require.ErrorIs(t, err, build.ErrOutput)
 	assert.NotErrorIs(t, err, update.ErrFetch)
+}
+
+// TestBuildReadFailure wraps a truncated splice stream as [update.ErrFetch].
+func TestBuildReadFailure(t *testing.T) {
+	t.Parallel()
+
+	img, gz, index, imageFile := fixtureImage(t)
+	tar := []byte(testTar)
+	require.Greater(t, len(gz), 32)
+
+	src := updatemocks.NewMockImageSource(t)
+	image := updatemocks.NewMockVerifiedAsset(t)
+	rescue := mediamocks.NewMockRescueWriter(t)
+	rep := uxmocks.NewMockReporter(t)
+	expectReporter(rep, 5, 4)
+
+	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
+	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
+	image.EXPECT().Open(mock.Anything).RunAndReturn(func(context.Context) (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(gz)), nil
+	}).Once()
+	image.EXPECT().Open(mock.Anything).RunAndReturn(func(context.Context) (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(gz[:32])), nil
+	}).Once()
+
+	_, err := build.RunBuild(
+		context.Background(),
+		onlineSpec(),
+		src,
+		rescue,
+		rep,
+		stubRender(tar),
+		io.Discard,
+		"",
+		img.Start,
+	)
+	require.Error(t, err)
+	require.ErrorIs(t, err, update.ErrFetch)
+	assert.NotErrorIs(t, err, build.ErrOutput)
+}
+
+// TestBuildShiftedPartitionWrapsErrFetch asserts the production Build path
+// probes GPT on handle Open #1 and maps a seed-data offset that is not
+// productionSeedStart to [update.ErrFetch] before splice.
+func TestBuildShiftedPartitionWrapsErrFetch(t *testing.T) {
+	t.Parallel()
+
+	_, gz, index, imageFile := fixtureImage(t)
+
+	src := updatemocks.NewMockImageSource(t)
+	image := updatemocks.NewMockVerifiedAsset(t)
+	rescue := mediamocks.NewMockRescueWriter(t)
+	rep := uxmocks.NewMockReporter(t)
+	expectReporter(rep, 3, 2)
+
+	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
+	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
+	expectOpen(image, gz, 1)
+
+	var out bytes.Buffer
+	_, err := build.Build(
+		context.Background(),
+		onlineSpec(),
+		src,
+		rescue,
+		rep,
+		stubRender([]byte(testTar)),
+		&out,
+		"",
+	)
+	require.Error(t, err)
+	require.ErrorIs(t, err, update.ErrFetch)
+	assert.Contains(t, err.Error(), "seed-data starts at byte")
+	assert.Empty(t, out.Bytes())
 }
 
 // TestBuildNilRender rejects a missing renderer without touching ports.
@@ -206,9 +288,9 @@ func TestBuildNilRender(t *testing.T) {
 		updatemocks.NewMockImageSource(t),
 		mediamocks.NewMockRescueWriter(t),
 		uxmocks.NewMockReporter(t),
+		nil,
 		io.Discard,
 		"",
-		nil,
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "seed renderer is not wired")
@@ -293,10 +375,10 @@ func expectOpen(handle *updatemocks.MockVerifiedAsset, gz []byte, times int) {
 	}).Times(times)
 }
 
-// expectReporter allows Step and Done calls from Build's phase reporting.
-func expectReporter(rep *uxmocks.MockReporter) {
-	rep.EXPECT().Step(mock.Anything)
-	rep.EXPECT().Done(mock.Anything)
+// expectReporter allows steps Step calls and dones Done calls.
+func expectReporter(rep *uxmocks.MockReporter, steps, dones int) {
+	rep.EXPECT().Step(mock.Anything).Times(steps)
+	rep.EXPECT().Done(mock.Anything).Times(dones)
 }
 
 // errWriter fails every Write.

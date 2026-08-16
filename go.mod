@@ -6,6 +6,7 @@ require (
 	github.com/getsops/sops/v3 v3.11.0
 	github.com/klauspost/pgzip v1.2.6
 	github.com/lxc/incus-os/incus-osd v0.0.0-20260815030500-0f5b8057f2fc
+	github.com/lxc/incus/v7 v7.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
@@ -97,7 +98,6 @@ require (
 	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
-	github.com/lxc/incus/v7 v7.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
