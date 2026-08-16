@@ -71,11 +71,14 @@ type Reporter interface {
 
 // RescueWriter builds RESCUE_DATA media into tmpPath — an exclusive temporary
 // file created and owned by the caller (the CLI's output publisher), which
-// fsyncs, hashes, and publishes it afterwards. The adapter never chooses
-// paths and never learns cache layout: it stages every asset by streaming
-// from its VerifiedAsset handle. It refuses an input with empty UpdateSJSON:
-// media without update.sjson is silently non-functional on the booted system
-// (recovery.go:178–182).
+// fsyncs, hashes, and publishes it afterwards. WriteRescue replaces the
+// tmpPath inode (unlink + O_EXCL create); callers must reopen by path after
+// the call returns — a file descriptor from before the call refers to the
+// unlinked placeholder, and the new file's mode is 0666 masked by umask.
+// The adapter never chooses paths and never learns cache layout: it stages
+// every asset by streaming from its VerifiedAsset handle. It refuses an
+// input with empty UpdateSJSON: media without update.sjson is silently
+// non-functional on the booted system (recovery.go:178–182).
 type RescueWriter interface {
 	WriteRescue(ctx context.Context, typ ImageType, in RescueInput, tmpPath string) error
 }

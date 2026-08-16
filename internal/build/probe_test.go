@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/componere/incusos-builder/internal/update"
+	"github.com/componere/incusos-builder/internal/errdefs"
 )
 
 func TestParseGPTSectorSizes(t *testing.T) {
@@ -72,7 +72,7 @@ func TestProbeShiftedPartitionWrapsErrFetch(t *testing.T) {
 
 	_, err := probe(context.Background(), handle, img.Start+512)
 	require.Error(t, err)
-	require.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
 	assert.Contains(t, err.Error(), "seed-data starts at byte")
 }
 
@@ -114,7 +114,7 @@ func TestProbeUnreadableGzipWrapsErrFetch(t *testing.T) {
 	handle := staticAsset{gz: []byte("not-gzip")}
 	_, err := probe(context.Background(), handle, 0)
 	require.Error(t, err)
-	require.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
 }
 
 func TestParseGPTRejectsOverflowingEntryLBA(t *testing.T) {
