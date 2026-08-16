@@ -1,0 +1,27 @@
+# Non-TTY (testscript by construction) refuses an existing output without
+# --force (exit 2, never hangs). --force overwrites.
+
+cp dummy.txt out.img
+exists out.img
+exits 2 incusos-builder build -f online.yaml -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr 'refusing to overwrite'
+grep 'old-output' out.img
+
+# --force bypasses the pre-check and publishes over the dummy.
+exec incusos-builder build --json -f online.yaml -o out.img --force --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --color never
+exists out.img
+jsonlines stdout
+cp stdout envelope.json
+extractjson envelope.json result.sha256
+cp stdout digest.txt
+cmpsha256 out.img digest.txt
+
+-- dummy.txt --
+old-output
+
+-- online.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable

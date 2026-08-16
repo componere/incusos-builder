@@ -1,0 +1,28 @@
+# --json stdout is exactly one JSON document. No full splice: the success
+# envelope is covered by build_basic. This script locks the error-envelope
+# contract and the "no summary on stdout" rule.
+
+stdin online.yaml
+exits 2 incusos-builder build --json -f - -o - --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+jsonlines stdout
+jsonfield stdout error.code 2
+! stdout 'summary'
+! stdout 'progress'
+
+exits 3 incusos-builder validate --json -f bad.yaml
+jsonlines stdout
+jsonfield stdout error.code 3
+! stdout 'summary'
+
+-- online.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable
+
+-- bad.yaml --
+version: 1
+image:
+  type: disk
+  architecture: x86_64

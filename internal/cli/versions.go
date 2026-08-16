@@ -187,12 +187,22 @@ func imageTypeName(t apiimages.UpdateFileType) (string, bool) {
 		return string(build.ImageTypeISO), true
 	case apiimages.UpdateFileTypeImageRaw:
 		return string(build.ImageTypeRaw), true
+	case apiimages.UpdateFileTypeUndefined,
+		apiimages.UpdateFileTypeImageManifest,
+		apiimages.UpdateFileTypeChangelog,
+		apiimages.UpdateFileTypeUpdateEFI,
+		apiimages.UpdateFileTypeUpdateUsr,
+		apiimages.UpdateFileTypeUpdateUsrVerity,
+		apiimages.UpdateFileTypeUpdateUsrVeritySignature,
+		apiimages.UpdateFileTypeUpdateSecureboot,
+		apiimages.UpdateFileTypeApplication:
+		return "", false
 	default:
 		return "", false
 	}
 }
 
-// hostArchitecture maps runtime.GOARCH onto the update-server names.
+// hostArchitecture maps [runtime.GOARCH] onto the update-server names.
 func hostArchitecture() string {
 	switch runtime.GOARCH {
 	case "amd64":

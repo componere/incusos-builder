@@ -24,12 +24,13 @@ func TestSeedSectionsMatchBuildSeeds(t *testing.T) {
 	t.Parallel()
 
 	typ := reflect.TypeFor[build.Seeds]()
-	require.Equal(t, typ.NumField(), len(seedSections), "seedSections must list every build.Seeds field")
+	sections := seedSections()
+	require.Len(t, sections, typ.NumField(), "seedSections must list every build.Seeds field")
 	for i := range typ.NumField() {
 		field := typ.Field(i)
 		require.True(t, field.IsExported(), "build.Seeds field %s must be exported", field.Name)
-		require.Equal(t, field.Name, seedSections[i].Field, "seedSections[%d] field", i)
-		require.NotEmpty(t, seedSections[i].YAML, "seedSections[%d] yaml name", i)
+		require.Equal(t, field.Name, sections[i].Field, "seedSections[%d] field", i)
+		require.NotEmpty(t, sections[i].YAML, "seedSections[%d] yaml name", i)
 	}
 }
 
@@ -214,7 +215,7 @@ func TestNewInitFormDoesNotPanic(t *testing.T) {
 }
 
 // TestNewInitFormAccessibleDoesNotPanic builds the form with ACCESSIBLE set.
-// Huh's accessible prompts each allocate a bufio.Scanner, so a single piped
+// Huh's accessible prompts each allocate a [bufio.Scanner], so a single piped
 // script cannot drive every field reliably; full-screen TTY driving is left
 // to a later smoke test.
 func TestNewInitFormAccessibleDoesNotPanic(t *testing.T) {

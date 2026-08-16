@@ -25,6 +25,8 @@ const (
 	envAccessible = "ACCESSIBLE"
 	// schemaVersionLiteral is the only config schema version this CLI writes.
 	schemaVersionLiteral = 1
+	// initFileMode is the mode used for O_CREAT|O_EXCL config claims.
+	initFileMode = 0o644
 )
 
 // seedSection is one commented seeds. key in the --no-input example.
@@ -38,18 +40,20 @@ type seedSection struct {
 // seedSections lists every [build.Seeds] field in struct order. YAML names
 // match internal/config's schema tags. Tests assert this table against the
 // live struct so a new section cannot ship without appearing in the example.
-var seedSections = []seedSection{
-	{Field: "Applications", YAML: "applications"},
-	{Field: "Incus", YAML: "incus"},
-	{Field: "Install", YAML: "install"},
-	{Field: "MigrationManager", YAML: "migration-manager"},
-	{Field: "Network", YAML: "network"},
-	{Field: "OperationsCenter", YAML: "operations-center"},
-	{Field: "Provider", YAML: "provider"},
-	{Field: "Services", YAML: "services"},
-	{Field: "Update", YAML: "update"},
-	{Field: "Kernel", YAML: "kernel"},
-	{Field: "Security", YAML: "security"},
+func seedSections() []seedSection {
+	return []seedSection{
+		{Field: "Applications", YAML: "applications"},
+		{Field: "Incus", YAML: "incus"},
+		{Field: "Install", YAML: "install"},
+		{Field: "MigrationManager", YAML: "migration-manager"},
+		{Field: "Network", YAML: "network"},
+		{Field: "OperationsCenter", YAML: "operations-center"},
+		{Field: "Provider", YAML: "provider"},
+		{Field: "Services", YAML: "services"},
+		{Field: "Update", YAML: "update"},
+		{Field: "Kernel", YAML: "kernel"},
+		{Field: "Security", YAML: "security"},
+	}
 }
 
 // initAnswers is the image block collected by the interactive form or
@@ -271,7 +275,7 @@ func renderInitConfig(answers initAnswers, noInput bool) string {
 	fmt.Fprintf(&b, "  offline: %t\n", answers.Offline)
 	if noInput {
 		b.WriteString("#seeds:\n")
-		for _, section := range seedSections {
+		for _, section := range seedSections() {
 			fmt.Fprintf(&b, "#  %s: {}\n", section.YAML)
 		}
 	}
@@ -290,7 +294,7 @@ func writeInitOutput(path, body string, stdout io.Writer) error {
 	if path == "" {
 		return usagef("output path is required")
 	}
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, initFileMode)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return usagef("refusing to overwrite existing file %s", path)

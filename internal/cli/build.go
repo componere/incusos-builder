@@ -88,6 +88,14 @@ type buildDeps struct {
 	Confirm ConfirmFunc
 }
 
+// buildFlags are the build-specific flags resolved after policy.
+type buildFlags struct {
+	configPath string
+	output     string
+	resources  string
+	force      bool
+}
+
 // newBuildCommand constructs the build subcommand. It is not registered
 // here; the orchestrator wires AddCommand.
 func newBuildCommand(opts Options) *cobra.Command {
@@ -120,35 +128,23 @@ func runBuildCommand(cmd *cobra.Command, opts Options, deps buildDeps) error {
 	if err != nil {
 		return finishCommand(opts, pol, err)
 	}
-	configPath, err := cmd.Flags().GetString(flagConfig)
+	flags, err := readBuildFlags(cmd)
 	if err != nil {
 		return finishCommand(opts, pol, err)
 	}
-	output, err := cmd.Flags().GetString(flagOutput)
-	if err != nil {
-		return finishCommand(opts, pol, err)
-	}
-	resources, err := cmd.Flags().GetString(flagResourcesOutput)
-	if err != nil {
-		return finishCommand(opts, pol, err)
-	}
-	force, err := cmd.Flags().GetBool(flagForce)
-	if err != nil {
-		return finishCommand(opts, pol, err)
-	}
-	if err := checkBuildFlags(configPath, output, pol.JSON); err != nil {
+	if err = checkBuildFlags(flags.configPath, flags.output, pol.JSON); err != nil {
 		return finishCommand(opts, pol, err)
 	}
 
-	spec, err := loadBuildSpec(deps, configPath, opts.In)
+	spec, err := loadBuildSpec(deps, flags.configPath, opts.In)
 	if err != nil {
 		return finishCommand(opts, pol, err)
 	}
-	if err := checkBuildSpecUsage(output, spec); err != nil {
+	if err = checkBuildSpecUsage(flags.output, spec); err != nil {
 		return finishCommand(opts, pol, err)
 	}
 
-	toStdout := isStdout(output)
+	toStdout := isStdout(flags.output)
 	color, progress := reporterModes(pol, toStdout)
 	reporter := buildReporter(deps, color, progress, opts.Err)
 	src, err := openImageSource(deps, pol.Server, pol.CacheDir, reporter)
@@ -162,41 +158,36 @@ func runBuildCommand(cmd *cobra.Command, opts Options, deps buildDeps) error {
 	}
 
 	if toStdout {
-		result, digest, runErr := streamBuild(cmd, opts, spec, src, rescue, reporter, render, output)
+		result, digest, runErr := streamBuild(cmd, opts, spec, src, rescue, reporter, render, flags.output)
 		if runErr != nil {
 			return runErr
 		}
-		return finishBuild(opts, pol, toStdout, output, "", result, digest, "")
+		return finishBuild(opts, pol, toStdout, flags.output, "", result, digest, "")
 	}
+	return publishBuild(cmd, opts, pol, deps, spec, src, rescue, reporter, render, flags)
+}
 
-	session, err := Begin(Request{
-		Image:     output,
-		Resources: resources,
-		Offline:   spec.Offline,
-		Type:      spec.Type,
-		Force:     force,
-		Confirm:   confirmFor(pol, opts, deps.Confirm),
-	})
+// readBuildFlags loads the build-specific cobra flags.
+func readBuildFlags(cmd *cobra.Command) (buildFlags, error) {
+	var flags buildFlags
+	var err error
+	flags.configPath, err = cmd.Flags().GetString(flagConfig)
 	if err != nil {
-		return finishCommand(opts, pol, err)
+		return buildFlags{}, err
 	}
-	defer session.Abort()
-
-	dest, closer := wrapStoredWriter(output, session.ImageWriter())
-	result, err := build.Build(cmd.Context(), spec, src, rescue, reporter, render, dest, session.ResourcesTemp())
-	closeErr := closer()
+	flags.output, err = cmd.Flags().GetString(flagOutput)
 	if err != nil {
-		return finishCommand(opts, pol, err)
+		return buildFlags{}, err
 	}
-	if closeErr != nil {
-		return finishCommand(opts, pol, outputWrap(closeErr, "close image stream"))
-	}
-	pub, err := session.Publish()
+	flags.resources, err = cmd.Flags().GetString(flagResourcesOutput)
 	if err != nil {
-		return finishCommand(opts, pol, err)
+		return buildFlags{}, err
 	}
-	paths := session.Paths()
-	return finishBuild(opts, pol, false, paths.Image, paths.Resources, result, pub.ImageSHA256, pub.ResourcesSHA256)
+	flags.force, err = cmd.Flags().GetBool(flagForce)
+	if err != nil {
+		return buildFlags{}, err
+	}
+	return flags, nil
 }
 
 // checkBuildFlags rejects missing required flags and --json with -o -.
@@ -211,6 +202,49 @@ func checkBuildFlags(configPath, output string, jsonMode bool) error {
 		return usagef("--json cannot be combined with -o -")
 	}
 	return nil
+}
+
+// publishBuild writes the image through [Begin] and publishes the finals.
+func publishBuild(
+	cmd *cobra.Command,
+	opts Options,
+	pol policy,
+	deps buildDeps,
+	spec build.Spec,
+	src build.ImageSource,
+	rescue build.RescueWriter,
+	reporter build.Reporter,
+	render build.SeedRenderFunc,
+	flags buildFlags,
+) error {
+	session, err := Begin(Request{
+		Image:     flags.output,
+		Resources: flags.resources,
+		Offline:   spec.Offline,
+		Type:      spec.Type,
+		Force:     flags.force,
+		Confirm:   confirmFor(pol, opts, deps.Confirm),
+	})
+	if err != nil {
+		return finishCommand(opts, pol, err)
+	}
+	defer session.Abort()
+
+	dest, closer := wrapStoredWriter(flags.output, session.ImageWriter())
+	result, err := build.Build(cmd.Context(), spec, src, rescue, reporter, render, dest, session.ResourcesTemp())
+	closeErr := closer()
+	if err != nil {
+		return finishCommand(opts, pol, err)
+	}
+	if closeErr != nil {
+		return finishCommand(opts, pol, outputWrap(closeErr, "close image stream"))
+	}
+	pub, err := session.Publish()
+	if err != nil {
+		return finishCommand(opts, pol, err)
+	}
+	paths := session.Paths()
+	return finishBuild(opts, pol, false, paths.Image, paths.Resources, result, pub.ImageSHA256, pub.ResourcesSHA256)
 }
 
 // checkBuildSpecUsage rejects offline builds that would share one stdout stream.

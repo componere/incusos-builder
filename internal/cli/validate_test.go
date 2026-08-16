@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -90,7 +91,7 @@ func TestValidateJSONErrorEnvelope(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(stdout), &env))
 	assert.Equal(t, exitDecrypt, env.Error.Code)
 	assert.NotEmpty(t, env.Error.Message)
-	assert.Equal(t, 1, bytes.Count([]byte(stdout), []byte("\n")))
+	assert.Equal(t, 1, strings.Count(stdout, "\n"))
 }
 
 // TestValidateStdinDashReadsConfig accepts -f - from opts.In.

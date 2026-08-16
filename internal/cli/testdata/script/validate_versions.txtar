@@ -1,0 +1,35 @@
+# validate valid/invalid (0/3). versions human table contains the fixture
+# version; --json contains version + channels. Unknown --channel is empty, exit 0.
+
+exec incusos-builder validate -f valid.yaml --color never
+stdout 'configuration valid'
+
+exits 3 incusos-builder validate -f bad.yaml
+stderr 'must be iso or raw'
+
+exec incusos-builder versions --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --architecture x86_64 --color never
+stdout $INCUSOS_VERSION
+stdout 'x86_64'
+stdout 'raw'
+
+exec incusos-builder versions --json --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --architecture x86_64
+jsonlines stdout
+stdout '"version":"'$INCUSOS_VERSION'"'
+stdout '"channels":\["stable"\]'
+
+exec incusos-builder versions --json --channel nightly --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --architecture x86_64
+jsonlines stdout
+stdout '"versions":\[\]'
+
+-- valid.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable
+
+-- bad.yaml --
+version: 1
+image:
+  type: disk
+  architecture: x86_64

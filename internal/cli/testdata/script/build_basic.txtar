@@ -1,0 +1,22 @@
+# One online --json build against the shared local-dir mirror.
+# Digest in the envelope must match a second SHA-256 of the published file.
+
+exec incusos-builder build --json -f online.yaml -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --color never
+exists out.img
+jsonlines stdout
+jsonfield stdout result.output out.img
+jsonfield stdout result.type raw
+jsonfield stdout result.architecture x86_64
+jsonfield stdout result.version $INCUSOS_VERSION
+jsonfield stdout result.channel stable
+! stdout 'summary'
+extractjson stdout result.sha256
+cp stdout digest.txt
+cmpsha256 out.img digest.txt
+
+-- online.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable

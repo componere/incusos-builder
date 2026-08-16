@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-
 	"github.com/componere/incusos-builder/internal/testfixture"
 )
 
@@ -20,7 +18,7 @@ import (
 func TestVersionsTableRendersLocalMirror(t *testing.T) {
 	mirror := generateVersionsMirror(t)
 
-	stdout, _, err := executeVersions(t, nil,
+	stdout, err := executeVersions(t,
 		"--server", mirror,
 		"--cache-dir", t.TempDir(),
 		"--architecture", testfixture.ArchX8664,
@@ -35,7 +33,7 @@ func TestVersionsTableRendersLocalMirror(t *testing.T) {
 func TestVersionsJSONGolden(t *testing.T) {
 	mirror := generateVersionsMirror(t)
 
-	stdout, _, err := executeVersions(t, nil,
+	stdout, err := executeVersions(t,
 		"--server", mirror,
 		"--cache-dir", t.TempDir(),
 		"--architecture", testfixture.ArchX8664,
@@ -65,7 +63,7 @@ func TestVersionsJSONGolden(t *testing.T) {
 func TestVersionsUnknownChannelIsEmpty(t *testing.T) {
 	mirror := generateVersionsMirror(t)
 
-	stdout, _, err := executeVersions(t, nil,
+	stdout, err := executeVersions(t,
 		"--server", mirror,
 		"--cache-dir", t.TempDir(),
 		"--architecture", testfixture.ArchX8664,
@@ -90,7 +88,7 @@ func TestVersionsBadServerIsUsageError(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, _, err := executeVersions(t, nil, "--server", tc.server, "--cache-dir", t.TempDir())
+			_, err := executeVersions(t, "--server", tc.server, "--cache-dir", t.TempDir())
 			require.Error(t, err)
 			require.True(t, IsUsage(err), "err=%v", err)
 			assert.Equal(t, exitUsage, exitCode(err))
@@ -108,14 +106,11 @@ func generateVersionsMirror(t *testing.T) string {
 }
 
 // executeVersions wires versions onto NewRootCommand and runs args.
-func executeVersions(t *testing.T, stdin io.Reader, args ...string) (string, string, error) {
+func executeVersions(t *testing.T, args ...string) (string, error) {
 	t.Helper()
-	if stdin == nil {
-		stdin = bytes.NewReader(nil)
-	}
 	var stdout, stderr bytes.Buffer
 	opts := Options{
-		In:        stdin,
+		In:        bytes.NewReader(nil),
 		Out:       &stdout,
 		Err:       &stderr,
 		Viper:     viper.New(),
@@ -127,5 +122,5 @@ func executeVersions(t *testing.T, stdin io.Reader, args ...string) (string, str
 	root.AddCommand(newVersionsCommand(opts))
 	root.SetArgs(append([]string{"versions"}, args...))
 	err := root.Execute()
-	return stdout.String(), stderr.String(), err
+	return stdout.String(), err
 }
