@@ -1,0 +1,22 @@
+# -f - reads the config from stdin. Plain and SOPS-encrypted both work
+# via validate (no splice). Missing key is exit 4.
+
+stdin plain.yaml
+exec incusos-builder validate -f - --color never
+stdout 'configuration valid'
+
+stdin $INCUSOS_ENCRYPTED
+exec incusos-builder validate -f - --color never
+stdout 'configuration valid'
+
+env SOPS_AGE_KEY=
+stdin $INCUSOS_ENCRYPTED
+exits 4 incusos-builder validate -f -
+stderr 'decryption failed'
+
+-- plain.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable

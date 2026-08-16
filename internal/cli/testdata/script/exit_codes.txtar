@@ -1,0 +1,62 @@
+# Provoke each process exit code from ARCHITECTURE §3.
+# Exit 6: --force into a read-only destination directory so createTemp
+# fails after the overwrite pre-check. No 2.1 GiB splice.
+
+# 2: --json with -o -
+stdin online.yaml
+exits 2 incusos-builder build --json -f - -o - --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr '--json cannot be combined with -o -'
+
+# 2: missing -f
+exits 2 incusos-builder build -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr '-f/--config is required'
+
+# 2: bad --server
+exits 2 incusos-builder build -f online.yaml -o out.img --server /definitely-not-a-mirror --cache-dir $INCUSOS_CACHE
+stderr 'neither an https URL nor an existing directory'
+
+# 2: plain http server
+exits 2 incusos-builder build -f online.yaml -o out.img --server http://example.invalid/os --cache-dir $INCUSOS_CACHE
+stderr 'plain http is not supported'
+
+# 3: invalid config field
+exits 3 incusos-builder build -f bad-type.yaml -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr 'must be iso or raw'
+
+# 4: encrypted config, no key in env
+env SAVED_AGE_KEY=$SOPS_AGE_KEY
+env SOPS_AGE_KEY=
+exits 4 incusos-builder build -f $INCUSOS_ENCRYPTED -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr 'decryption failed'
+env SOPS_AGE_KEY=$SAVED_AGE_KEY
+# 5: config pinning a release the mirror does not have
+exits 5 incusos-builder build -f missing-release.yaml -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr 'not in channel'
+
+# 6: --force write into a read-only directory (createTemp → ErrOutput)
+mkdir ro
+chmod 555 ro
+exits 6 incusos-builder build -f online.yaml -o ro/out.img --force --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr 'create temp|permission denied|read-only'
+chmod 755 ro
+
+-- online.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable
+
+-- bad-type.yaml --
+version: 1
+image:
+  type: disk
+  architecture: x86_64
+
+-- missing-release.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable
+  release: 199901010000

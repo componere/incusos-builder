@@ -1,0 +1,34 @@
+# Offline config publishes image + default <stem>.resources.img.
+# Both digests appear in the --json envelope. offline + -o - is usage (exit 2).
+
+# Usage path first: no splice.
+exits 2 incusos-builder build -f offline.yaml -o - --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE
+stderr 'offline builds cannot use -o -'
+
+exec incusos-builder build --json -f offline.yaml -o out.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --color never
+exists out.img
+exists out.resources.img
+jsonlines stdout
+jsonfield stdout result.output out.img
+jsonfield stdout result.resources_output out.resources.img
+jsonfield stdout result.type raw
+jsonfield stdout result.version $INCUSOS_VERSION
+cp stdout envelope.json
+extractjson envelope.json result.sha256
+cp stdout image.digest
+cmpsha256 out.img image.digest
+extractjson envelope.json result.resources_sha256
+cp stdout resources.digest
+cmpsha256 out.resources.img resources.digest
+
+-- offline.yaml --
+version: 1
+image:
+  type: raw
+  architecture: x86_64
+  channel: stable
+  offline: true
+seeds:
+  applications:
+    applications:
+      - name: incus
