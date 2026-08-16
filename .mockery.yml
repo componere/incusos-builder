@@ -1,0 +1,27 @@
+# mockery v3.7.3 packages config. Mocks live under the adapter that will
+# implement each port (AGENTS.md T3).
+template: testify
+formatter: goimports
+pkgname: mocks
+filename: "mock_{{.InterfaceName}}.go"
+structname: "Mock{{.InterfaceName}}"
+force-file-write: true
+# testify v3 always emits EXPECT(); with-expecter is rejected by the
+# 3.7.3 template-data schema (additionalProperties: false).
+template-data:
+  unroll-variadic: true
+packages:
+  github.com/componere/incusos-builder/internal/build:
+    interfaces:
+      ImageSource:
+        config:
+          dir: internal/update/mocks
+      VerifiedAsset:
+        config:
+          dir: internal/update/mocks
+      RescueWriter:
+        config:
+          dir: internal/media/mocks
+      Reporter:
+        config:
+          dir: internal/ux/mocks
