@@ -359,3 +359,47 @@ only with sparse copy and a thin pool; on thick provisioning budget ~120 GiB.
 
 Next decision for the developer: apply the BOOT-05/06 checklist correction, then
 pick Semaphore (free) or Scaleway (~EUR 0.35).
+
+## 2026-08-16 19:05 — BOOT oracle corrected; Semaphore blocked on GitHub authorization
+
+Checklist corrections landed (three parallel agents):
+- `docs/docs/how-to/verify-boot-acceptance.md` on `fix/campaign-remediation`
+  (commit 9bb06cb, pushed, PR #21): BOOT-05 reframed as an input baseline with
+  `source-seed.before.*`; BOOT-06 rewritten around the target-side oracle
+  (detach target volume -> throwaway Linux VM -> locate by PARTLABEL=seed-data ->
+  assert source-contains / target-lacks / digests-differ); BOOT-07 annotated that
+  the raw config matches the GPT partlabel and never exercises the NUL-padded ISO
+  identifier, with an optional ISO variant; evidence inventory renamed.
+- `.journal/005/FUNCTIONAL_TEST_PLAN.md`: same corrections plus new finding
+  **F-DOC-11** (BOOT-06 unpassable as written, cited to install.go:893-894 and
+  seed.go:31-36) and corrected Track C costs (~3.76 GB transfer; ~22 GB only with
+  sparse copy + thin pool; ~120 GiB on thick provisioning).
+- `chore/semaphore-preflight` branch (commit 6abf9c1, pushed): disposable
+  `.semaphore/semaphore.yml` preflight — 8 fail-fast checks ending in a real
+  `-enable-kvm` guest boot using the host kernel as payload (zero download).
+  Deliberately uses `-enable-kvm` not `-accel kvm:tcg`, so it cannot manufacture
+  a pass via software emulation.
+
+Verified independently against primary docs:
+- `f1-standard-4` is 4 vCPU / 16 GB / 65 GB Intel x86_64 and pairs with
+  `ubuntu2404` (docs.semaphore.io/reference/machine-types).
+- Nested virtualization IS officially supported: "Linux-based machines support
+  nested virtualization" (docs.semaphore.io/reference/os-ubuntu). Note their own
+  snippet says `grep -cw vmx /proc/cpuinfo` "should be 0", which is backwards —
+  a count of 0 means absent. Our preflight asserts presence, which is correct.
+
+**Blocked:** the Semaphore account has not authorized GitHub. Both integrations
+fail at `sem init`:
+- `github_token`: `Token for not found.`
+- `github_app`: "It looks like you haven't authorized Semaphore with GitHub,
+  please visit https://docs.semaphoreci.com/using-semaphore/connect-github"
+Projects are mandatory — `sem create job` and `sem create workflow` both refuse
+without one, so there is no CLI-only path around it. Authorizing a third-party
+app against the componere org is a security-significant grant I will not perform
+on the developer's behalf.
+
+Confirmed zero collateral: the failed init created **no** webhook and **no**
+deploy key (repo reports 0 of each). Nothing to clean up.
+
+Pipeline YAML validated offline: parses, correct schema version, correct machine
+type and image, 56 commands, manual-only parameter gate that fails closed.
