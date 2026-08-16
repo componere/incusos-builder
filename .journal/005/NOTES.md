@@ -81,3 +81,45 @@ detached from the rest. Applied to `.journal/005/FUNCTIONAL_TEST_PLAN.md`:
 - §7 exit criteria regrouped by originating wave so a wave can be signed off
   independently; §8 results log regrouped into shared preflight / Wave 1 /
   Wave 2 tracks A,B,C / Wave P.
+
+## 2026-08-16 14:05 — Wave 1 executed
+
+Ran the shared preflight myself, then four `functional-tester` agents in parallel
+(cap 4, as instructed): W1CLI (CLI-01..20), W1CFG (CFG-01..19), W1ArtMed
+(ART-01/02/03/04/14/15/16 + MED-01..06), W1SupDoc (SUP+DOC+BOOT-01, 23 cases).
+
+Result: **75/75 executed — 64 pass, 10 deviations, 1 fail, 0 blocked.**
+Consolidated evidence in `.journal/005/WAVE1_RESULTS.md`; the plan's §8 Wave 1
+table and §5 findings list are filled in.
+
+Preflight surprises:
+- HEAD had moved to 59c268b (PR #20 rewrote configuration.md). All eight fenced
+  YAML ranges shifted +12; agents re-derived them.
+- `root:check` fails: `root:format` walks the gitignored `reference/incus-os/`
+  clone; `root:lint` needed a golangci cache clean (stale deleted-worktree
+  paths). Scoped fmt over ./cmd/... ./internal/... is clean → F-GATE-1/2.
+- The harness sets `CI=true` and `NO_COLOR=1`; both silently defeat prompt and
+  colour cases. Every tester had to clear them.
+
+The one failure is SUP-16: private vulnerability reporting is disabled, so
+SECURITY.md's reporting link is dead. Already a §7 release blocker.
+
+Highest-value new findings: N-CLI-1 (ACCESSIBLE=1 `init` cannot be cancelled —
+swallows SIGINT/EOF, only SIGKILL or completing the form exits), F-DOC-9
+(`validate` accepts a plain-http `--server` while `versions`/`build` refuse),
+N-ART-2 (reporter prints `done <step>` for steps that then fail). Everything
+previously recorded — F-CLI-1..8, F-CFG-1..3, F-DOC-1/3/4/5/8, F-REPO-1..4 — was
+confirmed; only F-DOC-2 needed re-scoping (`/sbin/sha256sum` is Apple-signed base
+system on macOS 26).
+
+Process notes: two testers collided on the shared tmux socket (`kill-server`
+killed a sibling's session mid-case); per-agent sockets are now the standing
+policy. Three agents yielded a "see final message" pointer without emitting the
+body — recovered by DMing them for the report. Repo verified unmodified by all
+four testers before and after.
+
+Wave 2 readiness: track B is open (Docker reachable, OrbStack 29.4.0); track C
+still blocked on this host (arm64, no /dev/kvm, local incus is a Homebrew
+client).
+
+Next: Wave 2 on request.

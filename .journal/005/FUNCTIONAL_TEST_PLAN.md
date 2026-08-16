@@ -2883,6 +2883,34 @@ the release owner must make before tagging — fix it, document it, or accept it
 | F-SUP-1 | `moon.yml:37` declares the `releaseConfig` input `'.github/workflows.disabled/**/*.yml'`; that directory does not exist. | SUP-12 |
 | F-SUP-2 | `CONTRIBUTING.md:44-56` never mentions `mise run image-local`, so the container path has no discoverable entry point for a new contributor. | DOC-09 |
 
+### Found during Wave 1 execution (2026-08-16, commit 59c268b)
+
+Full evidence in `WAVE1_RESULTS.md`. 75/75 Wave 1 cases executed: 64 pass,
+10 deviations, 1 fail.
+
+| ID | Severity | Finding | Case |
+|----|----------|---------|------|
+| N-CLI-1 | high | `ACCESSIBLE=1 init` cannot be cancelled: raw mode with ISIG off swallows Ctrl-C, Ctrl-D, and an external `kill -INT`; stray keystrokes are eaten as form answers. Only completing the form or SIGKILL exits. Contradicts `cli.md:186-190`. | CLI-19 |
+| F-DOC-9 | medium | `validate` silently accepts a plain-HTTP `--server` (exit 0) while `versions`/`build` refuse with exit 2. `run-in-ci.md` §4 states the rule unconditionally. | DOC-13 |
+| N-ART-2 | medium | The step reporter emits `done index` / `done download` for steps that then fail; stderr asserts success and then reports the same step failing. | ART-14 |
+| N-ART-1 | cosmetic | Doubled prefix: `acquisition failed: gzip: gzip: invalid header`. | ART-14a |
+| N-ART-3 | cosmetic | Local-mirror open errors double the verb and leak the resolved absolute path. | ART-14h/i |
+| N-CLI-5 | cosmetic | `ACCESSIBLE=1` drops every field description, hiding the "default stable" hint. | CLI-19 |
+| N-CLI-2 | cosmetic | `--resources-output` help text differs between `cli.md:77` and the binary. | CLI-02 |
+| N-CFG-A | advisory | The decrypt path passes go-yaml messages through unfiltered, echoing a 7-char fragment of the offending scalar where every other path renders `<value>`. | CFG-16 |
+| N-CFG-B | advisory | Decrypt-path errors are the only multi-line stderr messages. | CFG-16 |
+| N-ART-4 | advisory | `versions` never writes to `--cache-dir`; `index.json` is refetched every invocation. | ART-01..03 |
+| N-ART-5 | cosmetic | The `versions` table is two-space-joined text and misaligns with its header. | ART-01 |
+| N-CFG-C | cosmetic | Interactive `init` Channel placeholder reads as an unclearable prefilled value. | CFG-12 |
+| F-DOC-10 | doc | The docs site is served at `/incusos-builder/`, not `/`; `http://127.0.0.1:8000/` returns 302. All 15 pages are otherwise 200 OK. | DOC-07 |
+| F-DOC-2 (revised) | doc | **Re-scope, not a defect on macOS 26.** `/sbin/sha256sum` is an Apple-signed base-system binary here (`com.apple.sha224sum`, platform 26). The claim "does not exist on stock macOS" is false for macOS 26, true for ≤ 15. `/usr/bin/sha256sum` is absent. | DOC-17 |
+| F-GATE-1 | high (dev workflow) | `root:format`/`root:lint` walk the gitignored `reference/incus-os/` clone and `.wt/` worktrees, so `moon run root:check` — which `CONTRIBUTING.md:57` calls the full local gate — cannot pass in a checkout that follows TECH_NOTES or uses the mandated Worktrunk flow. Scoped `golangci-lint fmt --diff ./cmd/... ./internal/...` is clean. | PRE-06, DOC-09 |
+| F-GATE-2 | advisory | A stale golangci-lint cache reports diagnostics for deleted worktree paths; `golangci-lint cache clean` clears it. | PRE-06 |
+
+Plan defects found while executing (D-1..D-8) are listed in `WAVE1_RESULTS.md`;
+the load-bearing one is **D-1**: all eight `configuration.md` line ranges shifted
++12 at commit 59c268b and must be re-derived, not trusted.
+
 ### Repository state that blocks documented promises (observed 2026-08-16)
 
 | ID | Finding | Case |
@@ -3020,92 +3048,92 @@ runs days later.
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| PRE-01 |  |  |  |
-| PRE-02 |  |  |  |
-| PRE-03 |  |  |  |
-| PRE-04 |  |  |  |
-| PRE-05 |  |  |  |
-| PRE-06 |  |  |  |
+| PRE-01 | pass | WAVE1_RESULTS.md |  |
+| PRE-02 | deviation | WAVE1_RESULTS.md | CI=true and NO_COLOR=1 set in this harness |
+| PRE-03 | pass | WAVE1_RESULTS.md | sops 3.13.1, syft present, /sbin/sha256sum present |
+| PRE-04 | pass | WAVE1_RESULTS.md | HTTP 200, 237 GB free |
+| PRE-05 | pass | WAVE1_RESULTS.md | dev (none) built unknown; pin matches go.mod |
+| PRE-06 | deviation | WAVE1_RESULTS.md | root:format walks gitignored reference/ (F-GATE-1); scoped fmt clean |
 
 ### Wave 1 — fast lane
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| PRE-07-W1 |  |  |  |
-| CLI-01 |  |  |  |
-| CLI-02 |  |  |  |
-| CLI-03 |  |  |  |
-| CLI-04 |  |  |  |
-| CLI-05 |  |  |  |
-| CLI-06 |  |  |  |
-| CLI-07 |  |  |  |
-| CLI-08 |  |  |  |
-| CLI-09 |  |  |  |
-| CLI-10 |  |  |  |
-| CLI-11 |  |  |  |
-| CLI-12 |  |  |  |
-| CLI-13 |  |  |  |
-| CLI-14 |  |  |  |
-| CLI-15 |  |  |  |
-| CLI-16 |  |  |  |
-| CLI-17 |  |  |  |
-| CLI-18 |  |  |  |
-| CLI-19 |  |  |  |
-| CLI-20 |  |  |  |
-| CFG-01 |  |  |  |
-| CFG-02 |  |  |  |
-| CFG-03 |  |  |  |
-| CFG-04 |  |  |  |
-| CFG-05 |  |  |  |
-| CFG-06 |  |  |  |
-| CFG-07 |  |  |  |
-| CFG-08 |  |  |  |
-| CFG-09 |  |  |  |
-| CFG-10 |  |  |  |
-| CFG-11 |  |  |  |
-| CFG-12 |  |  |  |
-| CFG-13 |  |  |  |
-| CFG-14 |  |  |  |
-| CFG-15 |  |  |  |
-| CFG-16 |  |  |  |
-| CFG-17 |  |  |  |
-| CFG-18 |  |  |  |
-| CFG-19 |  |  |  |
-| ART-01 |  |  |  |
-| ART-02 |  |  |  |
-| ART-03 |  |  |  |
-| ART-04 |  |  |  |
-| ART-14 |  |  |  |
-| ART-15 |  |  |  |
-| ART-16 |  |  |  |
-| MED-01 |  |  |  |
-| MED-02 |  |  |  |
-| MED-03 |  |  |  |
-| MED-04 |  |  |  |
-| MED-05 |  |  |  |
-| MED-06 |  |  |  |
-| SUP-01 |  |  |  |
-| SUP-02 |  |  |  |
-| SUP-11 |  |  |  |
-| SUP-13 |  |  |  |
-| SUP-14 |  |  |  |
-| SUP-15 |  |  |  |
-| SUP-16 |  |  |  |
-| SUP-17 |  |  |  |
-| SUP-18 |  |  |  |
-| DOC-02 |  |  |  |
-| DOC-03 |  |  |  |
-| DOC-05 |  |  |  |
-| DOC-06 |  |  |  |
-| DOC-07 |  |  |  |
-| DOC-08 |  |  |  |
-| DOC-09 |  |  |  |
-| DOC-11 |  |  |  |
-| DOC-13 |  |  |  |
-| DOC-16 |  |  |  |
-| DOC-17 |  |  |  |
-| DOC-18 |  |  |  |
-| BOOT-01 |  |  |  |
+| PRE-07-W1 | pass | WAVE1_RESULTS.md | per-tester scratch dirs under /tmp |
+| CLI-01 | pass | WAVE1_RESULTS.md |  |
+| CLI-02 | pass | WAVE1_RESULTS.md |  |
+| CLI-03 | pass | WAVE1_RESULTS.md |  |
+| CLI-04 | pass | WAVE1_RESULTS.md |  |
+| CLI-05 | pass | WAVE1_RESULTS.md |  |
+| CLI-06 | pass | WAVE1_RESULTS.md |  |
+| CLI-07 | pass | WAVE1_RESULTS.md |  |
+| CLI-08 | deviation | WAVE1_RESULTS.md | retry ladder measured 1s, not ~1 min (D-4); F-CLI-4 confirmed |
+| CLI-09 | pass | WAVE1_RESULTS.md |  |
+| CLI-10 | pass | WAVE1_RESULTS.md |  |
+| CLI-11 | pass | WAVE1_RESULTS.md |  |
+| CLI-12 | pass | WAVE1_RESULTS.md |  |
+| CLI-13 | pass | WAVE1_RESULTS.md |  |
+| CLI-14 | pass | WAVE1_RESULTS.md |  |
+| CLI-15 | pass | WAVE1_RESULTS.md |  |
+| CLI-16 | pass | WAVE1_RESULTS.md |  |
+| CLI-17 | pass | WAVE1_RESULTS.md |  |
+| CLI-18 | pass | WAVE1_RESULTS.md |  |
+| CLI-19 | pass | WAVE1_RESULTS.md |  |
+| CLI-20 | deviation | WAVE1_RESULTS.md | final --verbose build deferred to Wave 2; F-CLI-7/F-CLI-8 confirmed |
+| CFG-01 | pass | WAVE1_RESULTS.md |  |
+| CFG-02 | pass | WAVE1_RESULTS.md |  |
+| CFG-03 | pass | WAVE1_RESULTS.md |  |
+| CFG-04 | pass | WAVE1_RESULTS.md |  |
+| CFG-05 | pass | WAVE1_RESULTS.md |  |
+| CFG-06 | pass | WAVE1_RESULTS.md |  |
+| CFG-07 | pass | WAVE1_RESULTS.md |  |
+| CFG-08 | pass | WAVE1_RESULTS.md |  |
+| CFG-09 | pass | WAVE1_RESULTS.md |  |
+| CFG-10 | pass | WAVE1_RESULTS.md |  |
+| CFG-11 | pass | WAVE1_RESULTS.md |  |
+| CFG-12 | pass | WAVE1_RESULTS.md | falsifier fired: offline=yes config fails validate (F-CFG-2) |
+| CFG-13 | pass | WAVE1_RESULTS.md |  |
+| CFG-14 | pass | WAVE1_RESULTS.md |  |
+| CFG-15 | pass | WAVE1_RESULTS.md |  |
+| CFG-16 | pass | WAVE1_RESULTS.md |  |
+| CFG-17 | pass | WAVE1_RESULTS.md | falsifier fired: 3 of 4 key combinations succeed (F-CFG-3) |
+| CFG-18 | pass | WAVE1_RESULTS.md |  |
+| CFG-19 | pass | WAVE1_RESULTS.md |  |
+| ART-01 | pass | WAVE1_RESULTS.md |  |
+| ART-02 | pass | WAVE1_RESULTS.md |  |
+| ART-03 | pass | WAVE1_RESULTS.md |  |
+| ART-04 | pass | WAVE1_RESULTS.md |  |
+| ART-14 | deviation | WAVE1_RESULTS.md | 9/9 sub-cases correct; N-ART-1/2/3 wording+reporter defects |
+| ART-15 | pass | WAVE1_RESULTS.md |  |
+| ART-16 | pass | WAVE1_RESULTS.md |  |
+| MED-01 | pass | WAVE1_RESULTS.md |  |
+| MED-02 | pass | WAVE1_RESULTS.md |  |
+| MED-03 | pass | WAVE1_RESULTS.md |  |
+| MED-04 | pass | WAVE1_RESULTS.md |  |
+| MED-05 | pass | WAVE1_RESULTS.md |  |
+| MED-06 | pass | WAVE1_RESULTS.md |  |
+| SUP-01 | pass | WAVE1_RESULTS.md |  |
+| SUP-02 | pass | WAVE1_RESULTS.md |  |
+| SUP-11 | pass | WAVE1_RESULTS.md |  |
+| SUP-13 | deviation | WAVE1_RESULTS.md | 7 check contexts, not 4 (D-5); F-REPO-4 confirmed |
+| SUP-14 | deviation | WAVE1_RESULTS.md | credentials present; rulesets [] (F-REPO-2) |
+| SUP-15 | pass | WAVE1_RESULTS.md |  |
+| SUP-16 | fail | WAVE1_RESULTS.md | private-vulnerability-reporting = {"enabled":false} (F-REPO-1) |
+| SUP-17 | pass | WAVE1_RESULTS.md |  |
+| SUP-18 | pass | WAVE1_RESULTS.md |  |
+| DOC-02 | pass | WAVE1_RESULTS.md |  |
+| DOC-03 | pass | WAVE1_RESULTS.md |  |
+| DOC-05 | pass | WAVE1_RESULTS.md |  |
+| DOC-06 | pass | WAVE1_RESULTS.md |  |
+| DOC-07 | deviation | WAVE1_RESULTS.md | site served at /incusos-builder/, not / (F-DOC-10); 15/15 pages 200 |
+| DOC-08 | pass | WAVE1_RESULTS.md |  |
+| DOC-09 | deviation | WAVE1_RESULTS.md | CONTRIBUTING's 'full local gate' claim false (F-GATE-1) |
+| DOC-11 | pass | WAVE1_RESULTS.md |  |
+| DOC-13 | deviation | WAVE1_RESULTS.md | validate accepts http:// --server (F-DOC-9); Wave 2 build steps deferred |
+| DOC-16 | deviation | WAVE1_RESULTS.md | incus + sha256sum present, plan expected MISSING (D-8) |
+| DOC-17 | deviation | WAVE1_RESULTS.md | F-DOC-1/3/4/5 confirmed, F-DOC-8 green, F-DOC-2 refuted for macOS 26 |
+| DOC-18 | pass | WAVE1_RESULTS.md |  |
+| BOOT-01 | pass | WAVE1_RESULTS.md | venue decision recorded: remote x86_64 Linux Incus host required |
 
 ### Wave 2 — track A (live build chain, media, doc walkthroughs)
 
@@ -3141,7 +3169,7 @@ runs days later.
 | DOC-04 |  |  |  |
 | DOC-10 |  |  |  |
 | DOC-12 |  |  |  |
-| DOC-14 |  |  |  |
+| DOC-14 | pass | WAVE1_RESULTS.md | Wave 1 half only; mirror build deferred to Wave 2 |
 | DOC-15 |  |  |  |
 
 ### Wave 2 — track B (container image, release rehearsal)
