@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 
+	charmlog "charm.land/log/v2"
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,6 +37,9 @@ type policy struct {
 	Server string
 	// CacheDir is the content-addressed download cache directory.
 	CacheDir string
+	// Log writes diagnostics to stderr. Debug when Verbose, error-only
+	// when Quiet, warn-and-above otherwise.
+	Log *charmlog.Logger
 }
 
 // resolvePolicy reads Viper-backed settings plus verbose/quiet flags and
@@ -69,7 +73,22 @@ func resolvePolicy(cmd *cobra.Command, opts Options, vp *viper.Viper) (policy, e
 		JSON:     vp.GetBool(flagJSON),
 		Server:   vp.GetString(flagServer),
 		CacheDir: vp.GetString(flagCacheDir),
+		Log:      newPolicyLogger(color, verbose, quiet, opts.Err),
 	}, nil
+}
+
+// newPolicyLogger constructs the stderr logger for one invocation.
+func newPolicyLogger(color ux.ColorMode, verbose, quiet bool, errW io.Writer) *charmlog.Logger {
+	logger := ux.NewLogger(color, errW)
+	switch {
+	case verbose:
+		logger.SetLevel(charmlog.DebugLevel)
+	case quiet:
+		logger.SetLevel(charmlog.ErrorLevel)
+	default:
+		logger.SetLevel(charmlog.WarnLevel)
+	}
+	return logger
 }
 
 // parseColor validates --color.

@@ -95,6 +95,9 @@ func runVersions(cmd *cobra.Command, opts Options) error {
 	if pol.JSON {
 		return writeJSON(opts.Out, versionsResult{Versions: entries})
 	}
+	if pol.Quiet {
+		return nil
+	}
 	ux.VersionsTable(pol.Color, opts.Out, tableRows(entries, channel))
 	return nil
 }

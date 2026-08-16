@@ -83,13 +83,21 @@ func TestResolvePathsDefaultResourcesNames(t *testing.T) {
 			wantRes: filepath.Join(dir, "foo.bar.resources.iso"),
 		},
 		{
-			name:      "online ignores resources flag",
+			name:      "online rejects resources flag",
 			image:     iso,
 			resources: filepath.Join(dir, "ignored.iso"),
 			offline:   false,
 			typ:       build.ImageTypeISO,
-			wantImg:   filepath.Clean(iso),
-			wantRes:   "",
+			wantErr:   ErrUsage,
+			contain:   "--resources-output",
+		},
+		{
+			name:    "online empty resources",
+			image:   iso,
+			offline: false,
+			typ:     build.ImageTypeISO,
+			wantImg: filepath.Clean(iso),
+			wantRes: "",
 		},
 		{
 			name:      "explicit resources kept",
@@ -376,6 +384,50 @@ func TestImageDigestMatchesReread(t *testing.T) {
 	require.Equal(t, want, pub.ImageSHA256)
 	require.Equal(t, want, sha256Hex([]byte(readFile(t, session.Paths().Image))))
 	require.Empty(t, pub.ResourcesSHA256)
+}
+
+// TestPublishedImageHasClaimMode asserts rename keeps the chmod'd claimMode
+// instead of CreateTemp's 0600.
+func TestPublishedImageHasClaimMode(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	session := beginOnline(t, dir)
+	_, err := session.ImageWriter().Write([]byte(newImageBody))
+	require.NoError(t, err)
+
+	_, err = session.Publish()
+	require.NoError(t, err)
+
+	info, err := os.Stat(session.Paths().Image)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(claimMode), info.Mode().Perm(), "published image must be %04o", claimMode)
+}
+
+// TestFailReportsUnremovableTemp surfaces leftover temps in fail() error
+// text when cleanup cannot unlink them from a read-only directory.
+func TestFailReportsUnremovableTemp(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	session := beginOnline(t, dir)
+	_, err := session.ImageWriter().Write([]byte(newImageBody))
+	require.NoError(t, err)
+
+	temp := session.image.temp
+	require.FileExists(t, temp)
+
+	require.NoError(t, os.Chmod(dir, 0o555))
+	t.Cleanup(func() {
+		_ = os.Chmod(dir, 0o755)
+		_ = os.Remove(temp)
+	})
+
+	_, err = session.Publish()
+	require.ErrorIs(t, err, build.ErrOutput)
+	require.Contains(t, err.Error(), leftoverLabel)
+	require.Contains(t, err.Error(), temp)
+	require.FileExists(t, temp)
 }
 
 // TestResourcesDigestAfterInodeReplacement hashes by re-read after a

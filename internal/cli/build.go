@@ -337,6 +337,16 @@ func reporterModes(pol policy, toStdout bool) (ux.ColorMode, ux.ProgressMode) {
 	return pol.Color, progress
 }
 
+// logBuildPlan writes resolved version, selected asset, and output paths
+// at debug so --verbose is observably meaningful.
+func logBuildPlan(pol policy, version, asset, image, resources string) {
+	if pol.Log == nil {
+		return
+	}
+	pol.Log.Debug("resolved version", "version", version, "asset", asset)
+	pol.Log.Debug("output paths", "image", image, "resources", resources)
+}
+
 // confirmFor returns the overwrite callback passed to [Begin].
 //
 // Under [policy.NoInput] the publisher receives a nil Confirm and refuses
@@ -434,6 +444,7 @@ func finishBuild(
 		SHA256:          imageSHA,
 		ResourcesSHA256: resourcesSHA,
 	}
+	logBuildPlan(pol, result.Version, string(result.Type)+"/"+string(result.Architecture), output, resources)
 	if pol.JSON {
 		return writeJSON(opts.Out, payload)
 	}

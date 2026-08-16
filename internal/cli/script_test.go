@@ -60,6 +60,7 @@ func TestScript(t *testing.T) {
 		},
 		Cmds: map[string]func(*testscript.TestScript, bool, []string){
 			"cmpsha256":   cmdCmpSHA256,
+			"execstdout":  cmdExecStdout,
 			"extractjson": cmdExtractJSON,
 			"exits":       cmdExits,
 			"jsonfield":   cmdJSONField,
@@ -110,6 +111,7 @@ func setupScript(env *testscript.Env, mirror scriptMirror) error {
 	env.Setenv(envCacheDir, cache)
 	env.Setenv(envEncrypted, mirror.encrypted)
 	env.Setenv("GNUPGHOME", filepath.Join(env.WorkDir, ".gnupg"))
+	env.Values[scriptVarsKey{}] = append([]string(nil), env.Vars...)
 	return nil
 }
 
@@ -141,6 +143,70 @@ func cmdExits(ts *testscript.TestScript, neg bool, args []string) {
 	}
 }
 
+type scriptVarsKey struct{}
+
+func scriptEnviron(ts *testscript.TestScript) []string {
+	vars, _ := ts.Value(scriptVarsKey{}).([]string)
+	return vars
+}
+
+// cmdExecStdout runs a program with stdout redirected to a file so large
+// artifacts are never captured as testscript's in-memory stdout.
+//
+//	execstdout streamed.img incusos-builder build -o -
+func cmdExecStdout(ts *testscript.TestScript, neg bool, args []string) {
+	if len(args) < 2 {
+		ts.Fatalf("usage: execstdout file program [args...]")
+	}
+	out, err := os.Create(ts.MkAbs(args[0]))
+	if err != nil {
+		ts.Fatalf("create %s: %v", args[0], err)
+	}
+	defer out.Close()
+
+	program, err := lookScriptPath(ts, args[1])
+	if err != nil {
+		ts.Fatalf("execstdout: %v", err)
+	}
+	cmd := exec.Command(program, args[2:]...)
+	cmd.Dir = ts.MkAbs(".")
+	cmd.Env = append(scriptEnviron(ts), "PWD="+cmd.Dir)
+	cmd.Stdout = out
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if stderr.Len() > 0 {
+		ts.Logf("[stderr]\n%s", stderr.String())
+	}
+	if err == nil && neg {
+		ts.Fatalf("unexpected command success")
+	}
+	if err != nil && !neg {
+		var ee *exec.ExitError
+		if !errors.As(err, &ee) {
+			ts.Fatalf("exec %s: %v", args[1], err)
+		}
+		ts.Fatalf("unexpected command failure: %v\n%s", err, stderr.String())
+	}
+}
+
+func lookScriptPath(ts *testscript.TestScript, name string) (string, error) {
+	if filepath.Base(name) != name {
+		return name, nil
+	}
+	for dir := range strings.SplitSeq(ts.Getenv("PATH"), string(os.PathListSeparator)) {
+		if dir == "" {
+			continue
+		}
+		cand := filepath.Join(dir, name)
+		info, err := os.Stat(cand)
+		if err == nil && !info.IsDir() {
+			return cand, nil
+		}
+	}
+	return "", fmt.Errorf("%s: not found in PATH", name)
+}
+
 // cmdCmpSHA256 compares a file's SHA-256 against a 64-hex digest, a
 // digest file, or another artifact.
 //
@@ -166,18 +232,25 @@ func cmdCmpSHA256(ts *testscript.TestScript, neg bool, args []string) {
 }
 
 func resolveDigest(abs, raw string) (string, error) {
-	data, err := os.ReadFile(abs)
-	if err == nil {
+	info, err := os.Stat(abs)
+	if err != nil {
+		if isHexDigest(raw) {
+			return strings.ToLower(raw), nil
+		}
+		return "", err
+	}
+	// Digest files are one 64-hex line. Artifact files are hashed in a stream.
+	if info.Size() <= 65 {
+		data, err := os.ReadFile(abs)
+		if err != nil {
+			return "", err
+		}
 		text := strings.TrimSpace(string(data))
 		if isHexDigest(text) {
 			return strings.ToLower(text), nil
 		}
-		return fileSHA256(abs)
 	}
-	if isHexDigest(raw) {
-		return strings.ToLower(raw), nil
-	}
-	return "", err
+	return fileSHA256(abs)
 }
 
 func isHexDigest(s string) bool {

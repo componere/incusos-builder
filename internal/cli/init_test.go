@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -131,7 +133,47 @@ func TestInitNoInputWritesFile(t *testing.T) {
 	got, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, renderInitConfig(exampleInitAnswers(), true), string(got))
+	require.Equal(t, fmt.Sprintf(initWrote+"\n", path), stdout.String())
+}
+
+// TestInitQuietSuppressesWroteNotice honors -q after a file write.
+func TestInitQuietSuppressesWroteNotice(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	var stdout bytes.Buffer
+	root := newInitTestCommand(t, &stdout, ioDiscard(), strings.NewReader(""))
+	root.SetArgs([]string{"init", "--no-input", "-q", "-o", path})
+
+	require.NoError(t, root.Execute())
+	got, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, renderInitConfig(exampleInitAnswers(), true), string(got))
 	require.Empty(t, stdout.String())
+}
+
+// TestInitQuietKeepsJSONEnvelope leaves --json success output intact.
+func TestInitQuietKeepsJSONEnvelope(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.yaml")
+	var stdout bytes.Buffer
+	root := newInitTestCommand(t, &stdout, ioDiscard(), strings.NewReader(""))
+	root.SetArgs([]string{"init", "--no-input", "-q", "--json", "-o", path})
+
+	require.NoError(t, root.Execute())
+	var env initEnvelope
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &env))
+	require.Equal(t, path, env.Result.Output)
+	require.Equal(t, 1, strings.Count(stdout.String(), "\n"))
+}
+
+// TestInitQuietStdoutDashUnaffected still writes the config to stdout.
+func TestInitQuietStdoutDashUnaffected(t *testing.T) {
+	var stdout bytes.Buffer
+	root := newInitTestCommand(t, &stdout, ioDiscard(), strings.NewReader(""))
+	root.SetArgs([]string{"init", "--no-input", "-q", "-o", "-"})
+
+	require.NoError(t, root.Execute())
+	require.Equal(t, renderInitConfig(exampleInitAnswers(), true), stdout.String())
 }
 
 // TestInitRefusesExistingFile is a usage error (exit 2).
@@ -214,19 +256,50 @@ func TestNewInitFormDoesNotPanic(t *testing.T) {
 	})
 }
 
-// TestNewInitFormAccessibleDoesNotPanic builds the form with ACCESSIBLE set.
-// Huh's accessible prompts each allocate a [bufio.Scanner], so a single piped
-// script cannot drive every field reliably; full-screen TTY driving is left
-// to a later smoke test.
-func TestNewInitFormAccessibleDoesNotPanic(t *testing.T) {
+// TestRunInitFormHonorsAccessibleEnv drives runInitForm, which is the
+// path that reads ACCESSIBLE, through Huh's line-oriented prompts.
+func TestRunInitFormHonorsAccessibleEnv(t *testing.T) {
+	t.Setenv(envCI, "")
+	t.Setenv("TERM", "xterm")
 	t.Setenv(envAccessible, "1")
 
-	answers := exampleInitAnswers()
-	channel := string(answers.Channel)
-	require.NotPanics(t, func() {
-		form := newInitForm(&answers, &channel).WithAccessible(true)
-		require.NotNil(t, form)
+	var stderr bytes.Buffer
+	answers, err := runInitForm(Options{
+		In:  newOneLineReader("2\n2\nnightly\ny\n"),
+		Err: &stderr,
 	})
+	require.NoError(t, err)
+	require.Equal(t, build.ImageTypeRaw, answers.Type)
+	require.Equal(t, build.ArchAarch64, answers.Architecture)
+	require.Equal(t, build.Channel("nightly"), answers.Channel)
+	require.True(t, answers.Offline)
+	require.Contains(t, stderr.String(), "Enter a number", "accessible select prompt must run")
+}
+
+// newOneLineReader returns one line per Read so each Huh accessible
+// field's [bufio.Scanner] cannot buffer later answers.
+func newOneLineReader(s string) *oneLineReader {
+	return &oneLineReader{rest: []byte(s)}
+}
+
+type oneLineReader struct {
+	rest []byte
+}
+
+func (r *oneLineReader) Read(p []byte) (int, error) {
+	if len(r.rest) == 0 {
+		return 0, io.EOF
+	}
+	end := 0
+	for end < len(r.rest) && r.rest[end] != '\n' {
+		end++
+	}
+	if end < len(r.rest) {
+		end++
+	}
+	n := copy(p, r.rest[:end])
+	r.rest = r.rest[n:]
+	return n, nil
 }
 
 // newInitTestCommand builds a root+init tree with no-TTY --no-input auto-on.
@@ -240,7 +313,5 @@ func newInitTestCommand(t *testing.T, stdout, stderr *bytes.Buffer, stdin *strin
 		StdinTTY:  func() bool { return false },
 		StdoutTTY: func() bool { return false },
 	}
-	root := NewRootCommand(opts)
-	root.AddCommand(newInitCommand(opts))
-	return root
+	return NewRootCommand(opts)
 }

@@ -1,13 +1,13 @@
 # -o - writes artifact bytes on stdout; summary is suppressed.
-# One file build plus one stdout build of the same spec; cmp the bytes.
+# One file build plus one stdout build of the same spec; compare digests
+# without capturing the 2.1 GiB stream in testscript.
 
 exec incusos-builder build -f online.yaml -o file.img --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --color never --progress never
 exists file.img
 
-exec incusos-builder build -f online.yaml -o - --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --color never --progress never
-cp stdout streamed.img
-cmp streamed.img file.img
-! stdout 'summary'
+execstdout streamed.img incusos-builder build -f online.yaml -o - --server $INCUSOS_MIRROR --cache-dir $INCUSOS_CACHE --color never --progress never
+exists streamed.img
+cmpsha256 streamed.img file.img
 
 -- online.yaml --
 version: 1

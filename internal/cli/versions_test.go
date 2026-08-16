@@ -29,6 +29,38 @@ func TestVersionsTableRendersLocalMirror(t *testing.T) {
 	assert.Contains(t, stdout, testfixture.Version+"  "+testfixture.ChannelStable+"  "+testfixture.ArchX8664+"  raw\n")
 }
 
+// TestVersionsQuietSuppressesTable honors -q for the human table.
+func TestVersionsQuietSuppressesTable(t *testing.T) {
+	mirror := generateVersionsMirror(t)
+
+	stdout, err := executeVersions(t,
+		"--server", mirror,
+		"--cache-dir", t.TempDir(),
+		"--architecture", testfixture.ArchX8664,
+		"-q",
+	)
+	require.NoError(t, err)
+	assert.Empty(t, stdout)
+}
+
+// TestVersionsQuietKeepsJSONEnvelope leaves --json success output intact.
+func TestVersionsQuietKeepsJSONEnvelope(t *testing.T) {
+	mirror := generateVersionsMirror(t)
+
+	stdout, err := executeVersions(t,
+		"--server", mirror,
+		"--cache-dir", t.TempDir(),
+		"--architecture", testfixture.ArchX8664,
+		"-q",
+		"--json",
+	)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"result":{"versions":[{"version":"`+testfixture.Version+
+		`","channels":["`+testfixture.ChannelStable+
+		`"],"published_at":"2026-08-16T00:00:00Z","architectures":["`+
+		testfixture.ArchX8664+`"]}]}}`, stdout)
+}
+
 // TestVersionsJSONGolden locks the success envelope field names.
 func TestVersionsJSONGolden(t *testing.T) {
 	mirror := generateVersionsMirror(t)

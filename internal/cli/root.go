@@ -76,10 +76,12 @@ func NewRootCommand(options Options) *cobra.Command {
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if err := initializeConfig(cmd, options.Viper); err != nil {
-				return err
+				return reportBuildError(options, jsonRequested(cmd, options), err)
 			}
-			_, err := resolvePolicy(cmd, options, options.Viper)
-			return err
+			if _, err := resolvePolicy(cmd, options, options.Viper); err != nil {
+				return reportBuildError(options, jsonRequested(cmd, options), err)
+			}
+			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return nil
@@ -98,7 +100,9 @@ func NewRootCommand(options Options) *cobra.Command {
 	root.SetIn(options.In)
 	root.SetOut(options.Out)
 	root.SetErr(options.Err)
-	root.SetFlagErrorFunc(flagUsageError)
+	root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		return reportBuildError(options, jsonRequested(cmd, options), flagUsageError(cmd, err))
+	})
 	registerPersistentFlags(root)
 	root.AddCommand(
 		newBuildCommand(options),
@@ -202,6 +206,26 @@ func defaultCacheDir() string {
 		return ""
 	}
 	return filepath.Join(dir, appName)
+}
+
+// jsonRequested reports whether this invocation should write a JSON
+// envelope. After PersistentPreRunE, Viper holds the resolved --json
+// value (flag, INCUSOS_BUILDER_JSON, or default). Flag-parse failures
+// run before Viper is initialized, so a parsed --json flag is also
+// honored.
+func jsonRequested(cmd *cobra.Command, opts Options) bool {
+	if opts.Viper != nil && opts.Viper.GetBool(flagJSON) {
+		return true
+	}
+	if cmd == nil {
+		return false
+	}
+	flag := cmd.Flags().Lookup(flagJSON)
+	if flag == nil || !flag.Changed {
+		return false
+	}
+	value, err := cmd.Flags().GetBool(flagJSON)
+	return err == nil && value
 }
 
 // flagUsageError wraps cobra/pflag parse failures as [ErrUsage] so they

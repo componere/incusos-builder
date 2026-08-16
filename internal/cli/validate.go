@@ -70,6 +70,9 @@ func runValidate(cmd *cobra.Command, opts Options) error {
 			Offline:      spec.Offline,
 		})
 	}
+	if pol.Quiet {
+		return nil
+	}
 	_, err = fmt.Fprintln(opts.Out, validateOK)
 	return err
 }

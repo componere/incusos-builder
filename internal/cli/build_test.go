@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/klauspost/pgzip"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 
@@ -83,7 +84,6 @@ func TestBuildUsageMatrix(t *testing.T) {
 				StderrTTY: func() bool { return true },
 			}
 			root := NewRootCommand(opts)
-			root.AddCommand(newBuildCommand(opts))
 			root.SetArgs(tc.args)
 
 			err := root.Execute()
@@ -131,43 +131,81 @@ func TestSelectImageSourceByServerShape(t *testing.T) {
 	require.True(t, IsUsage(err), "got %v", err)
 }
 
-// TestBuildNoInputExistingOutputNeverBlocks refuses overwrite without --force.
-func TestBuildNoInputExistingOutputNeverBlocks(t *testing.T) {
+// TestBuildConfirmSeamHonorsNoInput refuses overwrite without --force.
+//
+// The injected Confirm is the command that actually runs. A positive
+// control with input allowed proves the seam is reached; --no-input
+// must not call it.
+func TestBuildConfirmSeamHonorsNoInput(t *testing.T) {
 	t.Setenv(envCI, "")
 
-	dir := t.TempDir()
-	cfg := filepath.Join(dir, "config.yaml")
-	out := filepath.Join(dir, "out.iso")
-	require.NoError(t, os.WriteFile(cfg, []byte(onlineConfigYAML), 0o600))
-	require.NoError(t, os.WriteFile(out, []byte("existing"), 0o600))
-
-	blocked := false
-	var stdout bytes.Buffer
-	opts := Options{
-		In:        strings.NewReader(""),
-		Out:       &stdout,
-		Err:       io.Discard,
-		Viper:     viper.New(),
-		StdinTTY:  func() bool { return true },
-		StdoutTTY: func() bool { return true },
-		StderrTTY: func() bool { return true },
-	}
-	root := NewRootCommand(opts)
-	root.AddCommand(newBuildCommandWith(opts, buildDeps{
-		Confirm: func() (bool, error) {
-			blocked = true
-			return true, nil
+	tests := []struct {
+		name        string
+		args        []string
+		wantBlocked bool
+	}{
+		{
+			name:        "no-input refuses without calling confirm",
+			args:        []string{"--no-input"},
+			wantBlocked: false,
 		},
-	}))
-	root.SetArgs([]string{"build", "-f", cfg, "-o", out, "--no-input"})
+		{
+			name:        "input allowed reaches confirm seam",
+			args:        nil,
+			wantBlocked: true,
+		},
+	}
 
-	err := root.Execute()
-	require.Error(t, err)
-	require.True(t, IsUsage(err), "got %v", err)
-	require.Contains(t, err.Error(), "refusing to overwrite")
-	require.Equal(t, exitUsage, exitCode(err))
-	require.False(t, blocked, "confirm seam must not run under --no-input")
-	require.Equal(t, "existing", readFile(t, out))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			cfg := filepath.Join(dir, "config.yaml")
+			out := filepath.Join(dir, "out.iso")
+			require.NoError(t, os.WriteFile(cfg, []byte(onlineConfigYAML), 0o600))
+			require.NoError(t, os.WriteFile(out, []byte("existing"), 0o600))
+
+			blocked := false
+			opts := Options{
+				In:        strings.NewReader(""),
+				Out:       io.Discard,
+				Err:       io.Discard,
+				Viper:     viper.New(),
+				StdinTTY:  func() bool { return true },
+				StdoutTTY: func() bool { return true },
+				StderrTTY: func() bool { return true },
+			}
+			root := newRootWithBuild(t, opts, buildDeps{
+				Confirm: func() (bool, error) {
+					blocked = true
+					return false, nil
+				},
+			})
+			root.SetArgs(append([]string{"build", "-f", cfg, "-o", out}, tc.args...))
+
+			err := root.Execute()
+			require.Error(t, err)
+			require.True(t, IsUsage(err), "got %v", err)
+			require.Contains(t, err.Error(), "refusing to overwrite")
+			require.Equal(t, exitUsage, exitCode(err))
+			require.Equal(t, tc.wantBlocked, blocked, "confirm seam reached=%v, want %v", blocked, tc.wantBlocked)
+			require.Equal(t, "existing", readFile(t, out))
+		})
+	}
+}
+
+// newRootWithBuild is NewRootCommand with the production build command
+// replaced by one that carries injected deps.
+func newRootWithBuild(t *testing.T, opts Options, deps buildDeps) *cobra.Command {
+	t.Helper()
+	root := NewRootCommand(opts)
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == "build" {
+			root.RemoveCommand(cmd)
+			break
+		}
+	}
+	root.AddCommand(newBuildCommandWith(opts, deps))
+	return root
 }
 
 // TestWrapStoredWriterGzipDigestHashesCompressedBytes covers the .gz

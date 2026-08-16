@@ -33,6 +33,26 @@ func TestValidateValidConfig(t *testing.T) {
 	assert.Empty(t, stderr)
 }
 
+// TestValidateQuietSuppressesSuccessLine honors -q for the human writer.
+func TestValidateQuietSuppressesSuccessLine(t *testing.T) {
+	t.Parallel()
+
+	stdout, stderr, err := executeValidate(t, nil, "-f", validConfigFile, "-q")
+	require.NoError(t, err)
+	assert.Empty(t, stdout)
+	assert.Empty(t, stderr)
+}
+
+// TestValidateQuietKeepsJSONEnvelope leaves --json success output intact.
+func TestValidateQuietKeepsJSONEnvelope(t *testing.T) {
+	t.Parallel()
+
+	stdout, stderr, err := executeValidate(t, nil, "-f", validConfigFile, "-q", "--json")
+	require.NoError(t, err)
+	assert.Empty(t, stderr)
+	assert.JSONEq(t, `{"result":{"valid":true,"type":"iso","architecture":"x86_64","offline":false}}`, stdout)
+}
+
 // TestValidateJSONEnvelope locks the success document field names.
 func TestValidateJSONEnvelope(t *testing.T) {
 	t.Parallel()
@@ -132,7 +152,6 @@ func executeValidate(t *testing.T, stdin io.Reader, args ...string) (string, str
 		StderrTTY: func() bool { return false },
 	}
 	root := NewRootCommand(opts)
-	root.AddCommand(newValidateCommand(opts))
 	root.SetArgs(append([]string{"validate"}, args...))
 	err := root.Execute()
 	return stdout.String(), stderr.String(), err

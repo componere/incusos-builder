@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -137,6 +138,36 @@ func TestColorModePassedThrough(t *testing.T) {
 		StderrTTY: func() bool { return true },
 	}, []string{"--color", "always"})
 	require.Equal(t, ux.ColorModeAlways, pol.Color)
+}
+
+// TestVerboseEmitsDebugToStderr constructs the policy logger at debug when
+// --verbose is set, and at warn-and-above by default so debug is silent.
+func TestVerboseEmitsDebugToStderr(t *testing.T) {
+	t.Setenv(envCI, "")
+
+	var verboseErr bytes.Buffer
+	verbose := mustResolvePolicy(t, Options{
+		Err:       &verboseErr,
+		StdinTTY:  func() bool { return true },
+		StdoutTTY: func() bool { return true },
+		StderrTTY: func() bool { return true },
+	}, []string{"--verbose", "--color", "never"})
+	logBuildPlan(verbose, "202508141200", "IncusOS_202508141200.iso", "out.iso", "")
+	require.Contains(t, verboseErr.String(), "resolved version")
+	require.Contains(t, verboseErr.String(), "202508141200")
+	require.Contains(t, verboseErr.String(), "IncusOS_202508141200.iso")
+	require.Contains(t, verboseErr.String(), "output paths")
+	require.Contains(t, verboseErr.String(), "out.iso")
+
+	var defaultErr bytes.Buffer
+	def := mustResolvePolicy(t, Options{
+		Err:       &defaultErr,
+		StdinTTY:  func() bool { return true },
+		StdoutTTY: func() bool { return true },
+		StderrTTY: func() bool { return true },
+	}, []string{"--color", "never"})
+	logBuildPlan(def, "202508141200", "IncusOS_202508141200.iso", "out.iso", "")
+	require.Empty(t, defaultErr.String())
 }
 
 func mustResolvePolicy(t *testing.T, opts Options, args []string) policy {

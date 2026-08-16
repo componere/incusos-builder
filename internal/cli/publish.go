@@ -48,6 +48,8 @@ const (
 	rollRestoreResources = "restored resources"
 	// rollRestoreImage is a rollback note for restoring image.bak (always last).
 	rollRestoreImage = "restored image"
+	// leftoverLabel prefixes leftover paths in fail() error text.
+	leftoverLabel = "leftover"
 )
 
 // ErrUsage marks a CLI usage error. Root maps it to process exit code 2.
@@ -63,6 +65,7 @@ type Request struct {
 	// Image is the -o destination. "-" is a usage error here.
 	Image string
 	// Resources is --resources-output. Empty means default when Offline.
+	// A non-empty value on an online request is a usage error.
 	Resources string
 	// Offline selects the two-artifact lifecycle.
 	Offline bool
@@ -107,7 +110,7 @@ type Session struct {
 	replace bool
 	// rollback records restore steps taken on a handled failure.
 	rollback []string
-	// leftovers records bak (or other) paths that could not be removed.
+	// leftovers records paths that could not be removed during cleanup.
 	leftovers []string
 	// complete is true after a successful Publish; Abort becomes a no-op.
 	complete bool
@@ -274,6 +277,9 @@ func resolvePaths(image, resources string, offline bool, typ build.ImageType) (P
 		resources = defaultResources(image, ext)
 	}
 	if !offline {
+		if strings.TrimSpace(resources) != "" {
+			return Paths{}, usagef("--resources-output requires offline: true in the config")
+		}
 		resources = ""
 	}
 	image = filepath.Clean(image)
@@ -393,13 +399,20 @@ func (s *Session) createTemps() error {
 	return nil
 }
 
-// createTemp creates [os.CreateTemp](dir(dest), ".<base>-*.tmp").
+// createTemp creates [os.CreateTemp](dir(dest), ".<base>-*.tmp") and
+// chmods it to [claimMode] so rename publishes a world-readable artifact.
 func createTemp(dest string) (*os.File, error) {
 	dir := filepath.Dir(dest)
 	base := filepath.Base(dest)
 	f, err := os.CreateTemp(dir, "."+base+"-*.tmp")
 	if err != nil {
 		return nil, outputWrap(err, "create temp for %s", dest)
+	}
+	if err := f.Chmod(claimMode); err != nil {
+		name := f.Name()
+		_ = f.Close()
+		_ = os.Remove(name)
+		return nil, outputWrap(err, "chmod temp for %s", dest)
 	}
 	return f, nil
 }
@@ -571,13 +584,20 @@ func (s *Session) removeBaks() []string {
 	return leftovers
 }
 
-// fail runs abort cleanup and attaches every rollback step to err.
+// fail runs abort cleanup and attaches every rollback step and leftover
+// path to err. Leftovers are the failure-path report channel; they are
+// not returned as Publication.Leftovers.
 func (s *Session) fail(err error) error {
 	s.cleanup()
-	if len(s.rollback) == 0 {
+	parts := make([]string, 0, len(s.rollback)+1)
+	parts = append(parts, s.rollback...)
+	if len(s.leftovers) > 0 {
+		parts = append(parts, leftoverLabel+" "+strings.Join(s.leftovers, ", "))
+	}
+	if len(parts) == 0 {
 		return err
 	}
-	return fmt.Errorf("%w (%s)", err, strings.Join(s.rollback, "; "))
+	return fmt.Errorf("%w (%s)", err, strings.Join(parts, "; "))
 }
 
 // cleanup restores the old pair, removes claims/temps, and is idempotent.

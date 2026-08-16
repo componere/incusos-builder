@@ -299,6 +299,7 @@ func TestViperPrecedenceResolvedPolicy(t *testing.T) {
 }
 
 // TestUsageErrorsExitTwo maps cobra flag-parse failures and invalid enums to exit 2.
+// Without --json, stdout stays empty. With --json, stdout is exactly one error envelope.
 func TestUsageErrorsExitTwo(t *testing.T) {
 	t.Parallel()
 
@@ -315,8 +316,10 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			var stdout bytes.Buffer
 			root := NewRootCommand(Options{
-				Out: ioDiscard(),
+				Out: &stdout,
 				Err: ioDiscard(),
 				In:  strings.NewReader(""),
 			})
@@ -325,6 +328,21 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 			require.Error(t, err)
 			require.True(t, IsUsage(err), "err=%v", err)
 			require.Equal(t, exitUsage, exitCode(err))
+			require.Empty(t, stdout.String())
+
+			var jsonOut bytes.Buffer
+			jsonRoot := NewRootCommand(Options{
+				Out: &jsonOut,
+				Err: ioDiscard(),
+				In:  strings.NewReader(""),
+			})
+			jsonRoot.SetArgs(append([]string{"--json"}, tc.args...))
+			err = jsonRoot.Execute()
+			require.Error(t, err)
+			require.True(t, IsUsage(err), "err=%v", err)
+			require.Equal(t, exitUsage, exitCode(err))
+			assertErrorEnvelope(t, jsonOut.Bytes(), exitUsage, err.Error())
+			require.Equal(t, 1, strings.Count(jsonOut.String(), "\n"))
 		})
 	}
 }

@@ -27,6 +27,8 @@ const (
 	schemaVersionLiteral = 1
 	// initFileMode is the mode used for O_CREAT|O_EXCL config claims.
 	initFileMode = 0o644
+	// initWrote is the human success line after writing a config file.
+	initWrote = "wrote %s"
 )
 
 // seedSection is one commented seeds. key in the --no-input example.
@@ -115,14 +117,18 @@ func runInit(cmd *cobra.Command, opts Options) error {
 		return finishInit(opts, pol, err)
 	}
 	body := renderInitConfig(answers, pol.NoInput)
-	if err := writeInitOutput(output, body, opts.Out); err != nil {
+	if err = writeInitOutput(output, body, opts.Out); err != nil {
 		return finishInit(opts, pol, err)
 	}
-	if !pol.JSON {
+	if pol.JSON {
+		enc := json.NewEncoder(opts.Out)
+		return enc.Encode(initEnvelope{Result: initResult{Output: output}})
+	}
+	if pol.Quiet || output == stdoutSentinel {
 		return nil
 	}
-	enc := json.NewEncoder(opts.Out)
-	return enc.Encode(initEnvelope{Result: initResult{Output: output}})
+	_, err = fmt.Fprintf(opts.Out, initWrote+"\n", output)
+	return err
 }
 
 // finishInit writes a JSON error envelope when --json is set, then returns err.
