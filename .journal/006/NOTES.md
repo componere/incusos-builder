@@ -33,3 +33,34 @@ Plan:
 3. Review the plan for coverage against the promises, then write it into this
    session folder as `FUNCTIONAL-TEST-PLAN.md`.
 4. Present it to the developer for review.
+
+## 2026-08-16 13:05 — Plan composed and filed
+
+Surveyed the public surfaces directly before delegating: `README.md`,
+`SECURITY.md`, `docs/docs/index.md`, the four reference pages (`cli`,
+`automation`, `configuration`, `cache`), `explanation/trust-model.md`,
+`how-to/verify-boot-acceptance.md`, `how-to/run-in-ci.md`,
+`how-to/recover-interrupted-build.md`, `moon.yml`, and `ghd.toml`. That
+inventory went into the planner brief so the agent worked from a fixed
+surface list rather than discovering scope on its own.
+
+Spawned one `planner` subagent (`FunctionalTestPlanner`, 24 min). Its
+first yield was a JSON stub instead of the document; recovered the real
+Markdown by messaging it to write `'/Users/josh/.omp/agent/sessions/-code-imgoci-go/2026-08-16T19-18-48-228Z_01a00c03-26a4-7000-a48e-105ed855e845/local/functional-test-plan.md'`
+(133,833 bytes).
+
+Reviewed the result before filing:
+- 51 cases across nine suites (A install/provenance, B CLI contract,
+  C config/SOPS, D acquisition/cache/trust, E build/publication,
+  F offline media, G docs-as-written, H release/supply chain,
+  I boot acceptance). Verified every case ID referenced by the coverage
+  ledger actually exists as a heading.
+- Three-gate verdict model: pre-tag, draft-release, published-release.
+  I-01 (the Incus boot gate) is mandatory pre-tag and is `Blocked`, not
+  waivable, without an x86_64 Linux Incus host.
+- Found one ledger gap: H-08 (security-scan workflow) existed as a case
+  with no promise row. Added the row rather than bouncing the document.
+
+Filed as `.journal/006/FUNCTIONAL-TEST-PLAN.md`.
+
+Next: present to the developer for review.
