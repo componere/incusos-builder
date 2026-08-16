@@ -1,0 +1,7 @@
+custom_ca_certs:
+  - |
+    -----BEGIN CERTIFICATE-----
+    CA
+    -----END CERTIFICATE-----
+encryption_recovery_keys: []
+version: "1"

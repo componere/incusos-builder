@@ -1,0 +1,6 @@
+version: 1
+image:
+  type: iso
+  architecture: x86_64
+sops:
+  lastmodified: "2026-08-15T00:00:00Z"

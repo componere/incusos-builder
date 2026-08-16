@@ -71,12 +71,36 @@ tasks:
     options:
       cache: false
 
+  # Type-only upstream gate: incus-osd is imported for its API type declarations,
+  # so no package from its `internal/` or `cmd/` trees may reach our build closure
+  # (docs/notes/spike-1d-types.md). Scoped deny assertion, not a package count.
+  check-upstream:
+    script: 'python3 -m unittest discover -s .github/scripts -p test_check_upstream_closure.py && python3 .github/scripts/check_upstream_closure.py'
+    inputs:
+      - '@group(goSources)'
+      - '.github/scripts/check_upstream_closure.py'
+      - '.github/scripts/test_check_upstream_closure.py'
+    options:
+      cache: false
+
+  # Regenerate the testify mocks declared in .mockery.yml. Codegen is a local task:
+  # CI verifies the committed mocks by compiling and testing against them.
+  mocks:
+    command: 'mockery'
+    inputs:
+      - '@group(goSources)'
+      - '.mockery.yml'
+    options:
+      cache: false
+      runInCI: false
+
   check:
     deps:
       - 'root:format'
       - 'root:lint'
       - 'root:build'
       - 'root:test'
+      - 'root:check-upstream'
       - 'docs:build'
     inputs:
       - '@group(goSources)'

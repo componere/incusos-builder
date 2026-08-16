@@ -1,0 +1,4 @@
+console:
+  - device: /dev/ttyS0
+    baud_rate: 115200
+version: "1"

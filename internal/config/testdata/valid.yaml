@@ -1,0 +1,9 @@
+version: 1
+image:
+  type: iso
+  architecture: x86_64
+  channel: stable
+seeds:
+  applications:
+    applications:
+      - name: incus

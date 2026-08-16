@@ -60,9 +60,11 @@ ENV/
 htmlcov/
 .coverage
 .coverage.*
-dist/
-build/
-site/
+# Rooted on purpose: an unanchored `build/` also ignores the Go package
+# `internal/build/`, which silently kept the domain core out of every commit.
+/dist/
+/build/
+/site/
 *.egg-info/
 .eggs/
 pip-wheel-metadata/
