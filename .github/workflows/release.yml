@@ -22,7 +22,7 @@ permissions: {}
 # A tag is released exactly once. Never cancel a publishing run in flight;
 # queue a duplicate (re-run, or a dispatch racing the tag push) behind it.
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.tag || github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -177,6 +177,9 @@ jobs:
       # caller must also grant packages even though the binary attestation never
       # pushes to a registry (unused here, but required to satisfy the shared job).
       packages: write
+      # Same caller-must-cover-callee rule for artifact-metadata: write, which
+      # attest.yml uses to create the linked-artifact storage record.
+      artifact-metadata: write
     uses: ./.github/workflows/attest.yml
     with:
       checksums-artifact: release-checksums
@@ -425,6 +428,7 @@ jobs:
       attestations: write
       packages: write
       contents: read
+      artifact-metadata: write
     uses: ./.github/workflows/attest.yml
     with:
       subject-name: ${{ needs.container-image-release.outputs.image-name }}

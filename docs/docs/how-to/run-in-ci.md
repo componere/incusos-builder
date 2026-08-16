@@ -19,11 +19,11 @@ the [automation reference](../reference/automation.md).
 - A [seed config](../reference/configuration.md) file, or YAML on
   stdin for `-f -`.
 - A writable directory for `-o`. Do not combine `--json` with `-o -`.
-- A content-addressed cache directory. The default is
-  `$XDG_CACHE_HOME/incusos-builder` (or the platform user cache
-  directory plus `incusos-builder`). If that default is empty,
-  acquisition fails with exit `5`. Pass `--cache-dir` or
-  `INCUSOS_BUILDER_CACHE_DIR`.
+- A content-addressed cache directory. The default is Go
+  `os.UserCacheDir()` joined with `incusos-builder`: `$XDG_CACHE_HOME`
+  or `$HOME/.cache` on Linux, `$HOME/Library/Caches` on macOS. If that
+  default is empty, acquisition fails with exit `5`. Pass `--cache-dir`
+  or `INCUSOS_BUILDER_CACHE_DIR`.
 - For an encrypted seed config, `SOPS_AGE_KEY` in the job
   environment. Absence of every SOPS key source is exit `4`. See
   [How to encrypt a seed config with age and SOPS](./sops-encryption.md).

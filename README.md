@@ -25,7 +25,7 @@ go run ./cmd/incusos-builder --version
 
 ### From a GitHub release
 
-After a release is published, ghd can install the verified binary:
+After a release is published, [ghd](https://github.com/meigma/ghd) can install the verified binary. Install `ghd` from that project's [getting started](https://github.com/meigma/ghd/blob/master/docs/docs/getting-started.md) guide. The `install` and `download` syntax below is from `ghd install --help` and `ghd download --help`; it does not mean incusos-builder assets exist yet.
 
 ```sh
 ghd install componere/incusos-builder/incusos-builder \

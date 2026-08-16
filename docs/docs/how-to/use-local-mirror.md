@@ -15,10 +15,10 @@ as the HTTPS update server.
   when the path is already a directory. Create and populate the tree
   before the command runs.
 - A content-addressed cache directory. Local assets are admitted into
-  the same cache as HTTPS downloads. The default is
-  `$XDG_CACHE_HOME/incusos-builder` (or the platform user cache
-  directory plus `incusos-builder`). Pass `--cache-dir` if that
-  default is empty.
+  the same cache as HTTPS downloads. The default is Go
+  `os.UserCacheDir()` joined with `incusos-builder`: `$XDG_CACHE_HOME`
+  or `$HOME/.cache` on Linux, `$HOME/Library/Caches` on macOS. Pass
+  `--cache-dir` if that default is empty.
 
 ## 1. Lay out the directory
 

@@ -18,15 +18,17 @@ Command flags are in [CLI](cli.md). Acquisition failures are exit `5`
 
 `--cache-dir` / `INCUSOS_BUILDER_CACHE_DIR` selects the cache root.
 
-Default: `<user-cache>/incusos-builder`. On Unix, `<user-cache>` is
-`XDG_CACHE_HOME` when that variable is set, otherwise the platform
-user-cache directory. If that directory cannot be determined, the
+Default: Go `os.UserCacheDir()` joined with `incusos-builder`. On
+Linux, that is `$XDG_CACHE_HOME` when set, otherwise `$HOME/.cache`.
+On macOS, that is `$HOME/Library/Caches`; macOS does not consult
+`$XDG_CACHE_HOME`. If that directory cannot be determined, the
 default is empty.
 
 An empty resolved cache directory is an acquisition error
 (`cache directory is required`). The path is made absolute at
-construction. The root and `sha256/` subdirectory are created on first
-successful admission (`0o755`).
+construction. The root and `sha256/` subdirectory are created at the
+start of the first admission attempt (`0o755`), even if that
+admission later fails.
 
 There is no cache subcommand and no TTL, prune, or size-limit cleanup.
 
@@ -44,8 +46,9 @@ the update file's SHA-256 after validation: exactly 64 lowercase
 hexadecimal characters.
 
 Admission writes a `.fetch-*` temp in the cache root. A failed
-admission closes and removes the temp. No digest file and no leftover
-`.fetch*` temp remain after a failed admit.
+admission closes and removes the temp. The root and `sha256/`
+directory remain. No digest file and no leftover `.fetch*` temp
+remain after a failed admit.
 
 ## Digest keys
 

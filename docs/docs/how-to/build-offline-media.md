@@ -17,10 +17,10 @@ the `RESCUE_DATA` rescue media.
   or an [existing local mirror directory](./use-local-mirror.md).
 - A writable directory for `-o` and the rescue-media file. Offline
   builds cannot use `-o -`.
-- A content-addressed cache directory. The default is
-  `$XDG_CACHE_HOME/incusos-builder` (or the platform user cache
-  directory plus `incusos-builder`). Pass `--cache-dir` if that
-  default is empty.
+- A content-addressed cache directory. The default is Go
+  `os.UserCacheDir()` joined with `incusos-builder`: `$XDG_CACHE_HOME`
+  or `$HOME/.cache` on Linux, `$HOME/Library/Caches` on macOS. Pass
+  `--cache-dir` if that default is empty.
 
 ## 1. Write the seed config
 
