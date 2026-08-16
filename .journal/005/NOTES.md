@@ -161,3 +161,36 @@ not the 5–12 min budgeted.
 
 Remaining: track A (31 cases, live build chain — the expensive one) and track C
 (boot acceptance, still blocked on an x86_64 Linux Incus host).
+
+## 2026-08-16 15:40 — Wave 2 track A executed
+
+Staged fan-out, cap 4. I ran the PRE-07-W2 gate myself as a supervised process
+(`root:e2e` green, 63 s). Stage 1: AChain (ART-05..10). On its warm-cache signal,
+stage 2: AMirror (ART-12/13/19/20), APublish (ART-11/17/18/21), AMedia
+(MED-07..17). As slots freed, ADocs (DOC-04/10/12/14/15).
+
+Result: **31/31 executed — 25 pass, 5 deviations, 1 fail, 0 blocked.** Evidence in
+`.journal/005/WAVE2_TRACKA_RESULTS.md`; plan §8 track A rows and §5 findings filled.
+
+The artifact contract is solid: seed tar at byte 2,148,532,224 with eleven 0600
+entries in writeSeed order; prefix and suffix cmp clean against the stock image;
+the image digest reproduced four independent ways (fresh-cache env build,
+post-SIGINT re-run, `-o -` stream, local mirror build).
+
+The failure is ART-20 and it is a genuine defect: the low-disk warning never
+fires on a first-use cache directory. warnIfLowSpace statfs's a directory that
+does not exist yet, gets ENOENT, and swallows it. First build against a new
+cache location = no warning, then a mid-download ENOSPC. AMirror root-caused it
+by re-running the identical command after the dir existed.
+
+Other new findings: raw rescue media is not byte-reproducible (random GPT GUID +
+FAT32 serial; five builds, five resources_sha256 values) while the installer is;
+mounting rescue media on macOS mutates it (.fseventsd); the ISO volume label is
+NUL-padded not space-padded; the README quickstart leaves a 3.4 GB untracked
+incusos.iso in a clean clone and neither it nor config.yaml is gitignored.
+
+Plan cost model is ~10x pessimistic on this hardware (ART-05 17 s vs 1-3 min,
+MED-07 5.3 s vs 10-20 min, DOC-04 ~4 min vs 20-45 min).
+
+Wave 2 is now complete except track C. Remaining: BOOT-02..BOOT-10, still
+blocked on an x86_64 Linux Incus host with /dev/kvm.

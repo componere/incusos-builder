@@ -2924,6 +2924,30 @@ Full evidence in `WAVE2_TRACKB_RESULTS.md`. 9/9 track B cases executed, all pass
 | F-IMG-C | positive | The binary is root-owned `0755`, so the runtime uid cannot modify it. | SUP-06 |
 | F-DOC-9 (extended) | medium | `validate` does not merely accept a plain-http `--server`; it **ignores `--server` entirely** — the envelope is byte-identical with and without a bogus server. | SUP-10 |
 
+### Found during Wave 2 track A execution (2026-08-16, commit 59c268b)
+
+Full evidence in `WAVE2_TRACKA_RESULTS.md`. 31/31 executed: 25 pass, 5 deviations,
+**1 fail**.
+
+| ID | Severity | Finding | Case |
+|----|----------|---------|------|
+| **N-AMIR-1** | **medium — the one track A failure** | The low-disk warning **never fires on a first-use cache directory**. `warnIfLowSpace` (`internal/update/cache.go:220-232`) calls `freeBytes(c.dir)` and swallows the error; on a first-use cache the `statfs` hits a directory that does not exist yet (created only on first admission, `cache.go:42-51`), returns ENOENT, and the warning is dropped. Invoked at `cache.go:91` and `client.go:127`, both before creation. The first build against any new cache location — the common case, and the one most likely to be on a too-small volume — gets no advance warning and hits a mid-download ENOSPC instead. | ART-20 |
+| **N-MEDIA-1** | medium | **Raw rescue media is not byte-reproducible.** Five builds of one identical offline config produced the same installer digest every time and five *different* `resources_sha256` values, from a random GPT disk GUID plus FAT32 volume serial. No doc says the rescue artifact is non-deterministic, and `result.resources_sha256` reads like a reproducible property. | MED-07, DOC-12 |
+| **N-MEDIA-2** | advisory | **Mounting rescue media on macOS mutates it** — macOS writes `.fseventsd/fseventsd-uuid` into the FAT volume, changing its digest. Verification must mount read-only or expect the change; never compare a post-mount digest to the envelope. | MED-10 |
+| **N-MEDIA-3** | cosmetic | The ISO volume identifier is NUL-padded, not space-padded per ISO 9660 §8.4.4 (go-diskfs behaviour). `hdiutil` and `bsdtar` resolve it; a strict Linux `blkid` label match is the residual risk, gated by BOOT-07. | MED-13 |
+| **N-DOC-F** | medium (UX) | The README quickstart **dirties a clean clone**: `config.yaml` and a 3.4 GB `incusos.iso` land in the checkout root and neither is gitignored. | DOC-04 |
+| **N-DOC-A** | doc | `README.md:65` implies `--resources-output` is required for rescue media; offline builds emit it with no flag, and the flag on a non-offline config is exit 2. | DOC-04 |
+| **N-DOC-B** | doc | `build-offline-media.md:198` quotes a one-path refusal; the tool names both finals, comma-separated. | DOC-12 |
+| **N-DOC-C** | doc | `use-local-mirror.md:183` omits the `acquisition failed: ` prefix. | DOC-14 |
+| **N-DOC-D** | doc | `build-offline-media.md:215-219` presents leftover `.bak` files as a usable previous generation; publish step 6 deletes them. | DOC-12 |
+| **N-DOC-E** | advisory | The `--force` `.bak` window is effectively unobservable on a warm cache; the realistic post-kill state is decision-table row 1 (temps, no `.bak`). | DOC-15 |
+
+Also recorded: DOC-04's quickstart yields `seed_bytes 1024` — an empty seed tar,
+because the starter config comments out every `seeds` section. Plan corrections
+D-13..D-18 (cost estimates ~10× pessimistic; ART-06's "no progress lines" wording;
+MED-13's padding; MED-14's error source; ART-12's Wi-Fi instruction; DOC-15's
+realistic state) are in `WAVE2_TRACKA_RESULTS.md`.
+
 Track B plan corrections D-9..D-12 (SUP-03 costs ~40 s not 5–12 min; SUP-12's
 greps match only echoed script bodies; SUP-08's expectation must target the
 per-arch SBOM; SUP-09 cannot read a version from a `go install`-ed syft) are
@@ -3161,38 +3185,38 @@ runs days later.
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| PRE-07-W2 | partial | WAVE2_TRACKB_RESULTS.md | track B portion only; root:e2e deferred to track A |
-| ART-05 |  |  |  |
-| ART-06 |  |  |  |
-| ART-07 |  |  |  |
-| ART-08 |  |  |  |
-| ART-09 |  |  |  |
-| ART-10 |  |  |  |
-| ART-11 |  |  |  |
-| ART-12 |  |  |  |
-| ART-13 |  |  |  |
-| ART-17 |  |  |  |
-| ART-18 |  |  |  |
-| ART-19 |  |  |  |
-| ART-20 |  |  |  |
-| ART-21 |  |  |  |
-| MED-07 |  |  |  |
-| MED-08 |  |  |  |
-| MED-09 |  |  |  |
-| MED-10 |  |  |  |
-| MED-11 |  |  |  |
-| MED-12 |  |  |  |
-| MED-13 |  |  |  |
-| MED-14 |  |  |  |
-| MED-15 |  |  |  |
-| MED-16 |  |  |  |
-| MED-17 |  |  |  |
+| PRE-07-W2 | pass | WAVE2_TRACKA_RESULTS.md | root:e2e green (ok ... 58.777s); track B portion done earlier |
+| ART-05 | pass | WAVE2_TRACKA_RESULTS.md | 17.0 s wall (not 1-3 min); seed_bytes 13312; sha256 3e1fbc20...1847c |
+| ART-06 | pass | WAVE2_TRACKA_RESULTS.md | cache hit: no ==> download, 4.17 s; three-way digest agreement |
+| ART-07 | pass | WAVE2_TRACKA_RESULTS.md | -r--r--r-- 435456672, self-hash == filename, no .fetch-* residue |
+| ART-08 | pass | WAVE2_TRACKA_RESULTS.md | lba512=4196352 mib=2049; 13312 B; eleven -rw------- entries in writeSeed order |
+| ART-09 | pass | WAVE2_TRACKA_RESULTS.md | prefix and suffix cmp both silent exit 0; stock region digest differs from seed.tar |
+| ART-10 | pass | WAVE2_TRACKA_RESULTS.md | gz digest eef7b2c0...bc8c == compressed file; decompressed == ART-05 image |
+| ART-11 | pass | WAVE2_TRACKA_RESULTS.md | env run 1 download, flag run 0; /nonexistent-should-be-ignored never created |
+| ART-12 | pass | WAVE2_TRACKA_RESULTS.md | mirror build == 3e1fbc20...1847c under sandbox-exec deny-net (D-17) |
+| ART-13 | pass | WAVE2_TRACKA_RESULTS.md | exit 5 documented tamper wording; $TCACHE/sha256 empty, no .fetch-*, no output |
+| ART-17 | pass | WAVE2_TRACKA_RESULTS.md | kill -INT during splice -> exit 5 context canceled; no out.img, no .tmp; re-run digest matches |
+| ART-18 | pass | WAVE2_TRACKA_RESULTS.md | refusal exit 2; --force leaves no .bak/.tmp; restore drill returns recorded digest |
+| ART-19 | pass | WAVE2_TRACKA_RESULTS.md | both tampers exit 5 with documented wording; neither artifact published |
+| ART-20 | fail | WAVE2_TRACKA_RESULTS.md | low-space warning silently skipped on a first-use cache dir (N-AMIR-1) |
+| ART-21 | pass | WAVE2_TRACKA_RESULTS.md | streamed image == 3e1fbc20...1847c; no summary or JSON on stdout |
+| MED-07 | pass | WAVE2_TRACKA_RESULTS.md | both digests match envelope; rescue exactly 275901440 B; 5.3 s warm |
+| MED-08 | pass | WAVE2_TRACKA_RESULTS.md | ee / EFI PART / LBA 2048 / 536821 / RESCUE_DATA / FAT32 |
+| MED-09 | pass | WAVE2_TRACKA_RESULTS.md | 275901440 B and 55 aa at partition start + 510 |
+| MED-10 | pass | WAVE2_TRACKA_RESULTS.md | three files, exact logical sizes, cmp clean, no hotfix.sh.sig (N-MEDIA-2) |
+| MED-11 | pass | WAVE2_TRACKA_RESULTS.md | ISO pair published, both digests match envelope; 17.4 s warm |
+| MED-12 | pass | WAVE2_TRACKA_RESULTS.md | bsdtar lists the three long names; update.json 11859 B cmp clean |
+| MED-13 | pass | WAVE2_TRACKA_RESULTS.md | remainder=0, CD001, pvd_bytes == size; NUL-padded label (D-15) |
+| MED-14 | pass | WAVE2_TRACKA_RESULTS.md | exit 5 before publishing, nothing partial; parser message not validator (D-16) |
+| MED-15 | pass | WAVE2_TRACKA_RESULTS.md | index sha256 == cache filename == media digest; cache entries 0444 |
+| MED-16 | pass | WAVE2_TRACKA_RESULTS.md | installer 644 vs rescue 600 under umask 077 - inode replacement proven |
+| MED-17 | pass | WAVE2_TRACKA_RESULTS.md | refusal names both finals image-first; force run leaves no .bak |
 | DOC-01 |  |  |  |
-| DOC-04 |  |  |  |
-| DOC-10 |  |  |  |
-| DOC-12 |  |  |  |
+| DOC-04 | deviation | WAVE2_TRACKA_RESULTS.md | README quickstart works but seed_bytes 1024 (empty tar); leaves 3.4 GB untracked (N-DOC-F); F-DOC-1 reproduced |
+| DOC-10 | deviation | WAVE2_TRACKA_RESULTS.md | tutorial correct end to end except :157-158 - real PTY prompts (F-DOC-5 confirmed) |
+| DOC-12 | deviation | WAVE2_TRACKA_RESULTS.md | nine-field envelope and digests correct; :198 quotes one path, tool names both (N-DOC-B) |
 | DOC-14 | pass | WAVE1_RESULTS.md | Wave 1 half only; mirror build deferred to Wave 2 |
-| DOC-15 |  |  |  |
+| DOC-15 | deviation | WAVE2_TRACKA_RESULTS.md | 3 SIGKILL attempts all landed in row 1; .bak window unobservable on warm cache (N-DOC-E) |
 
 ### Wave 2 — track B (container image, release rehearsal)
 
