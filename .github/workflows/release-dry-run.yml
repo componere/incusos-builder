@@ -1,6 +1,11 @@
 # This workflow rehearses the release paths without uploading GitHub release
-# assets or publishing container images. It is intended for release PRs and
-# manual checks before changing release automation.
+# assets, pushing container images, signing, or attesting. It is intended for
+# release PRs and manual checks before changing release automation.
+#
+# Fidelity rule: every step here runs the same command the real release runs,
+# against a synthetic version, and stops short only of the publishing calls
+# (`gh release upload`, `apko publish`, `cosign sign`, and the attest.yml
+# provenance job). Do not reimplement release logic here; invoke it.
 #
 # Keep the pull_request trigger broad so required check contexts still report
 # on normal PRs. The jobs intentionally skip unless the PR head branch is a
@@ -16,6 +21,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   binary-release-dry-run:
     name: Binary Release Dry Run
@@ -23,6 +32,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+    env:
+      DRY_RUN_TAG: v0.0.0-dryrun.${{ github.run_id }}.${{ github.run_attempt }}
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -40,10 +51,7 @@ jobs:
         uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
 
       - name: Create synthetic release tag
-        env:
-          DRY_RUN_TAG: v0.0.0-dryrun.${{ github.run_id }}.${{ github.run_attempt }}
-        run: |
-          git tag -f "$DRY_RUN_TAG"
+        run: git tag -f "$DRY_RUN_TAG"
 
       - name: Run GoReleaser without publishing
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
@@ -53,70 +61,34 @@ jobs:
           args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GORELEASER_CURRENT_TAG: v0.0.0-dryrun.${{ github.run_id }}.${{ github.run_attempt }}
+          GORELEASER_CURRENT_TAG: ${{ env.DRY_RUN_TAG }}
 
-      - name: Validate ghd-compatible dry-run artifacts
+      - name: Stage and validate ghd release assets
         run: |
           set -euo pipefail
 
-          version="0.0.0-dryrun.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
-          binary_name="incusos-builder"
-          asset_prefix="${binary_name}_"
-          expected_signer="${GITHUB_REPOSITORY}/.github/workflows/attest.yml"
-          actual_signer="$(awk -F'"' '/signer_workflow/ { print $2; exit }' ghd.toml)"
+          # The real release runs this exact script, so ghd asset mapping, SBOM
+          # coverage, executable bits, and checksum integrity are rehearsed
+          # here instead of being discovered mid-release.
+          python3 .github/scripts/stage_ghd_release_assets.py --tag "$DRY_RUN_TAG"
 
-          if [ "$actual_signer" != "$expected_signer" ]; then
-            echo "ghd.toml signer_workflow must be $expected_signer, got $actual_signer" >&2
-            exit 1
-          fi
-
-          grep -Fq "name = \"$binary_name\"" ghd.toml
-          grep -Fq "tag_pattern = \"v\${version}\"" ghd.toml
-          grep -Fq "path = \"$binary_name\"" ghd.toml
-
-          jq -e --arg asset_prefix "$asset_prefix" '
-            [
-              .[]
-              | select(
-                  (.type == "Binary" and (.name | startswith($asset_prefix))) or
-                  (.type == "SBOM" and (.name | startswith($asset_prefix))) or
-                  (.type == "Checksum" and .name == "checksums.txt")
-                )
-            ] as $artifacts
-            | ($artifacts | map(select(.type == "Binary")) | length) == 4
-            and ($artifacts | map(select(.type == "SBOM")) | length) == 4
-            and ($artifacts | map(select(.type == "Checksum")) | length) == 1
-          ' dist/artifacts.json
-
-          test -f dist/checksums.txt
-
-          for os in darwin linux; do
-            for arch in amd64 arm64; do
-              expected="${binary_name}_${version}_${os}_${arch}"
-              expected_sbom="${expected}.sbom.json"
-              expected_pattern="pattern = \"${binary_name}_\${version}_${os}_${arch}\""
-
-              jq -e --arg name "$expected" '.[] | select(.type == "Binary" and .name == $name)' dist/artifacts.json >/dev/null
-              jq -e --arg name "$expected_sbom" '.[] | select(.type == "SBOM" and .name == $name)' dist/artifacts.json >/dev/null
-              grep -Fq "$expected_pattern" ghd.toml
-              awk -v name="$expected" '$2 == name && length($1) == 64 && $1 ~ /^[[:xdigit:]]+$/ { found = 1 } END { exit(found ? 0 : 1) }' dist/checksums.txt
-            done
-          done
+          # The script asserts ghd.toml points provenance at the isolated
+          # attest workflow; confirm that workflow still exists under that path.
+          test -f .github/workflows/attest.yml
 
       - name: Smoke test dry-run binary
         run: |
           set -euo pipefail
 
-          version="0.0.0-dryrun.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          version="${DRY_RUN_TAG#v}"
           binary_name="incusos-builder"
           host_os="$(go env GOHOSTOS)"
           host_arch="$(go env GOHOSTARCH)"
-          expected="${binary_name}_${version}_${host_os}_${host_arch}"
-          bin="$(jq -r --arg name "$expected" '.[] | select(.type == "Binary" and .name == $name) | .path' dist/artifacts.json)"
+          bin="dist/release-assets/${binary_name}_${version}_${host_os}_${host_arch}"
 
-          if [ -z "$bin" ] || [ "$bin" = "null" ] || [ ! -f "$bin" ]; then
-            echo "failed to locate host binary artifact $expected" >&2
-            jq . dist/artifacts.json >&2
+          if [ ! -x "$bin" ]; then
+            echo "failed to locate executable host binary artifact $bin" >&2
+            find dist/release-assets -maxdepth 1 -type f -print | sort >&2
             exit 1
           fi
 
@@ -124,12 +96,12 @@ jobs:
           printf '%s\n' "$output"
 
           case "$output" in
-            "$binary_name "*"$version"*) ;;
+            "$binary_name $version "*) ;;
             *) echo "unexpected version output: $output" >&2; exit 1 ;;
           esac
 
   # Rehearse the container build: build per-arch signed apks on native runners and
-  # assemble the image with apko, WITHOUT pushing, signing, or attesting.
+  # assemble the image with apko, WITHOUT pushing, cosign-signing, or attesting.
   melange-build-dry-run:
     name: Melange Build Dry Run (${{ matrix.arch }})
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release-please--') }}
@@ -207,6 +179,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+    env:
+      DRY_RUN_VERSION: 0.0.0-dryrun.${{ github.run_id }}.${{ github.run_attempt }}
     steps:
       - name: Check melange dry-run result
         env:
@@ -231,6 +205,9 @@ jobs:
           version: 2026.6.14
           cache: true
 
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+
       - name: Download per-arch apks and public keys
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -238,16 +215,75 @@ jobs:
           path: .
           merge-multiple: true
 
-      - name: Assemble image and smoke test (no push)
+      - name: Assemble multi-arch image (no push)
         run: |
           set -euo pipefail
 
+          # apko moves generated SBOMs into --sbom-path but never creates the
+          # directory; the release depends on this mkdir, so rehearse it too.
+          mkdir -p sbom
+
+          # Both arches, exactly as the release publishes them, so each per-arch
+          # apk is actually installed and signature-checked against its own key.
           apko build apko.yaml incusos-builder:dry-run image.tar \
-            --arch amd64 \
+            --arch amd64,arm64 \
             --keyring-append ./melange-amd64.rsa.pub \
-            --keyring-append ./melange-arm64.rsa.pub
+            --keyring-append ./melange-arm64.rsa.pub \
+            --sbom-path ./sbom
+
+          if [ -z "$(find sbom -type f -print -quit)" ]; then
+            echo "apko produced no SBOMs under ./sbom" >&2
+            exit 1
+          fi
 
           docker load < image.tar
+
+      - name: Verify image architectures
+        run: |
+          set -euo pipefail
+
+          # apko writes one docker-loadable image per arch, tagged <tag>-<arch>.
+          # The release asserts platforms on the pushed index with `imagetools
+          # inspect`; a dry run cannot push, so assert the loaded images here.
+          for arch in amd64 arm64; do
+            actual="$(docker image inspect "incusos-builder:dry-run-${arch}" --format '{{.Os}}/{{.Architecture}}')"
+            if [ "$actual" != "linux/${arch}" ]; then
+              echo "expected linux/${arch}, got ${actual}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Smoke test dry-run image
+        run: |
+          set -euo pipefail
+
+          # The runner is amd64, so only that image can execute here.
           docker tag incusos-builder:dry-run-amd64 incusos-builder:dry-run
 
-          docker run --rm incusos-builder:dry-run --version
+          output="$(docker run --rm incusos-builder:dry-run --version)"
+          printf '%s\n' "$output"
+
+          # Proves the apko entrypoint runs and that melange stamped the version
+          # through --vars-file instead of the melange.yaml default.
+          case "$output" in
+            "incusos-builder $DRY_RUN_VERSION "*) ;;
+            *) echo "unexpected container version output: $output" >&2; exit 1 ;;
+          esac
+
+          # apko `run-as: 65532` becomes the OCI config user; a root image here
+          # would be a silent regression of the nonroot posture.
+          image_user="$(docker image inspect incusos-builder:dry-run --format '{{.Config.User}}')"
+          if [ "$image_user" != "65532" ]; then
+            echo "expected image to run as uid 65532, got '${image_user}'" >&2
+            exit 1
+          fi
+
+      - name: Generate image SBOM (no attestation)
+        run: |
+          set -euo pipefail
+
+          # The release attests this SBOM with actions/attest-sbom. Attesting is
+          # a publishing act, so the rehearsal only proves syft can describe the
+          # assembled image.
+          syft docker:incusos-builder:dry-run -o spdx-json=image.spdx.json
+          jq -e '.packages | length > 0' image.spdx.json > /dev/null

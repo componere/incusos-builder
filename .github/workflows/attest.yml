@@ -49,6 +49,7 @@ jobs:
     permissions:
       id-token: write       # OIDC token minted HERE, isolated from the build job
       attestations: write   # write provenance to GitHub's attestation API
+      artifact-metadata: write # create the linked-artifact storage record
       contents: read
       packages: write       # used only for the image attestation (push-to-registry)
     steps:
