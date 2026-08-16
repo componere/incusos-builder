@@ -227,3 +227,47 @@ an upstream Huh fix should be checked first; and REPO-1 mutates live GitHub
 state so it needs human approval at execution time, not just a plan entry.
 
 Nothing was fixed or applied. Awaiting developer decisions.
+
+## 2026-08-16 17:10 — Remediation executed, PR #21 open
+
+Orchestrated the remediation plan with nine subagents across three waves, cap 4-5
+concurrent. Branch `fix/campaign-remediation` in its own Worktrunk worktree;
+PR #21 is MERGEABLE/CLEAN with CI green.
+
+Phase 1 (5 agents, code): PC-1/PC-2/PC-3 acquisition+diagnostics, PC-4 init,
+CLI-1/CLI-2 contract, DEV-1/DEV-2/CI-1/CI-2 build+workflows. Phase 2 (4 agents,
+docs+plan): DOC-1..DOC-4 and TP-1..TP-4. Phase 3 (2 agents, corrective).
+
+Everything the plan dispositioned fix-before-v1 or document is done except the
+two GitHub-state items, which I deliberately held: REPO-1 (apply settings) and
+REPO-2 (1.0.0 release PR) mutate live repo state and need explicit approval.
+
+Verification: `root:check` green (8 tasks) locally and in CI; `root:e2e` green
+(57 s); every fix smoke-tested live against the built binary, including a PTY
+test proving ACCESSIBLE init now cancels and a RAM-disk test proving the
+first-use low-space warning fires.
+
+Three things worth remembering:
+
+1. `AllowEmptyEnv(true)` (the plan's F-CLI-4 prescription) broke the live suite:
+   `e2e_helpers_test.go` isolated itself with INCUSOS_BUILDER_SERVER="" which
+   became an explicit empty value and a usage error. Fixed by unsetting instead,
+   plus tests pinning both halves and a doc note that an exported-but-empty
+   INCUSOS_BUILDER_SERVER is now a usage error, not the default. Caught only
+   because I ran root:e2e, which root:check does not include.
+
+2. I nearly caused real damage: I passed a markdown PR body through shell
+   command substitution and the backticked spans executed. It ran `mise run
+   image-local` and tried to execute `.github/repository-settings.toml`
+   (permission denied — no settings applied; PVR still {"enabled":false},
+   rulesets still []). Cleaned the stray artifacts; worktree is clean. Never
+   again: write the body to a file and use `gh pr edit --body-file`.
+
+3. CI failed once on `TestGenerateSatisfiesUpdateAdapter` — a 5 s wall-clock
+   budget in internal/testfixture that measured 6.35 s on a loaded runner. My
+   branch does not touch that package and recent master runs are green, so it is
+   a pre-existing flake. Re-run passed. A wall-clock assertion in a unit test is
+   a latent CI flake and should be replaced with a non-timing invariant; logged
+   as a new finding rather than fixed, since it is outside the plan's scope.
+
+Track C remains unexecuted and explicitly not discarded.
