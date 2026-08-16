@@ -56,3 +56,13 @@ Reviewer (AdapterReview) found 9 incl. 2 P1: https→http redirect downgrade (th
 Process: UpdateAdapter wrote 3a into the MAIN checkout (master) — transplanted to worktree, master restored; MediaAdapter caught itself doing the same before writing. Worth adding "verify cwd" to future agent contexts.
 Gates: root:check green; go test ./internal/... all ok (update tests run with -race by fix agent).
 Next: PR; then Phase 4 CLI surface + publisher.
+
+## 2026-08-16 01:25 — Phase 4 CLI complete (branch feat/phase-4-cli, PR pending)
+Model note: programmer agents switched to Grok 4.6 mid-phase after two RootPolicy DoAs on the prior model; post-switch all 12 agent runs completed.
+Landed: publisher (§3 lifecycle exact: claim-then-rename, resources-first/image-last, --force 6-step + reverse rollback, hashing writer + post-inode-replacement re-read), root+policy+exit mapping (Viper precedence ×6, no-input auto-on, both-TTY progress rule, one sentinel→code map), commands build/validate/versions/init (usage matrix, JSON envelopes, huh form w/ ACCESSIBLE, schema-driven example config w/ reflection drift guard), main wiring (incus-os pin via runtime/debug BuildInfo), internal/testfixture (sparse 2.7MB mirror, seed-data at production offset), testscript e2e ×9 scripts (exit codes 2–6, --json, -o - byte-exact via streamed digest, SOPS stdin, no-input).
+Reviewer (CliReview): 9 findings incl. P1 e2e suite at 15.4GB RSS (would OOM ubuntu-latest; now 828MB), published-artifact mode 0600 (also caught in my live smoke), --json envelope hole in PersistentPreRunE, silent --resources-output drop, unwired -q/--verbose, vacuous confirm-seam test (duplicate AddCommand shadowing). All 9 fixed with tests.
+Live smoke (mine): versions against live server OK; full build of 202608102114 aarch64 raw in 17s — JSON digest == file digest; dd-extract at 2049MiB untars install.yaml/network.yaml matching config.
+Contract decision: plain http:// --server = usage error (exit 2), adapter https-only stays defense-in-depth.
+Process: two agents wrote into main checkout again (Fixture transplanted; MediaAdapter self-caught earlier) — cwd-verification line now standard in contexts.
+Gates: root:check green; go test ./internal/... all ok.
+Next: PR; then Phase 5 (T3 live suite + boot gate attempt on Linux).
