@@ -271,3 +271,50 @@ Three things worth remembering:
    as a new finding rather than fixed, since it is outside the plan's scope.
 
 Track C remains unexecuted and explicitly not discarded.
+
+## 2026-08-16 17:35 — REPO-1 applied
+
+Ran `configure_github_repo.py plan` then `apply` against componere/incusos-builder.
+The plan reported **six** changes, not the seven the campaign recorded: "Create
+GitHub Pages site" is gone because CI created the Pages site in the meantime.
+
+Applied: general repository settings, immutable releases, private vulnerability
+reporting, automated security fixes, managed branch ruleset "Default branch",
+managed tag ruleset "Default tags". No warnings.
+
+Verification:
+- SUP-16 CLOSED — `private-vulnerability-reporting` is `{"enabled":true}`.
+  SECURITY.md's reporting link works. This was the campaign's only outright
+  failure and a §7 release blocker.
+- SUP-14 CLOSED — both rulesets active (branch + tag).
+- SUP-15 CLOSED — a second plan reports "No supported changes are required."
+- PR #21 is still MERGEABLE/CLEAN with the four required contexts enforced
+  (`ci`, `GitHub Pages`, `Binary Release Dry Run`, `Container Image Dry Run`).
+  The two dry-run contexts report `SKIPPED` on ordinary PRs, which counts as
+  passing, so the ruleset does not deadlock normal work.
+- Merge methods are squash-only (merge and rebase both false), matching the
+  repo's squash-merge policy.
+
+Two facts worth recording accurately rather than repeating the plan's wording:
+
+1. The tag ruleset targets `~ALL` tags, not just `v*`. Stricter than the plan
+   described, and consistent with intent, but it means *any* hand-created tag
+   now needs the admin bypass.
+2. The release-please app bypass RESOLVED: the tag ruleset's bypass actors are
+   RepositoryRole 5 (admin, always) and Integration 4551177 (always). The plan
+   said to stop rather than weaken tag protection if this failed; it did not
+   fail, so Release Please can still create tags.
+
+Honest gap: `immutable_releases` is not exposed as a field on the repo REST
+object, so I could not independently confirm it after the fact. The apply report
+records the toggle as `current=false -> desired=true` with no warning, and the
+re-plan shows no remaining delta, which is the strongest available evidence.
+Enabling it now was low risk because no releases exist yet, so there is nothing
+retroactive to freeze.
+
+Nine manifest keys remain unsupported by the REST API and are manual follow-ups
+(archive enrollment, automatic dependency submission, dependabot malware alerts,
+alert-dismissal controls, grouped security updates, dependabot version updates,
+code quality preview, commit comment visibility, PR creation permissions).
+
+REPO-2 (release PR as 1.0.0) is still held for approval.
