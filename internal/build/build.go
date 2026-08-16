@@ -9,7 +9,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 
-	"github.com/componere/incusos-builder/internal/update"
+	"github.com/componere/incusos-builder/internal/errdefs"
 )
 
 const (
@@ -109,7 +109,7 @@ func runBuild(
 	if seedSize > part.Length {
 		return Result{}, fmt.Errorf(
 			"%w: seed tar is %d bytes, seed-data partition holds %d",
-			ErrSeedTooLarge,
+			errdefs.ErrConfig,
 			seedSize,
 			part.Length,
 		)
@@ -153,7 +153,7 @@ func runBuild(
 
 // splice opens handle (Open #2), gunzips, copies [0, offset), writes tar,
 // discards len(tar) from the source, then copies the remainder. Read-side
-// errors wrap [update.ErrFetch]; write-side errors wrap [ErrOutput]. There
+// errors wrap [errdefs.ErrFetch]; write-side errors wrap [ErrOutput]. There
 // is no bare [io.Copy] across ports (ARCHITECTURE §6, P2).
 func splice(
 	ctx context.Context,
@@ -164,13 +164,13 @@ func splice(
 ) (int64, error) {
 	rc, err := handle.Open(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("%w: %w", update.ErrFetch, err)
+		return 0, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 	}
 	defer func() { _ = rc.Close() }()
 
 	zr, err := pgzip.NewReader(rc)
 	if err != nil {
-		return 0, fmt.Errorf("%w: gzip: %w", update.ErrFetch, err)
+		return 0, fmt.Errorf("%w: gzip: %w", errdefs.ErrFetch, err)
 	}
 	defer func() { _ = zr.Close() }()
 
@@ -264,13 +264,13 @@ func checkRenderedSeedSize(seedSize int64, tarBytes []byte) error {
 // copyN copies exactly n bytes from src to dst using buf. A short source
 // is a read-side error (the acquired image is truncated). A final short
 // read that delivers the last byte together with [io.EOF] is success.
-// Context cancellation wraps [update.ErrFetch].
+// Context cancellation wraps [errdefs.ErrFetch].
 func copyN(ctx context.Context, dst io.Writer, src io.Reader, n int64, buf []byte) (int64, error) {
 	written := int64(0)
 
 	for written < n {
 		if err := ctx.Err(); err != nil {
-			return written, fmt.Errorf("%w: %w", update.ErrFetch, err)
+			return written, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 		}
 
 		chunk := int64(len(buf))
@@ -308,20 +308,20 @@ func copyNReadErr(rerr error, written, n int64) error {
 			return nil
 		}
 
-		return fmt.Errorf("%w: image truncated after %d of %d bytes", update.ErrFetch, written, n)
+		return fmt.Errorf("%w: image truncated after %d of %d bytes", errdefs.ErrFetch, written, n)
 	}
 
-	return fmt.Errorf("%w: %w", update.ErrFetch, rerr)
+	return fmt.Errorf("%w: %w", errdefs.ErrFetch, rerr)
 }
 
 // copyAll copies src to dst until EOF using buf. Context cancellation
-// wraps [update.ErrFetch].
+// wraps [errdefs.ErrFetch].
 func copyAll(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (int64, error) {
 	written := int64(0)
 
 	for {
 		if err := ctx.Err(); err != nil {
-			return written, fmt.Errorf("%w: %w", update.ErrFetch, err)
+			return written, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 		}
 
 		nr, rerr := src.Read(buf)
@@ -342,20 +342,20 @@ func copyAll(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (int
 				return written, nil
 			}
 
-			return written, fmt.Errorf("%w: %w", update.ErrFetch, rerr)
+			return written, fmt.Errorf("%w: %w", errdefs.ErrFetch, rerr)
 		}
 	}
 }
 
 // discardN reads and drops n bytes from src. A final short read that
 // delivers the last byte together with [io.EOF] is success. Context
-// cancellation wraps [update.ErrFetch].
+// cancellation wraps [errdefs.ErrFetch].
 func discardN(ctx context.Context, src io.Reader, n int64, buf []byte) error {
 	dropped := int64(0)
 
 	for dropped < n {
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("%w: %w", update.ErrFetch, err)
+			return fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 		}
 
 		chunk := int64(len(buf))
@@ -373,10 +373,10 @@ func discardN(ctx context.Context, src io.Reader, n int64, buf []byte) error {
 					return nil
 				}
 
-				return fmt.Errorf("%w: image truncated while skipping seed region", update.ErrFetch)
+				return fmt.Errorf("%w: image truncated while skipping seed region", errdefs.ErrFetch)
 			}
 
-			return fmt.Errorf("%w: %w", update.ErrFetch, rerr)
+			return fmt.Errorf("%w: %w", errdefs.ErrFetch, rerr)
 		}
 	}
 

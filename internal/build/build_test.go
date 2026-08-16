@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/componere/incusos-builder/internal/build"
+	"github.com/componere/incusos-builder/internal/errdefs"
 	mediamocks "github.com/componere/incusos-builder/internal/media/mocks"
-	"github.com/componere/incusos-builder/internal/update"
 	updatemocks "github.com/componere/incusos-builder/internal/update/mocks"
 	uxmocks "github.com/componere/incusos-builder/internal/ux/mocks"
 
@@ -137,7 +137,7 @@ func TestBuildOfflineRescueInput(t *testing.T) {
 }
 
 // TestBuildOversizedTar maps a seed tar larger than the partition to the
-// exit-3-family sentinel [build.ErrSeedTooLarge].
+// exit-3-family sentinel [errdefs.ErrConfig].
 func TestBuildOversizedTar(t *testing.T) {
 	t.Parallel()
 
@@ -167,7 +167,7 @@ func TestBuildOversizedTar(t *testing.T) {
 		img.Start,
 	)
 	require.Error(t, err)
-	require.ErrorIs(t, err, build.ErrSeedTooLarge)
+	require.ErrorIs(t, err, errdefs.ErrConfig)
 	assert.Empty(t, out.Bytes())
 }
 
@@ -201,10 +201,10 @@ func TestBuildWriteFailure(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.ErrorIs(t, err, build.ErrOutput)
-	assert.NotErrorIs(t, err, update.ErrFetch)
+	assert.NotErrorIs(t, err, errdefs.ErrFetch)
 }
 
-// TestBuildReadFailure wraps a truncated splice stream as [update.ErrFetch].
+// TestBuildReadFailure wraps a truncated splice stream as [errdefs.ErrFetch].
 func TestBuildReadFailure(t *testing.T) {
 	t.Parallel()
 
@@ -239,13 +239,13 @@ func TestBuildReadFailure(t *testing.T) {
 		img.Start,
 	)
 	require.Error(t, err)
-	require.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
 	assert.NotErrorIs(t, err, build.ErrOutput)
 }
 
 // TestBuildShiftedPartitionWrapsErrFetch asserts the production Build path
 // probes GPT on handle Open #1 and maps a seed-data offset that is not
-// productionSeedStart to [update.ErrFetch] before splice.
+// productionSeedStart to [errdefs.ErrFetch] before splice.
 func TestBuildShiftedPartitionWrapsErrFetch(t *testing.T) {
 	t.Parallel()
 
@@ -273,7 +273,7 @@ func TestBuildShiftedPartitionWrapsErrFetch(t *testing.T) {
 		"",
 	)
 	require.Error(t, err)
-	require.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
 	assert.Contains(t, err.Error(), "seed-data starts at byte")
 	assert.Empty(t, out.Bytes())
 }
@@ -312,12 +312,12 @@ func TestBuildRendererSizeMismatch(t *testing.T) {
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "seed renderer reported")
-	require.NotErrorIs(t, err, update.ErrFetch)
+	require.NotErrorIs(t, err, errdefs.ErrFetch)
 	require.NotErrorIs(t, err, build.ErrOutput)
 	assert.Empty(t, out.Bytes())
 }
 
-// TestBuildCancelMidSplice maps a cancelled splice to [update.ErrFetch]
+// TestBuildCancelMidSplice maps a cancelled splice to [errdefs.ErrFetch]
 // so the CLI attributes Ctrl-C during copy as exit 5.
 func TestBuildCancelMidSplice(t *testing.T) {
 	t.Parallel()
@@ -356,7 +356,7 @@ func TestBuildCancelMidSplice(t *testing.T) {
 		img.Start,
 	)
 	require.Error(t, err)
-	require.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
 	require.ErrorIs(t, err, context.Canceled)
 	assert.NotErrorIs(t, err, build.ErrOutput)
 }

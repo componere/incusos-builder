@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/componere/incusos-builder/internal/update"
+	"github.com/componere/incusos-builder/internal/errdefs"
 )
 
 func TestCopyHelpersEOFWithData(t *testing.T) {
@@ -44,7 +44,7 @@ func TestCopyHelpersEOFWithData(t *testing.T) {
 			data:        "hi",
 			n:           5,
 			bufSize:     16,
-			wantErr:     update.ErrFetch,
+			wantErr:     errdefs.ErrFetch,
 			errContains: "image truncated after 2 of 5 bytes",
 		},
 		{
@@ -67,7 +67,7 @@ func TestCopyHelpersEOFWithData(t *testing.T) {
 			data:        "hi",
 			n:           5,
 			bufSize:     16,
-			wantErr:     update.ErrFetch,
+			wantErr:     errdefs.ErrFetch,
 			errContains: "image truncated while skipping seed region",
 		},
 	}
@@ -145,7 +145,7 @@ func TestCopyHelpersCanceledContext(t *testing.T) {
 			}
 
 			require.Error(t, err)
-			require.ErrorIs(t, err, update.ErrFetch)
+			require.ErrorIs(t, err, errdefs.ErrFetch)
 			require.ErrorIs(t, err, context.Canceled)
 			assert.NotErrorIs(t, err, ErrOutput)
 		})

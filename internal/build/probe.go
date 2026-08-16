@@ -12,7 +12,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 
-	"github.com/componere/incusos-builder/internal/update"
+	"github.com/componere/incusos-builder/internal/errdefs"
 )
 
 const (
@@ -51,30 +51,30 @@ type seedPartition struct {
 
 // probe opens handle (Open #1), gunzips the decompressed head, and locates
 // the GPT seed-data partition. Drift from expectedStart or an unreadable
-// table wraps [update.ErrFetch] (read-side, ARCHITECTURE §6). Production
+// table wraps [errdefs.ErrFetch] (read-side, ARCHITECTURE §6). Production
 // Build passes [productionSeedStart]; tests inject a compact fixture offset.
 func probe(ctx context.Context, handle VerifiedAsset, expectedStart int64) (seedPartition, error) {
 	rc, err := handle.Open(ctx)
 	if err != nil {
-		return seedPartition{}, fmt.Errorf("%w: %w", update.ErrFetch, err)
+		return seedPartition{}, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 	}
 	defer func() { _ = rc.Close() }()
 
 	zr, err := pgzip.NewReader(rc)
 	if err != nil {
-		return seedPartition{}, fmt.Errorf("%w: gzip: %w", update.ErrFetch, err)
+		return seedPartition{}, fmt.Errorf("%w: gzip: %w", errdefs.ErrFetch, err)
 	}
 	defer func() { _ = zr.Close() }()
 
 	part, err := parseGPT(zr)
 	if err != nil {
-		return seedPartition{}, fmt.Errorf("%w: %w", update.ErrFetch, err)
+		return seedPartition{}, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 	}
 
 	if part.StartByte != expectedStart {
 		return seedPartition{}, fmt.Errorf(
 			"%w: seed-data starts at byte %d, expected %d",
-			update.ErrFetch,
+			errdefs.ErrFetch,
 			part.StartByte,
 			expectedStart,
 		)
