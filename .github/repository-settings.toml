@@ -8,8 +8,9 @@
 # - Supported settings are applied directly through the GitHub REST API.
 # - Unsupported settings stay in this file so the script can report manual follow-ups.
 # - The branch ruleset follows the repository default branch via ~DEFAULT_BRANCH.
-# - Status checks default to the standard template CI check. Adjust them when
-#   the repository adds more required workflows.
+# - A required status check context is the job's `name`, or its job id when the
+#   job has no name. Keep the contexts below in step with the workflow jobs that
+#   run on pull requests.
 
 [repository]
 default_branch = "master"
@@ -75,8 +76,12 @@ required_review_thread_resolution = false
 enabled = true
 strict_required_status_checks_policy = false
 do_not_enforce_on_create = false
+# "ci" is ci.yml's unnamed `ci` job. The remaining contexts are job names in
+# docs-pages.yml and release-dry-run.yml. The release dry-run jobs skip on
+# non-release pull requests, and a skipped job still reports success.
 contexts = [
   "ci",
+  "GitHub Pages",
   "Binary Release Dry Run",
   "Container Image Dry Run",
 ]
@@ -114,7 +119,9 @@ automatic_dependency_submission = true
 dependabot_malware_alerts = true
 prevent_direct_alert_dismissals = false
 grouped_security_updates = true
-dependabot_version_updates = false
+# Dependabot version updates are enabled through .github/dependabot.yml
+# (github-actions, gomod, and uv ecosystems).
+dependabot_version_updates = true
 
 # General settings not currently handled in v1.
 code_quality_preview = true

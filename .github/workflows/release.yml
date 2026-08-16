@@ -19,6 +19,12 @@ on:
 
 permissions: {}
 
+# A tag is released exactly once. Never cancel a publishing run in flight;
+# queue a duplicate (re-run, or a dispatch racing the tag push) behind it.
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: ghcr.io/componere/incusos-builder
 
@@ -27,6 +33,8 @@ jobs:
     name: Resolve Release
     runs-on: ubuntu-24.04
     permissions:
+      # Draft releases are only listed for tokens with push access, so the wait
+      # below needs write even though this job only reads.
       contents: write
     outputs:
       tag: ${{ steps.release-tag.outputs.tag }}
@@ -136,7 +144,7 @@ jobs:
           printf '%s\n' "$output"
 
           case "$output" in
-            "$binary_name "*"$version"*) ;;
+            "$binary_name $version "*) ;;
             *) echo "unexpected version output: $output" >&2; exit 1 ;;
           esac
 
@@ -169,6 +177,9 @@ jobs:
       # caller must also grant packages even though the binary attestation never
       # pushes to a registry (unused here, but required to satisfy the shared job).
       packages: write
+      # Same caller-must-cover-callee rule for artifact-metadata: write, which
+      # attest.yml uses to create the linked-artifact storage record.
+      artifact-metadata: write
     uses: ./.github/workflows/attest.yml
     with:
       checksums-artifact: release-checksums
@@ -339,16 +350,17 @@ jobs:
 
           echo "name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "ref=${IMAGE_NAME}@${digest}" >> "$GITHUB_OUTPUT"
 
       - name: Verify multi-arch manifest
         env:
-          IMAGE_TAG: ${{ steps.publish.outputs.tag }}
+          # Inspect the digest, not the mutable tag: the digest is what gets
+          # signed, attested, and verified downstream.
+          IMAGE_REF: ${{ steps.publish.outputs.ref }}
         run: |
           set -euo pipefail
 
-          manifest_json="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{json .}}')"
+          manifest_json="$(docker buildx imagetools inspect "$IMAGE_REF" --format '{{json .}}')"
           platforms="$(jq -r '
             [
               .manifest.manifests[]
@@ -367,11 +379,27 @@ jobs:
       - name: Smoke test release image
         env:
           IMAGE_REF: ${{ steps.publish.outputs.ref }}
+          RELEASE_VERSION: ${{ needs.resolve-release.outputs.version }}
         run: |
           set -euo pipefail
 
-          docker run --rm "$IMAGE_REF" --version
-          docker run --rm "$IMAGE_REF" --message "hello from container"
+          output="$(docker run --rm "$IMAGE_REF" --version)"
+          printf '%s\n' "$output"
+
+          # Proves the apko entrypoint runs and that melange stamped the release
+          # version through --vars-file instead of the melange.yaml default.
+          case "$output" in
+            "incusos-builder $RELEASE_VERSION "*) ;;
+            *) echo "unexpected container version output: $output" >&2; exit 1 ;;
+          esac
+
+          # apko `run-as: 65532` becomes the OCI config user; a root image here
+          # would be a silent regression of the nonroot posture.
+          image_user="$(docker image inspect "$IMAGE_REF" --format '{{.Config.User}}')"
+          if [ "$image_user" != "65532" ]; then
+            echo "expected image to run as uid 65532, got '${image_user}'" >&2
+            exit 1
+          fi
 
       - name: Sign image (keyless, Sigstore/Fulcio via OIDC)
         env:
@@ -400,6 +428,7 @@ jobs:
       attestations: write
       packages: write
       contents: read
+      artifact-metadata: write
     uses: ./.github/workflows/attest.yml
     with:
       subject-name: ${{ needs.container-image-release.outputs.image-name }}
