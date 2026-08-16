@@ -38,12 +38,12 @@ image:
 seeds: {}
 ```
 
-| Key | Type | Required | Default |
-|---|---|---|---|
-| `version` | integer | yes | none |
-| `image` | mapping | yes | empty mapping (fails validation) |
-| `seeds` | mapping | no | all sections absent |
-| `sops` | mapping or scalar | no | absent |
+| Key | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `version` | integer | yes | none | Schema version of this document, so an older CLI refuses a newer layout. |
+| `image` | mapping | yes | empty mapping (fails validation) | Which published IncusOS image to acquire and in what form. |
+| `seeds` | mapping | no | all sections absent | Seed sections rendered into the image seed-data partition. |
+| `sops` | mapping or scalar | no | absent | SOPS metadata left in place by `sops`; its presence selects decryption. |
 
 `sops` is not a schema field. A top-level `sops` key selects
 in-memory decryption before decode. After a successful decrypt the
@@ -172,13 +172,13 @@ Any other integer: `version: unsupported schema version; a newer CLI is required
 
 Build artifact selector.
 
-| Key | Type | Required | Default |
-|---|---|---|---|
-| `type` | string | yes | none |
-| `architecture` | string | yes | none |
-| `channel` | string | no | `stable` |
-| `release` | string | no | empty (highest version in `channel`) |
-| `offline` | boolean | no | `false` |
+| Key | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `type` | string | yes | none | Artifact format: the `iso` installer or a `raw` disk image. |
+| `architecture` | string | yes | none | CPU architecture of the image to acquire. |
+| `channel` | string | no | `stable` | Update channel the release is resolved from. |
+| `release` | string | no | empty (highest version in `channel`) | Exact update version to pin instead of the newest one. |
+| `offline` | boolean | no | `false` | Build media that installs and runs without network access. |
 
 ### `image.type`
 
@@ -208,19 +208,19 @@ application, and `seeds.update.check_frequency` is forced to `never`.
 Optional mapping of seed sections. Each present (non-null) section is
 one tar member. YAML names:
 
-| YAML key | Origin | Tar member |
-|---|---|---|
-| `applications` | web customizer | `applications.yaml` |
-| `incus` | web customizer | `incus.yaml` |
-| `install` | web customizer | `install.yaml` |
-| `migration-manager` | web customizer | `migration-manager.yaml` |
-| `network` | web customizer | `network.yaml` |
-| `operations-center` | web customizer | `operations-center.yaml` |
-| `provider` | web customizer | `provider.yaml` |
-| `services` | web customizer | `services.yaml` |
-| `update` | web customizer | `update.yaml` |
-| `kernel` | CLI extension | `kernel.yaml` |
-| `security` | CLI extension | `security.yaml` |
+| YAML key | Origin | Tar member | Configures |
+|---|---|---|---|
+| `applications` | web customizer | `applications.yaml` | Applications installed once IncusOS is running. |
+| `incus` | web customizer | `incus.yaml` | Incus preseed and whether to apply Incus defaults. |
+| `install` | web customizer | `install.yaml` | Installer behavior and target-disk selection. |
+| `migration-manager` | web customizer | `migration-manager.yaml` | Migration Manager preseed and trusted client certificates. |
+| `network` | web customizer | `network.yaml` | Interfaces, bonds, VLANs, WireGuard, DNS, NTP, and proxy. |
+| `operations-center` | web customizer | `operations-center.yaml` | Operations Center preseed and trusted client certificates. |
+| `provider` | web customizer | `provider.yaml` | Which provider supplies updates and applications. |
+| `services` | web customizer | `services.yaml` | Storage and VPN services enabled on first boot. |
+| `update` | web customizer | `update.yaml` | Update channel, check frequency, and maintenance windows. |
+| `kernel` | CLI extension | `kernel.yaml` | Kernel settings needed before the IncusOS API is reachable. |
+| `security` | CLI extension | `security.yaml` | Extra certificate authorities in the system trust store. |
 
 Tar member order is the web-customizer `writeSeed` order, then the two
 CLI extensions:
@@ -246,16 +246,19 @@ a present section becomes `"1"`.
 
 Preinstalled applications.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `applications` | list of mappings | required when `image.offline` is `true`; otherwise optional |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `applications` | list of mappings | required when `image.offline` is `true`; otherwise optional | Applications IncusOS installs after it first boots. |
 
 Each list entry:
 
-| Key | Type |
-|---|---|
-| `name` | string |
+| Key | Type | Description |
+|---|---|---|
+| `name` | string | Application to install, such as `incus` or `operations-center`. |
+
+IncusOS accepts at most one primary application. When the list names no
+primary application, upstream appends `incus` to it.
 
 An offline document with `applications: []` is rejected at
 `seeds.applications`.
@@ -264,31 +267,39 @@ An offline document with `applications: []` is rejected at
 
 Incus init preseed.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `apply_defaults` | boolean | no (`false`) |
-| `preseed` | mapping | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `apply_defaults` | boolean | no (`false`) | Apply upstream's reasonable Incus defaults while installing Incus. |
+| `preseed` | mapping | no | Preseed handed to Incus during install. |
 
 `preseed` is `github.com/lxc/incus/v7/shared/api.InitPreseed`.
 First-level keys:
 
-| Key | Type |
-|---|---|
-| `config` | string-to-string map (Incus server config) |
-| `networks` | list |
-| `storage_pools` | list |
-| `storage_volumes` | list |
-| `profiles` | list |
-| `projects` | list |
-| `certificates` | list |
-| `cluster_groups` | list |
-| `cluster` | mapping |
+| Key | Type | Description |
+|---|---|---|
+| `config` | string-to-string map | Incus server configuration keys. |
+| `networks` | list | Networks to create, grouped by project. |
+| `storage_pools` | list | Storage pools to create. |
+| `storage_volumes` | list | Storage volumes to create. |
+| `profiles` | list | Profiles to create. |
+| `projects` | list | Projects to create. |
+| `certificates` | list | Client certificates to trust. |
+| `cluster_groups` | list | Cluster groups to create. |
+| `cluster` | mapping | Cluster bootstrap or join details. |
 
 `cluster` first-level keys from `InitClusterPreseed` / `ClusterPut`:
-`server_name`, `enabled`, `member_config`, `cluster_address`,
-`cluster_certificate`, `server_address`, `cluster_token`,
-`cluster_certificate_path`.
+
+| Key | Type | Description |
+|---|---|---|
+| `server_name` | string | Name this cluster member is known by. |
+| `enabled` | boolean | Whether clustering is enabled. |
+| `member_config` | list | Member-specific configuration applied while joining. |
+| `cluster_address` | string | Address of an existing cluster to join. |
+| `cluster_certificate` | string | Expected PEM-encoded certificate of that cluster. |
+| `cluster_certificate_path` | string | Path to a file holding that cluster certificate. |
+| `cluster_token` | string | Join token issued by the cluster. |
+| `server_address` | string | Local address this member uses for cluster traffic. |
 
 Deeper Incus object shapes are the Incus API types, not additional
 incusos-builder fields.
@@ -297,19 +308,14 @@ incusos-builder fields.
 
 Installer seed.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `force_install` | boolean | no (`false`) |
-| `force_install_confirmation` | string | no |
-| `force_reboot` | boolean | no (`false`) |
-| `security` | mapping | no |
-| `target` | mapping | no |
-
-`force_install` ignores existing data on the target disk.
-`force_install_confirmation` is an optional reinstall confirmation
-string. `force_reboot` reboots on completion instead of waiting for
-the install media to be removed.
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `force_install` | boolean | no (`false`) | Install over existing data on the target disk. This can destroy data. |
+| `force_install_confirmation` | string | no | Confirmation value required to overwrite an existing IncusOS install; the installer reports the expected value. |
+| `force_reboot` | boolean | no (`false`) | Reboot when the install finishes instead of waiting for the media to be removed. |
+| `security` | mapping | no | Opt-ins that let IncusOS install in a degraded security state. |
+| `target` | mapping | no | Selector for the install disk when several drives are present. |
 
 When `target` is omitted, the installer expects a single drive.
 
@@ -318,26 +324,22 @@ When `target` is omitted, the installer expects a single drive.
 Mutually exclusive degraded-security install flags. They apply only
 when the named condition is already true.
 
-| Key | Type | Default |
-|---|---|---|
-| `missing_tpm` | boolean | `false` |
-| `missing_secure_boot` | boolean | `false` |
-
-`missing_tpm` allows an swtpm fallback when no physical TPM is
-present. `missing_secure_boot` allows boot without Secure Boot checks
-when Secure Boot is already disabled.
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `missing_tpm` | boolean | `false` | Allow an swtpm fallback, and only when no physical TPM is present. |
+| `missing_secure_boot` | boolean | `false` | Allow boot without Secure Boot checks, and only when Secure Boot is already disabled. |
 
 #### `seeds.install.target`
 
 Target disk selector. Listed filters are combined with logical AND.
 
-| Key | Type | Notes |
+| Key | Type | Description |
 |---|---|---|
-| `bus` | string | bus type such as `NVME`, `SCSI`, or `USB` (case-insensitive) |
-| `id` | string | case-sensitive substring of `/dev/disk/by-id/` |
-| `min_size` | string | minimum disk size, such as `100GiB` |
-| `max_size` | string | maximum disk size, such as `1TiB` |
-| `sort_order` | string | empty, `smallest`, or `largest` (case-insensitive) |
+| `bus` | string | Match only disks on this bus type, such as `NVME`, `SCSI`, or `USB` (case-insensitive). |
+| `id` | string | Case-sensitive substring match against the disk ID in `/dev/disk/by-id/`. |
+| `min_size` | string | Reject disks smaller than this size, such as `100GiB`. |
+| `max_size` | string | Reject disks larger than this size, such as `1TiB`. |
+| `sort_order` | string | Pick the `smallest` or `largest` matching disk (case-insensitive); empty picks the sole match. |
 
 When `sort_order` is set, matching targets are sorted by capacity and
 the first is chosen.
@@ -346,12 +348,12 @@ the first is chosen.
 
 Migration Manager seed. The YAML key is kebab-case.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `trusted_client_certificates` | list of strings | no |
-| `apply_defaults` | boolean | no (`false`) |
-| `preseed` | mapping | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `trusted_client_certificates` | list of strings | no | PEM client certificates Migration Manager should trust. |
+| `apply_defaults` | boolean | no (`false`) | Apply upstream's reasonable Migration Manager defaults while installing it. |
+| `preseed` | mapping | no | Preseed handed to Migration Manager during install. |
 
 Each `trusted_client_certificates` entry is a PEM-encoded client
 certificate. Its SHA-256 fingerprint is added to any fingerprints in
@@ -359,11 +361,11 @@ certificate. Its SHA-256 fingerprint is added to any fingerprints in
 
 `preseed` first-level keys:
 
-| Key | Type |
-|---|---|
-| `system_certificate` | mapping |
-| `system_network` | mapping |
-| `system_security` | mapping |
+| Key | Type | Description |
+|---|---|---|
+| `system_certificate` | mapping | Server certificate, private key, and CA. |
+| `system_network` | mapping | REST API listen address and worker endpoint. |
+| `system_security` | mapping | Trusted clients and proxies, OIDC, OpenFGA, and ACME. |
 
 Those mappings are
 `github.com/FuturFusion/migration-manager/shared/api` types.
@@ -373,181 +375,188 @@ Those mappings are
 Network seed. Fields of `api.SystemNetworkConfig` are inlined next to
 `version`.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `confirmation_timeout` | string | no |
-| `dns` | mapping | no |
-| `time` | mapping | no |
-| `proxy` | mapping | no |
-| `interfaces` | list | no |
-| `bonds` | list | no |
-| `vlans` | list | no |
-| `wireguard` | list | no |
-
-`confirmation_timeout` is a duration string. When set, new network
-changes roll back unless confirmed before it elapses.
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `confirmation_timeout` | string | no | Duration such as `5m`; the configuration rolls back unless it is confirmed before the timeout elapses. |
+| `dns` | mapping | no | Host name, domain, resolvers, and DNS over TLS. |
+| `time` | mapping | no | NTP servers and system timezone. |
+| `proxy` | mapping | no | System-wide HTTP(S) proxy servers and routing rules. |
+| `interfaces` | list | no | Physical interfaces to configure. |
+| `bonds` | list | no | Link aggregation groups built from interfaces. |
+| `vlans` | list | no | VLAN devices layered on an interface or bond. |
+| `wireguard` | list | no | WireGuard tunnels. |
 
 #### `seeds.network.dns`
 
-| Key | Type |
-|---|---|
-| `domain` | string |
-| `hostname` | string |
-| `nameservers` | list of strings |
-| `search_domains` | list of strings |
-| `dns_over_tls` | boolean |
+| Key | Type | Description |
+|---|---|---|
+| `domain` | string | Domain name of the system. |
+| `hostname` | string | Host name of the system. |
+| `nameservers` | list of strings | Resolvers to use instead of the ones learned from DHCP. |
+| `search_domains` | list of strings | Domains appended when resolving short names. |
+| `dns_over_tls` | boolean | Resolve over TLS; every listed nameserver must support it. |
 
 #### `seeds.network.time`
 
-| Key | Type |
-|---|---|
-| `ntp_servers` | list of strings |
-| `timezone` | string |
+| Key | Type | Description |
+|---|---|---|
+| `ntp_servers` | list of strings | NTP servers used to synchronize the clock. |
+| `timezone` | string | System timezone, such as `America/New_York`. |
 
 #### `seeds.network.proxy`
 
-| Key | Type |
-|---|---|
-| `rules` | list of `{destination, target}` |
-| `servers` | map of name to server |
+| Key | Type | Description |
+|---|---|---|
+| `rules` | list of `{destination, target}` | Which destinations go through which server, bypass the proxy, or are blocked. |
+| `servers` | map of name to server | Named proxy servers that rules can target. |
+
+Each rule matches `destination` against a `|`-separated glob list and
+sends matching traffic to `target`: a server name, `direct` to bypass
+the proxy, or `none` to block it.
 
 Each proxy server:
 
-| Key | Type |
-|---|---|
-| `auth` | string |
-| `host` | string |
-| `password` | string |
-| `realm` | string |
-| `username` | string |
-| `use_tls` | boolean |
+| Key | Type | Description |
+|---|---|---|
+| `auth` | string | Authentication scheme: `anonymous`, `basic`, or `kerberos`. |
+| `host` | string | Proxy host and port, such as `proxy.example.com:8080`. |
+| `password` | string | Password for `basic` or `kerberos` authentication. |
+| `realm` | string | Kerberos realm. |
+| `username` | string | User name for `basic` or `kerberos` authentication. |
+| `use_tls` | boolean | Reach the proxy over TLS. |
 
 #### `seeds.network.interfaces[]`
 
-| Key | Type |
-|---|---|
-| `name` | string |
-| `hwaddr` | string |
-| `addresses` | list of strings |
-| `mtu` | integer |
-| `lldp` | boolean |
-| `roles` | list of strings |
-| `routes` | list of `{to, via}` |
-| `vlan_tags` | list of integers |
-| `required_for_online` | string |
-| `strict_hwaddr` | boolean |
-| `ethernet` | mapping |
-| `firewall_rules` | list |
+| Key | Type | Description |
+|---|---|---|
+| `name` | string | Name of the bridge IncusOS creates for this interface. |
+| `hwaddr` | string | MAC address of the physical device, or an interface name whose MAC is substituted at boot. |
+| `addresses` | list of strings | `dhcp4`, `dhcp6`, `slaac`, or static addresses in CIDR form. |
+| `mtu` | integer | MTU of the device. |
+| `lldp` | boolean | Send and receive LLDP on the device. |
+| `roles` | list of strings | How IncusOS uses the device: `management`, `cluster`, `instances`, or `storage`. |
+| `routes` | list of `{to, via}` | Static routes bound to the device. |
+| `vlan_tags` | list of integers | Extra VLAN tags the bridge accepts, on top of any `vlans` entry. |
+| `required_for_online` | string | Address families that must come up before the system counts as online: `ipv4`, `ipv6`, `both`, `any`, or `no`. Defaults to `any`. |
+| `strict_hwaddr` | boolean | Drop traffic leaving the device whose source MAC is not `hwaddr`. |
+| `ethernet` | mapping | Offload, wake-on-LAN, and energy-efficiency settings. |
+| `firewall_rules` | list | Ingress firewall rules for the device. |
 
-Documented interface roles: `management`, `cluster`, `instances`,
-`storage`.
+Roles drive how IncusOS uses a device: `management` for management
+traffic, `cluster` for internal cluster traffic, `instances` for use by
+containers and virtual machines, and `storage` for network-attached
+storage. With no roles set, IncusOS assigns `management` and `cluster`
+to every interface.
 
 #### `seeds.network.bonds[]`
 
 Same addressing, role, route, VLAN-tag, ethernet, and firewall fields
 as an interface, plus:
 
-| Key | Type |
-|---|---|
-| `mode` | string |
-| `members` | list of strings |
+| Key | Type | Description |
+|---|---|---|
+| `mode` | string | Bonding mode: `balance-rr`, `active-backup`, `balance-xor`, `broadcast`, `802.3ad`, `balance-tlb`, or `balance-alb`. |
+| `members` | list of strings | Interfaces enslaved to the bond, named by MAC or interface name. |
 
 `hwaddr` is optional on a bond.
 
 #### `seeds.network.vlans[]`
 
-| Key | Type |
-|---|---|
-| `name` | string |
-| `id` | integer |
-| `parent` | string |
-| `addresses` | list of strings |
-| `mtu` | integer |
-| `roles` | list of strings |
-| `routes` | list of `{to, via}` |
-| `required_for_online` | string |
-| `firewall_rules` | list |
+| Key | Type | Description |
+|---|---|---|
+| `name` | string | Name of the VLAN device. |
+| `id` | integer | 802.1Q VLAN ID carried on the parent. |
+| `parent` | string | Interface or bond that carries the VLAN. |
+| `addresses` | list of strings | `dhcp4`, `dhcp6`, `slaac`, or static addresses in CIDR form. |
+| `mtu` | integer | MTU of the device. |
+| `roles` | list of strings | How IncusOS uses the device: `management`, `cluster`, `instances`, or `storage`. |
+| `routes` | list of `{to, via}` | Static routes bound to the device. |
+| `required_for_online` | string | Address families that must come up before the system counts as online. |
+| `firewall_rules` | list | Ingress firewall rules for the device. |
 
 #### `seeds.network.wireguard[]`
 
-| Key | Type |
-|---|---|
-| `name` | string |
-| `addresses` | list of strings |
-| `mtu` | integer |
-| `port` | integer |
-| `private_key` | string |
-| `roles` | list of strings |
-| `routes` | list of `{to, via}` |
-| `required_for_online` | string |
-| `firewall_rules` | list |
-| `peers` | list |
+| Key | Type | Description |
+|---|---|---|
+| `name` | string | Name of the WireGuard device. |
+| `addresses` | list of strings | Static addresses assigned to the tunnel, in CIDR form. |
+| `mtu` | integer | MTU of the tunnel. |
+| `port` | integer | UDP port WireGuard listens on. |
+| `private_key` | string | Base64 private key of this endpoint; generated when empty. |
+| `roles` | list of strings | How IncusOS uses the device: `management`, `cluster`, `instances`, or `storage`. |
+| `routes` | list of `{to, via}` | Static routes bound to the tunnel. |
+| `required_for_online` | string | Address families that must come up before the system counts as online. |
+| `firewall_rules` | list | Ingress firewall rules for the tunnel. |
+| `peers` | list | Remote endpoints of the tunnel. |
 
 Each peer:
 
-| Key | Type |
-|---|---|
-| `public_key` | string |
-| `allowed_ips` | list of strings |
-| `endpoint` | string |
-| `persistent_keepalive` | integer |
-| `preshared_key` | string |
+| Key | Type | Description |
+|---|---|---|
+| `public_key` | string | Base64 public key of the peer. |
+| `allowed_ips` | list of strings | Networks routed to the peer and accepted from it. |
+| `endpoint` | string | Host and port used to reach the peer. |
+| `persistent_keepalive` | integer | Seconds between keepalive packets, for peers behind NAT. |
+| `preshared_key` | string | Optional symmetric key mixed into the handshake. |
 
 #### Shared network nested objects
 
 `ethernet`:
 
-| Key | Type |
-|---|---|
-| `disable_energy_efficient` | boolean |
-| `disable_gro` | boolean |
-| `disable_gso` | boolean |
-| `disable_ipv4_tso` | boolean |
-| `disable_ipv6_tso` | boolean |
-| `wakeonlan` | boolean |
-| `wakeonlan_modes` | list of strings |
-| `wakeonlan_password` | string |
+| Key | Type | Description |
+|---|---|---|
+| `disable_energy_efficient` | boolean | Turn off Energy-Efficient Ethernet. |
+| `disable_gro` | boolean | Turn off generic receive offload, in software and hardware. |
+| `disable_gso` | boolean | Turn off generic segmentation offload. |
+| `disable_ipv4_tso` | boolean | Turn off TCP segmentation offload for IPv4. |
+| `disable_ipv6_tso` | boolean | Turn off TCP segmentation offload for IPv6. |
+| `wakeonlan` | boolean | Enable wake-on-LAN, using the `magic` mode unless `wakeonlan_modes` is set. |
+| `wakeonlan_modes` | list of strings | systemd wake-on-LAN modes to set instead of `magic`. |
+| `wakeonlan_password` | string | SecureOn password, used only with the `secureon` mode. |
 
 `firewall_rules[]`:
 
-| Key | Type |
-|---|---|
-| `action` | string |
-| `source` | string |
-| `protocol` | string |
-| `port` | integer |
+| Key | Type | Description |
+|---|---|---|
+| `action` | string | What to do with matching traffic: `accept`, `drop`, or `reject`. |
+| `source` | string | Source address or CIDR the rule matches; empty matches any source. |
+| `protocol` | string | `tcp` or `udp`; required whenever `port` is set. |
+| `port` | integer | Destination port the rule matches; required whenever `protocol` is set. |
+
+On top of these rules, IncusOS always allows ICMP, ICMPv6, and
+established connections.
 
 `routes[]`:
 
-| Key | Type |
-|---|---|
-| `to` | string |
-| `via` | string |
+| Key | Type | Description |
+|---|---|---|
+| `to` | string | Destination prefix in CIDR form. |
+| `via` | string | Gateway used to reach that prefix. |
 
 ### `seeds.operations-center`
 
 Operations Center seed. The YAML key is kebab-case.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `trusted_client_certificates` | list of strings | no |
-| `apply_defaults` | boolean | no (`false`) |
-| `preseed` | mapping | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `trusted_client_certificates` | list of strings | no | PEM client certificates Operations Center should trust. |
+| `apply_defaults` | boolean | no (`false`) | Apply upstream's reasonable Operations Center defaults while installing it. |
+| `preseed` | mapping | no | Preseed handed to Operations Center during install. |
 
 PEM trusted-client certificates are handled as in
 `seeds.migration-manager`.
 
 `preseed` first-level keys:
 
-| Key | Type |
-|---|---|
-| `system_certificate` | mapping |
-| `system_network` | mapping |
-| `system_security` | mapping |
-| `system_updates` | mapping |
-| `system_settings` | mapping |
+| Key | Type | Description |
+|---|---|---|
+| `system_certificate` | mapping | Server certificate and private key. |
+| `system_network` | mapping | Address managed servers use, and the REST API listen address. |
+| `system_security` | mapping | Trusted clients and proxies, OIDC, OpenFGA, and ACME. |
+| `system_updates` | mapping | Upstream update source, signature trust, filters, and default channels. |
+| `system_settings` | mapping | Daemon log level and the server-registration scriptlet. |
 
 Those mappings are
 `github.com/FuturFusion/operations-center/shared/api/system` types.
@@ -557,148 +566,153 @@ Those mappings are
 Update and configuration provider. Fields of
 `api.SystemProviderConfig` are inlined next to `version`.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `name` | string | no |
-| `config` | string-to-string map | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `name` | string | no | Provider serving updates and applications: `images`, `operations-center`, or `debug`. |
+| `config` | string-to-string map | no | Provider-specific settings, such as the server URL. |
+
+`debug` exists for IncusOS development and is not meant for general
+use.
 
 ### `seeds.services`
 
 Auxiliary service toggles.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `iscsi` | mapping | no |
-| `lvm` | mapping | no |
-| `multipath` | mapping | no |
-| `netbird` | mapping | no |
-| `nvme` | mapping | no |
-| `ovn` | mapping | no |
-| `tailscale` | mapping | no |
-| `usbip` | mapping | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `iscsi` | mapping | no | iSCSI initiator for remote block storage over TCP. |
+| `lvm` | mapping | no | Clustered LVM storage backend. |
+| `multipath` | mapping | no | Multipath access to SAN devices. |
+| `netbird` | mapping | no | NetBird VPN client. |
+| `nvme` | mapping | no | NVMe-over-TCP or NVMe-over-Fibre-Channel initiator. |
+| `ovn` | mapping | no | OVN software-defined networking chassis. |
+| `tailscale` | mapping | no | Tailscale VPN client. |
+| `usbip` | mapping | no | Access to remote USB devices over IP. |
+
+The services seed is applied on first boot, before any service starts.
 
 #### `seeds.services.iscsi`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `targets` | list of `{target, address, port}` |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the iSCSI service. |
+| `targets` | list of `{target, address, port}` | iSCSI targets to connect to, each with its target name, address, and port. |
 
 #### `seeds.services.lvm`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `system_id` | integer |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the LVM service. |
+| `system_id` | integer | Cluster-unique host identifier for this system. |
 
 #### `seeds.services.multipath`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `wwns` | list of strings |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the Multipath service. |
+| `wwns` | list of strings | Device World Wide Names to configure for multipath, as lowercase hex without separators. |
 
 #### `seeds.services.netbird`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `setup_key` | string |
-| `management_url` | string |
-| `admin_url` | string |
-| `anonymize` | boolean |
-| `block_inbound` | boolean |
-| `block_lan_access` | boolean |
-| `disable_client_routes` | boolean |
-| `disable_server_routes` | boolean |
-| `disable_dns` | boolean |
-| `disable_firewall` | boolean |
-| `dns_resolver_address` | string |
-| `external_ip_map` | list of strings |
-| `extra_dns_labels` | list of strings |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the NetBird service. |
+| `setup_key` | string | NetBird setup key used to enroll this peer. |
+| `management_url` | string | NetBird management server. |
+| `admin_url` | string | NetBird admin server. |
+| `anonymize` | boolean | Anonymize IP addresses and non-`netbird.io` domains in logs and status output. |
+| `block_inbound` | boolean | Refuse all inbound connections. |
+| `block_lan_access` | boolean | Block access to local networks when this peer acts as a router or exit node. |
+| `disable_client_routes` | boolean | Ignore routes received from the management service. |
+| `disable_server_routes` | boolean | Do not act as a router for server routes received from the management service. |
+| `disable_dns` | boolean | Leave system DNS settings alone. |
+| `disable_firewall` | boolean | Leave firewall rules alone. |
+| `dns_resolver_address` | string | Custom address for NetBird's local DNS resolver. |
+| `external_ip_map` | list of strings | Maps between local addresses and interfaces. |
+| `extra_dns_labels` | list of strings | Additional DNS labels for this peer. |
 
 #### `seeds.services.nvme`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `targets` | list |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the NVMe service. |
+| `targets` | list | NVMe targets to connect to. |
 
 Each NVMe target:
 
-| Key | Type |
-|---|---|
-| `transport` | string |
-| `address` | string |
-| `host_address` | string |
-| `port` | integer |
-| `nqn` | string |
+| Key | Type | Description |
+|---|---|---|
+| `transport` | string | Transport type: `tcp` or `fc`. |
+| `address` | string | With `tcp`, the target IP address. With `fc`, the remote port World Wide Names as `nn-0x<WWNN>:pn-0x<WWPN>`. |
+| `host_address` | string | With `fc`, the local Fibre Channel port to connect from; all local ports are used when unset. |
+| `port` | integer | With `tcp`, the target port. Unused with `fc`. |
+| `nqn` | string | Connect straight to this subsystem NQN instead of using the target's discovery controller. |
 
 #### `seeds.services.ovn`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `ic_chassis` | boolean |
-| `database` | string |
-| `tls_client_certificate` | string |
-| `tls_client_key` | string |
-| `tls_ca_certificate` | string |
-| `tunnel_address` | string |
-| `tunnel_protocol` | string |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the OVN service. |
+| `ic_chassis` | boolean | Use this chassis as an interconnection gateway. |
+| `database` | string | OVN database this system fetches its configuration from. |
+| `tls_client_certificate` | string | PEM client certificate for the database connection. |
+| `tls_client_key` | string | PEM client key for the database connection. |
+| `tls_ca_certificate` | string | PEM CA certificate for the database connection. |
+| `tunnel_address` | string | Address other chassis use to reach this node; comma-separate several. |
+| `tunnel_protocol` | string | Encapsulation other chassis use to reach this node; comma-separate several. |
 
 #### `seeds.services.tailscale`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `login_server` | string |
-| `auth_key` | string |
-| `accept_routes` | boolean |
-| `accept_dns` | boolean |
-| `advertised_routes` | list of strings |
-| `advertise_exit_node` | boolean |
-| `exit_node` | string |
-| `exit_node_allow_lan_access` | boolean |
-| `serve_enabled` | boolean |
-| `serve_port` | integer |
-| `serve_service` | string |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the Tailscale service. |
+| `login_server` | string | Tailscale (or Headscale) login server. |
+| `auth_key` | string | Tailscale authentication key used to enroll this node. |
+| `accept_routes` | boolean | Accept subnet routes advertised by the tailnet. |
+| `accept_dns` | boolean | Accept DNS configuration advertised by the tailnet. |
+| `advertised_routes` | list of strings | Subnet routes this node advertises to the tailnet. |
+| `advertise_exit_node` | boolean | Offer this node as an exit node for tailnet internet traffic. |
+| `exit_node` | string | Exit node to route internet traffic through, by IP, base name, or `auto:any`. |
+| `exit_node_allow_lan_access` | boolean | Keep direct local network access while using an exit node. |
+| `serve_enabled` | boolean | Expose `localhost:8443`, normally the Incus API, through Tailscale Serve. |
+| `serve_port` | integer | TCP port Tailscale Serve publishes the HTTPS server on. |
+| `serve_service` | string | Tailscale Service to publish as; not passed when empty. |
 
 #### `seeds.services.usbip`
 
-| Key | Type |
-|---|---|
-| `enabled` | boolean |
-| `targets` | list of `{address, bus_id}` |
+| Key | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Enable the USBIP service. |
+| `targets` | list of `{address, bus_id}` | Remote USB devices to attach, each by host address and bus ID. |
 
 ### `seeds.update`
 
 Update daemon seed. Fields of `api.SystemUpdateConfig` are inlined
 next to `version`.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `auto_reboot` | boolean | no (`false`) |
-| `channel` | string | no |
-| `check_frequency` | string | no |
-| `maintenance_windows` | list | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `auto_reboot` | boolean | no (`false`) | Reboot on its own after an OS update is applied, interrupting service. |
+| `channel` | string | no | Update channel to follow, normally `stable` or `testing`. |
+| `check_frequency` | string | no | How often to check for updates, as a Go duration such as `6h`, or `never` to disable checks. Upstream defaults to six hours. |
+| `maintenance_windows` | list | no | Restrict when updates may be checked for and applied. |
 
 When `image.offline` is `true`, `check_frequency` is `never` after
 defaults, even if the document set another value.
 
 Each maintenance window:
 
-| Key | Type |
-|---|---|
-| `start_day_of_week` | string |
-| `start_hour` | integer |
-| `start_minute` | integer |
-| `end_day_of_week` | string |
-| `end_hour` | integer |
-| `end_minute` | integer |
+| Key | Type | Description |
+|---|---|---|
+| `start_day_of_week` | string | Day the window opens on; omitted makes the window repeat daily. |
+| `start_hour` | integer | Hour the window opens, in the system timezone. |
+| `start_minute` | integer | Minute the window opens. |
+| `end_day_of_week` | string | Day the window closes on; required whenever `start_day_of_week` is set. |
+| `end_hour` | integer | Hour the window closes, in the system timezone. |
+| `end_minute` | integer | Minute the window closes. |
 
 Accepted weekday strings on the pin: `Sunday`, `Monday`, `Tuesday`,
 `Wednesday`, `Thursday`, `Friday`, `Saturday`. Omitted is empty.
@@ -711,30 +725,28 @@ at parse time.
 CLI extension. Rendered as `kernel.yaml` after the nine customizer
 members.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `console` | list | no |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `console` | list | no | Console devices the IncusOS terminal interface should use. |
 
 Each console entry:
 
-| Key | Type |
-|---|---|
-| `device` | string |
-| `baud_rate` | integer |
+| Key | Type | Description |
+|---|---|---|
+| `device` | string | Console device path, such as `/dev/ttyS0`. |
+| `baud_rate` | integer | Speed to configure that console device at. |
 
 ### `seeds.security`
 
 CLI extension. Rendered as `security.yaml` last. Fields of
 `api.SystemSecurityConfig` are inlined next to `version`.
 
-| Key | Type | Required |
-|---|---|---|
-| `version` | string | no (default `"1"`) |
-| `custom_ca_certs` | list of strings | no |
-| `encryption_recovery_keys` | list of strings | no; must be empty if present |
-
-`custom_ca_certs` entries are PEM certificates.
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `version` | string | no (default `"1"`) | Schema version of this seed file. |
+| `custom_ca_certs` | list of strings | no | PEM X.509 certificates added to the system as extra certificate authorities. |
+| `encryption_recovery_keys` | list of strings | no; must be empty if present | Recovery keys for the encrypted system drive. Not settable from a seed; see below. |
 
 ## `seeds.security.encryption_recovery_keys`
 
