@@ -318,3 +318,44 @@ alert-dismissal controls, grouped security updates, dependabot version updates,
 code quality preview, commit comment visibility, PR creation permissions).
 
 REPO-2 (release PR as 1.0.0) is still held for approval.
+
+## 2026-08-16 18:20 — Track C execution options researched
+
+Three researchers in parallel: ProviderScan (paid infra), EphemeralCI (CI/dev
+environments), TechFloor (technical floor). Output at
+`.journal/005/TRACK_C_OPTIONS.md`.
+
+The important result is not a price. **BOOT-06 cannot pass as written**, on any
+host. At pinned upstream 0f5b8057f2fc the installer does not wipe the seed from
+the installer media: it copies partition 2 to the target and deletes install.*
+from the TARGET (install.go:893-894 calling seed.CleanupPostInstall; seed.go:31-36
+does the tar --delete). Source is opened O_RDONLY at install.go:1023, target
+O_WRONLY at :1061. BOOT-06 hashes the SOURCE before and after and asserts the
+digest changed, which can never happen. Corrected oracle: keep BOOT-05's capture
+as an input baseline (rename source-seed.before.*), then after install detach the
+target volume, attach it to a throwaway Linux VM, locate it by PARTLABEL
+seed-data, and compare against the source baseline.
+
+That also reinterprets the Phase 5 probe: target-disk growth was the right oracle
+in principle, so zero growth means the installer never reached its write path,
+not that the seed was ignored. Check the target for a GPT and seed-data partition
+to tell "never started" from "ran but did not consume".
+
+Second correction: BOOT-07 does not exercise N-MEDIA-3 at all. Track C uses
+image.type raw, so recovery matches GPT PARTLABEL, never the NUL-padded ISO PVD.
+Closing that risk needs an extra ISO run.
+
+Cost floor: no physical TPM needed (Incus tpm device is swtpm; QEMU emulator
+backend), so any working /dev/kvm qualifies. Cheapest credible paths: Semaphore
+Cloud f1-standard-4 at $0 under its recurring credit with documented nested virt
+and a first-party 3-hour attended SSH session with port forwarding; or Scaleway
+EM-A610R-NVMe bare metal at about EUR 0.11-0.33 for the run. GitHub-hosted
+runners do now expose /dev/kvm but only ~14 GB disk and unsupported generic
+nesting, so not viable for a 50 GiB target.
+
+Pre-staging: build on the M4 first and transfer only ~3.76 GB (the plan's 15 GB
+is a workspace budget, not the transfer pair). Watch the disk caveat: 22 GB holds
+only with sparse copy and a thin pool; on thick provisioning budget ~120 GiB.
+
+Next decision for the developer: apply the BOOT-05/06 checklist correction, then
+pick Semaphore (free) or Scaleway (~EUR 0.35).
