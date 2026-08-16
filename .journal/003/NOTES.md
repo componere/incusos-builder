@@ -17,3 +17,8 @@ Completed the required Linux boot attempt in Actions run [31958439711](https://g
 Decision: a CI boot gate is not viable on current evidence. `docs/docs/how-to/verify-boot-acceptance.md` is the manual Incus checklist that must run before every release tag until a CI boot gate succeeds. The temporary branch-only probe workflow and harness were removed after the run. Reviewer findings were corrected before the recorded attempt, including a go-diskfs FAT read overrun in the test reader, a nonexistent Ubuntu package, and an unsound network-as-seed-consumption oracle.
 
 Next: review and merge PR #13, then begin Phase 6 (documentation, release verification, and v1 readiness).
+
+## 2026-08-16 10:10 — Close
+PR [#13](https://github.com/componere/incusos-builder/pull/13) was approved and squash-merged to `master` as `3fa587273e1d65bd69bd7ed5f55db81f25dcf9d6`. The local `master` checkout was fast-forwarded and the `feat/phase-5-e2e-boot` Worktrunk worktree was removed.
+
+Phase 5 is complete. The live T3 suite and manual boot-acceptance release gate are on `master`; the negative Linux probe and its machine evidence are recorded. Phase 6 (documentation, release verification, repository settings, and v1 readiness) is the remaining implementation phase.
