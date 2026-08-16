@@ -15,9 +15,11 @@ const appSuffix = ".raw.gz"
 // (image-customizer main.go:823): channel membership, an exact Release pin
 // or the highest version by string compare of upstream version names, then
 // exactly one image-iso/image-raw for the spec's type and architecture.
-// Application assets are matched as <name>.raw.gz using [path.Base] so
-// per-arch prefixes (aarch64/incus.raw.gz) still hit. A missing application
-// wraps [ErrVersionNotFound] and lists what the update does carry.
+// Application assets are matched only when spec.Offline (sendOSImage never
+// looks at applications; sendRescueImage does). Matching uses [path.Base]
+// so per-arch prefixes (aarch64/incus.raw.gz) still hit. A missing
+// application wraps [ErrVersionNotFound] and lists what the update does
+// carry.
 func Resolve(spec Spec, index apiimages.Index) (Plan, error) {
 	channel := string(spec.Channel)
 	if channel == "" {
@@ -47,9 +49,13 @@ func Resolve(spec Spec, index apiimages.Index) (Plan, error) {
 		)
 	}
 
-	apps, err := matchApplications(spec, update)
-	if err != nil {
-		return Plan{}, err
+	var apps []apiimages.UpdateFile
+
+	if spec.Offline {
+		apps, err = matchApplications(spec, update)
+		if err != nil {
+			return Plan{}, err
+		}
 	}
 
 	return Plan{

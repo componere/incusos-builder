@@ -101,8 +101,9 @@ func runBuild(
 		return Result{}, err
 	}
 
-	if seedSize != int64(len(tarBytes)) {
-		seedSize = int64(len(tarBytes))
+	err = checkRenderedSeedSize(seedSize, tarBytes)
+	if err != nil {
+		return Result{}, err
 	}
 
 	if seedSize > part.Length {
@@ -245,14 +246,31 @@ func rescueRelPath(filename string) string {
 	return rescueTreePrefix + path.Clean("/" + filename)[1:]
 }
 
+// checkRenderedSeedSize rejects a renderer whose reported size disagrees
+// with the returned tar bytes. That is a programming error in the injected
+// collaborator, not a fetch or output failure.
+func checkRenderedSeedSize(seedSize int64, tarBytes []byte) error {
+	if seedSize == int64(len(tarBytes)) {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"internal: seed renderer reported %d bytes but returned %d",
+		seedSize,
+		len(tarBytes),
+	)
+}
+
 // copyN copies exactly n bytes from src to dst using buf. A short source
-// is a read-side error (the acquired image is truncated).
+// is a read-side error (the acquired image is truncated). A final short
+// read that delivers the last byte together with [io.EOF] is success.
+// Context cancellation wraps [update.ErrFetch].
 func copyN(ctx context.Context, dst io.Writer, src io.Reader, n int64, buf []byte) (int64, error) {
 	written := int64(0)
 
 	for written < n {
 		if err := ctx.Err(); err != nil {
-			return written, err
+			return written, fmt.Errorf("%w: %w", update.ErrFetch, err)
 		}
 
 		chunk := int64(len(buf))
@@ -275,24 +293,35 @@ func copyN(ctx context.Context, dst io.Writer, src io.Reader, n int64, buf []byt
 		}
 
 		if rerr != nil {
-			if errors.Is(rerr, io.EOF) {
-				return written, fmt.Errorf("%w: image truncated after %d of %d bytes", update.ErrFetch, written, n)
-			}
-
-			return written, fmt.Errorf("%w: %w", update.ErrFetch, rerr)
+			return written, copyNReadErr(rerr, written, n)
 		}
 	}
 
 	return written, nil
 }
 
-// copyAll copies src to dst until EOF using buf.
+// copyNReadErr maps a source Read error. A final short read that delivers
+// the last byte together with [io.EOF] is success.
+func copyNReadErr(rerr error, written, n int64) error {
+	if errors.Is(rerr, io.EOF) {
+		if written >= n {
+			return nil
+		}
+
+		return fmt.Errorf("%w: image truncated after %d of %d bytes", update.ErrFetch, written, n)
+	}
+
+	return fmt.Errorf("%w: %w", update.ErrFetch, rerr)
+}
+
+// copyAll copies src to dst until EOF using buf. Context cancellation
+// wraps [update.ErrFetch].
 func copyAll(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (int64, error) {
 	written := int64(0)
 
 	for {
 		if err := ctx.Err(); err != nil {
-			return written, err
+			return written, fmt.Errorf("%w: %w", update.ErrFetch, err)
 		}
 
 		nr, rerr := src.Read(buf)
@@ -318,13 +347,15 @@ func copyAll(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (int
 	}
 }
 
-// discardN reads and drops n bytes from src.
+// discardN reads and drops n bytes from src. A final short read that
+// delivers the last byte together with [io.EOF] is success. Context
+// cancellation wraps [update.ErrFetch].
 func discardN(ctx context.Context, src io.Reader, n int64, buf []byte) error {
 	dropped := int64(0)
 
 	for dropped < n {
 		if err := ctx.Err(); err != nil {
-			return err
+			return fmt.Errorf("%w: %w", update.ErrFetch, err)
 		}
 
 		chunk := int64(len(buf))
@@ -338,6 +369,10 @@ func discardN(ctx context.Context, src io.Reader, n int64, buf []byte) error {
 
 		if rerr != nil {
 			if errors.Is(rerr, io.EOF) {
+				if dropped >= n {
+					return nil
+				}
+
 				return fmt.Errorf("%w: image truncated while skipping seed region", update.ErrFetch)
 			}
 

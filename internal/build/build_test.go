@@ -278,6 +278,89 @@ func TestBuildShiftedPartitionWrapsErrFetch(t *testing.T) {
 	assert.Empty(t, out.Bytes())
 }
 
+// TestBuildRendererSizeMismatch rejects a renderer whose reported size
+// disagrees with the returned tar, without writing output.
+func TestBuildRendererSizeMismatch(t *testing.T) {
+	t.Parallel()
+
+	img, gz, index, imageFile := fixtureImage(t)
+	tar := []byte(testTar)
+
+	src := updatemocks.NewMockImageSource(t)
+	image := updatemocks.NewMockVerifiedAsset(t)
+	rescue := mediamocks.NewMockRescueWriter(t)
+	rep := uxmocks.NewMockReporter(t)
+	expectReporter(rep, 4, 3)
+
+	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
+	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
+	expectOpen(image, gz, 1)
+
+	var out bytes.Buffer
+	_, err := build.RunBuild(
+		context.Background(),
+		onlineSpec(),
+		src,
+		rescue,
+		rep,
+		func(build.Seeds) ([]byte, int64, error) {
+			return tar, int64(len(tar)) + 1, nil
+		},
+		&out,
+		"",
+		img.Start,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "seed renderer reported")
+	require.NotErrorIs(t, err, update.ErrFetch)
+	require.NotErrorIs(t, err, build.ErrOutput)
+	assert.Empty(t, out.Bytes())
+}
+
+// TestBuildCancelMidSplice maps a cancelled splice to [update.ErrFetch]
+// so the CLI attributes Ctrl-C during copy as exit 5.
+func TestBuildCancelMidSplice(t *testing.T) {
+	t.Parallel()
+
+	img, gz, index, imageFile := fixtureImage(t)
+	tar := []byte(testTar)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	src := updatemocks.NewMockImageSource(t)
+	image := updatemocks.NewMockVerifiedAsset(t)
+	rescue := mediamocks.NewMockRescueWriter(t)
+	rep := uxmocks.NewMockReporter(t)
+	expectReporter(rep, 5, 4)
+
+	src.EXPECT().Index(mock.Anything).Return(index, nil).Once()
+	src.EXPECT().Asset(mock.Anything, testVersion, imageFile).Return(image, nil).Once()
+	image.EXPECT().Open(mock.Anything).RunAndReturn(func(context.Context) (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(gz)), nil
+	}).Once()
+	image.EXPECT().Open(mock.Anything).RunAndReturn(func(context.Context) (io.ReadCloser, error) {
+		cancel()
+
+		return io.NopCloser(bytes.NewReader(gz)), nil
+	}).Once()
+
+	_, err := build.RunBuild(
+		ctx,
+		onlineSpec(),
+		src,
+		rescue,
+		rep,
+		stubRender(tar),
+		io.Discard,
+		"",
+		img.Start,
+	)
+	require.Error(t, err)
+	require.ErrorIs(t, err, update.ErrFetch)
+	require.ErrorIs(t, err, context.Canceled)
+	assert.NotErrorIs(t, err, build.ErrOutput)
+}
+
 // TestBuildNilRender rejects a missing renderer without touching ports.
 func TestBuildNilRender(t *testing.T) {
 	t.Parallel()

@@ -17,6 +17,7 @@ type Plan struct {
 	// Apps are the application assets matched as <name>.raw.gz against
 	// the selected update, in spec order. Filenames keep the per-arch
 	// prefix published by the server (for example aarch64/incus.raw.gz).
+	// Empty unless spec.Offline; online builds skip application matching.
 	Apps []apiimages.UpdateFile
 }
 

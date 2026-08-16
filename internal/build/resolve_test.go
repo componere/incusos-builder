@@ -129,11 +129,12 @@ func TestResolve(t *testing.T) {
 			errContains: "expected exactly one image-raw",
 		},
 		{
-			name: "application matching keeps arch prefix",
+			name: "offline application matching keeps arch prefix",
 			spec: Spec{
 				Type:         ImageTypeRaw,
 				Architecture: ArchAarch64,
 				Channel:      "stable",
+				Offline:      true,
 				Seeds: Seeds{Applications: &apiseed.Applications{
 					Applications: []apiseed.Application{{Name: "incus"}},
 				}},
@@ -144,11 +145,26 @@ func TestResolve(t *testing.T) {
 			wantApps:    []string{"aarch64/incus.raw.gz"},
 		},
 		{
-			name: "missing application lists what update does carry",
+			name: "online build skips application matching",
 			spec: Spec{
 				Type:         ImageTypeRaw,
 				Architecture: ArchAarch64,
 				Channel:      "stable",
+				Seeds: Seeds{Applications: &apiseed.Applications{
+					Applications: []apiseed.Application{{Name: "no-such-app"}},
+				}},
+			},
+			index:       index,
+			wantVersion: "202608102114",
+			wantImage:   "aarch64/IncusOS_202608102114.img.gz",
+		},
+		{
+			name: "offline missing application lists what update does carry",
+			spec: Spec{
+				Type:         ImageTypeRaw,
+				Architecture: ArchAarch64,
+				Channel:      "stable",
+				Offline:      true,
 				Seeds: Seeds{Applications: &apiseed.Applications{
 					Applications: []apiseed.Application{{Name: "no-such-app"}},
 				}},
