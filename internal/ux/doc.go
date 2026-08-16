@@ -1,0 +1,27 @@
+// Package ux implements the [build.Reporter] port with a fancy Lip Gloss
+// renderer and a plain ASCII renderer behind one constructor.
+//
+// [New] selects the renderer from [ColorMode] and [ProgressMode]. Explicit
+// always/never values override the environment. [ColorModeAuto] uses this
+// precedence (first match wins):
+//
+//  1. [ColorModeAlways] / [ColorModeNever] (the caller already chose)
+//  2. NO_COLOR set to a non-empty value → no color
+//  3. TERM=dumb → no color
+//  4. w is not a terminal → no color
+//  5. otherwise color (fancy renderer)
+//
+// [ProgressModeAuto] enables progress when w is a TTY; always/never
+// override. Progress output never uses ANSI when progress is resolved off.
+// The CLI (Phase 4) can pass [ProgressModeNever] when stdout is not a TTY
+// to honor ARCHITECTURE §3's both-streams rule; this adapter only observes w.
+//
+// Plain progress is rate-limited: a percentage line is written at most once
+// per 200ms, plus the first update and the 100% completion line, so piped
+// output is not spammed when a download reports every buffer.
+//
+// All three Charm packages share [DefaultPalette]. Huh forms arrive in
+// Phase 4 and should theme from the same palette. charm.land/log/v2 is
+// the only logger; [NewLogger] styles it from the palette and follows
+// [ColorMode].
+package ux
