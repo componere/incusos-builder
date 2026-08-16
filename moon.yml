@@ -75,10 +75,11 @@ tasks:
   # so no package from its `internal/` or `cmd/` trees may reach our build closure
   # (docs/notes/spike-1d-types.md). Scoped deny assertion, not a package count.
   check-upstream:
-    command: 'python3 .github/scripts/check_upstream_closure.py'
+    script: 'python3 -m unittest discover -s .github/scripts -p test_check_upstream_closure.py && python3 .github/scripts/check_upstream_closure.py'
     inputs:
       - '@group(goSources)'
       - '.github/scripts/check_upstream_closure.py'
+      - '.github/scripts/test_check_upstream_closure.py'
     options:
       cache: false
 

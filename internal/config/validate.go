@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	apiseed "github.com/lxc/incus-os/incus-osd/api/seed"
 
@@ -134,7 +135,7 @@ func validateInstall(install *apiseed.Install) error {
 	if install == nil || install.Target == nil {
 		return nil
 	}
-	switch install.Target.SortOrder {
+	switch strings.ToLower(install.Target.SortOrder) {
 	case "", sortOrderSmallest, sortOrderLargest:
 		return nil
 	default:

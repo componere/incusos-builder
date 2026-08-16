@@ -75,8 +75,16 @@ func TestParseValidationRules(t *testing.T) {
 			yaml: installSortYAML("smallest"),
 		},
 		{
+			name: "install sort_order Smallest",
+			yaml: installSortYAML("Smallest"),
+		},
+		{
 			name: "install sort_order largest",
 			yaml: installSortYAML("largest"),
+		},
+		{
+			name: "install sort_order LARGEST",
+			yaml: installSortYAML("LARGEST"),
 		},
 		{
 			name: "security custom_ca_certs allowed",
