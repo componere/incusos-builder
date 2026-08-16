@@ -10,18 +10,21 @@ tag until a CI boot gate succeeds. Phase 5.2 did not observe seed
 consumption or recovery acceptance. Do not treat that probe, network
 traffic, a changed file size, or source-overlay growth as a pass.
 
-Pass only when you observe install completion, a wiped installer
-seed-data partition, `RESCUE_DATA` detection, and the signed recovery
-payload taking effect.
+Pass only when you observe install completion, removal of the install
+seed from the target seed-data partition, `RESCUE_DATA` detection, and
+the signed recovery payload taking effect.
 
-Use one Incus VM for install and recovery. Copy the detached installed
-volume; do not clone the VM.
+Use the same gate VM for install and recovery. Use a separate
+throwaway Linux VM only to inspect the detached target volume. Copy
+the detached installed volume; do not clone the gate VM.
 
 ## Prerequisites
 
 - An `x86_64` Linux Incus host with `/dev/kvm`, a managed storage
   pool, and a managed network. This checklist uses `default` and
   `incusbr0`.
+- An `x86_64` Linux VM image available to Incus for target inspection.
+  The commands below use `images:ubuntu/24.04/cloud`.
 - A SPICE client (`remote-viewer` or `spicy`) for VGA.
 - VirtIO-SCSI for every IncusOS disk. VirtIO-BLK does not expose the
   drives IncusOS needs.
@@ -140,20 +143,22 @@ Add the software TPM before the first start; Incus cannot hot-plug a
 TPM into a VM. Higher `boot.priority` boots first, so the installer
 (`30`) precedes the 50 GiB target (`20`) and the dummy root (`10`).
 
-## 4. Record the seed, then install
+## 4. Record the source seed baseline, then install
 
-The install seed is a tar archive at the start of the installer
-image's seed-data partition.
+The install seed is a tar archive at the start of the source installer
+image's seed-data partition. Record this input baseline for the later
+comparison with the target seed partition. It is not the first half of
+a before-and-after comparison on the source device.
 
 ```bash
 SEED_PART=$(lsblk -nrpo NAME,PARTLABEL "$SOURCE_BLOCK" | awk '$2 == "seed-data" {print $1; exit}')
 test -n "$SEED_PART"
 
 sudo dd if="$SEED_PART" bs=4M status=none \
-  | sha256sum | tee "$EVIDENCE/seed-partition.before.sha256"
+  | sha256sum | tee "$EVIDENCE/source-seed.before.sha256"
 sudo dd if="$SEED_PART" bs=4M status=none \
-  | tar -tf - >"$EVIDENCE/seed.before.list"
-grep -E '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/seed.before.list"
+  | tar -tf - >"$EVIDENCE/source-seed.before.list"
+grep -E '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/source-seed.before.list"
 
 incus start "$VM"
 incus console "$VM" --type=vga
@@ -170,29 +175,79 @@ incus console "$VM" --show-log | tee "$EVIDENCE/install-serial.log"
 Secure Boot enrollment can run before the installer UI. Wait until the
 installer reports completion. Do not treat network traffic as success.
 
-## 5. Prove the seed was wiped
+## 5. Prove the target seed was cleaned
+
+After the installer reports completion, stop the gate VM and detach
+both the source installer and the target. Attach the target to a
+throwaway Linux VM as its only data disk. This inspection works with
+any Incus storage driver; do not assume that the host can loop-map the
+managed volume.
 
 ```bash
 incus stop "$VM"
 incus config device remove "$VM" install-media
 incus config device remove "$VM" install-target
 
-sudo blockdev --flushbufs "$SOURCE_BLOCK"
-sudo dd if="$SEED_PART" bs=4M status=none \
-  | sha256sum | tee "$EVIDENCE/seed-partition.after.sha256"
-sudo dd if="$SEED_PART" bs=4M status=none \
-  | tar -tf - >"$EVIDENCE/seed.after.list" 2>"$EVIDENCE/seed.after.tar.stderr" || true
+INSPECT_VM=phase5-target-inspector
+incus init images:ubuntu/24.04/cloud "$INSPECT_VM" \
+  --vm --profile "$PROFILE" \
+  --device root,boot.priority=10
+incus config device add "$INSPECT_VM" inspect-target disk \
+  pool="$POOL" source="$TARGET_VOL" io.bus=virtio-scsi boot.priority=0
+incus start "$INSPECT_VM"
 
-BEFORE=$(cut -d' ' -f1 "$EVIDENCE/seed-partition.before.sha256")
-AFTER=$(cut -d' ' -f1 "$EVIDENCE/seed-partition.after.sha256")
-test "$BEFORE" != "$AFTER"
-! grep -Eq '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/seed.after.list"
+incus exec "$INSPECT_VM" -- udevadm settle
+incus exec "$INSPECT_VM" -- \
+  lsblk -o NAME,SIZE,TYPE,PTTYPE,FSTYPE,LABEL,PARTLABEL \
+  | tee "$EVIDENCE/target-block-layout.txt"
+TARGET_SEED=$(incus exec "$INSPECT_VM" -- \
+  lsblk -nrpo NAME,PARTLABEL \
+  | awk '$2 == "seed-data" {print $1; exit}')
+test -n "$TARGET_SEED"
+
+incus exec "$INSPECT_VM" -- \
+  dd if="$TARGET_SEED" bs=4M status=none \
+  | sha256sum | tee "$EVIDENCE/target-seed.after.sha256"
+incus exec "$INSPECT_VM" -- \
+  dd if="$TARGET_SEED" bs=4M status=none \
+  | tar -tf - >"$EVIDENCE/target-seed.after.list"
+
+SOURCE_BEFORE=$(cut -d' ' -f1 "$EVIDENCE/source-seed.before.sha256")
+TARGET_AFTER=$(cut -d' ' -f1 "$EVIDENCE/target-seed.after.sha256")
+grep -Eq '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/source-seed.before.list"
+! grep -Eq '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/target-seed.after.list"
+test "$SOURCE_BEFORE" != "$TARGET_AFTER"
+
+incus stop "$INSPECT_VM"
+incus config device remove "$INSPECT_VM" inspect-target
+incus delete "$INSPECT_VM"
 ```
 
-Both checks must pass: the seed-data partition changed, and the
-`install.*` seed recorded before boot is no longer readable. Stop here
-if either check fails. Incus has no seed-consumption command; this
-readback is host-side evidence.
+All three assertions must pass: the source baseline contains an
+`install.*` entry, the target listing does not, and the source and
+target digests differ. Stop here if any assertion fails.
+
+The source is expected to remain byte-identical. At pinned upstream
+commit `0f5b8057f2fc`, the installer copies partition 2 to the target,
+then calls `CleanupPostInstall` to delete `install.*` from the target
+seed partition.
+
+Optionally confirm that the source itself is unchanged:
+
+```bash
+sudo blockdev --flushbufs "$SOURCE_BLOCK"
+sudo dd if="$SEED_PART" bs=4M status=none \
+  | sha256sum | tee "$EVIDENCE/source-seed.after.sha256"
+SOURCE_AFTER=$(cut -d' ' -f1 "$EVIDENCE/source-seed.after.sha256")
+test "$SOURCE_BEFORE" = "$SOURCE_AFTER"
+```
+
+The earlier Phase 5.2 probe observed zero target-disk growth. That
+means the installer never reached its write path, not that it ignored
+the seed. In `target-block-layout.txt`, no GPT means writes never
+began. A GPT with a `seed-data` partition means the target write path
+ran; if that partition still contains `install.*`, the installer ran
+but did not consume the install seed.
 
 ## 6. Copy the installed volume and attach rescue media
 
@@ -233,6 +288,10 @@ A valid recovery disk has a FAT or ISO data partition labeled
 `RESCUE_DATA`. Early in boot IncusOS looks for it, then tries
 `hotfix.sh.sig` at the root and signed updates under `update/`.
 
+With this guide's `image.type: raw` config, recovery finds the GPT
+`PARTLABEL=RESCUE_DATA` before it considers a filesystem label. This
+run therefore does not exercise the NUL-padded ISO volume identifier.
+
 Require all of the following:
 
 1. VGA or serial evidence that the installed target booted.
@@ -245,16 +304,34 @@ Require all of the following:
 
 Fail the gate if any item is missing.
 
+### Optional ISO-media variant
+
+To close the ISO volume-identifier risk empirically, run this checklist
+again as a separate gate run with distinct VM, volume, loop-device, and
+evidence names. Change only `image.type` to `iso`, write the installer
+and rescue artifacts to `.iso` files, and require the same recovery
+evidence from the ISO rescue-media run.
+
+[INFERENCE] Current util-linux likely resolves the ISO label correctly:
+its iso9660 probe passes the fixed 32-byte PVD field to
+`blkid_probe_set_label`, whose right-trimming uses `strlen`; the first
+NUL therefore terminates the label at `RESCUE_DATA`. Only the separate
+ISO-media run establishes that behavior on the release host.
+
 ## 8. Archive evidence, then clean up
 
 Keep with the release record:
 
 - `incus-version.txt`
+- `loop-devices.txt`
 - `install-config.yaml` and `recovery-config.yaml`
 - `artifact-sha256.txt` plus the builder `result.sha256` and
   `result.resources_sha256` values
-- `seed-partition.before.sha256`, `seed.before.list`,
-  `seed-partition.after.sha256`, `seed.after.list`
+- `source-seed.before.sha256`, `source-seed.before.list`,
+  `target-seed.after.sha256`, and `target-seed.after.list`
+- `source-seed.after.sha256` when the optional source-immutability
+  check is run
+- `target-block-layout.txt`
 - `install-serial.log` and `recovery-serial.log`
 - `rescue-block-layout.txt`
 
