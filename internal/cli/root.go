@@ -74,6 +74,7 @@ func NewRootCommand(options Options) *cobra.Command {
 		Version:       options.Build.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Args:          noArgs(options),
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if err := initializeConfig(cmd, options.Viper); err != nil {
 				return reportBuildError(options, jsonRequested(cmd, options), err)
@@ -166,6 +167,9 @@ func registerPersistentFlags(root *cobra.Command) {
 func initializeConfig(cmd *cobra.Command, vp *viper.Viper) error {
 	vp.SetEnvPrefix(envPrefix)
 	vp.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
+	// Empty INCUSOS_BUILDER_* values are equivalent to passing an empty flag
+	// (automation.md). Viper otherwise drops them and falls through to defaults.
+	vp.AllowEmptyEnv(true)
 	vp.AutomaticEnv()
 	applyViperDefaults(vp)
 	return bindParsedFlags(cmd, vp)
@@ -235,4 +239,21 @@ func flagUsageError(_ *cobra.Command, err error) error {
 		return err
 	}
 	return fmt.Errorf("%w: %w", ErrUsage, err)
+}
+
+// noArgs rejects positional operands as [ErrUsage] (exit 2). Cobra's own
+// NoArgs returns an untyped error that would otherwise map to exit 1.
+func noArgs(opts Options) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return nil
+		}
+		var err error
+		if cmd.Parent() == nil {
+			err = usagef("unknown command %q for %q", args[0], cmd.CommandPath())
+		} else {
+			err = usagef("%s accepts no arguments", cmd.CommandPath())
+		}
+		return reportBuildError(opts, jsonRequested(cmd, opts), err)
+	}
 }

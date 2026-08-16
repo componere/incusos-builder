@@ -29,12 +29,15 @@ type validateResult struct {
 	Offline bool `json:"offline"`
 }
 
+// validateCommandName is the validate subcommand's name.
+const validateCommandName = "validate"
+
 // newValidateCommand returns the validate subcommand.
 func newValidateCommand(opts Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "validate",
+		Use:   validateCommandName,
 		Short: "Validate a build configuration without fetching images",
-		Args:  cobra.NoArgs,
+		Args:  noArgs(opts),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runValidate(cmd, opts)
 		},

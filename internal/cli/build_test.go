@@ -272,6 +272,39 @@ func TestLoadBuildSpecOfflineFixture(t *testing.T) {
 	require.True(t, IsUsage(err))
 }
 
+// TestLoadBuildSpecDotSlashDashReadsStdin pins F-CLI-6: paths that clean to "-" read stdin.
+func TestLoadBuildSpecDotSlashDashReadsStdin(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{"./-", "foo/../-"} {
+		spec, err := loadBuildSpec(buildDeps{}, path, strings.NewReader(onlineConfigYAML))
+		require.NoError(t, err, path)
+		require.Equal(t, build.ImageTypeISO, spec.Type, path)
+		require.False(t, spec.Offline, path)
+	}
+}
+
+// TestBuildHelpMetavarsAndResourcesDescription pins F-CLI-3 and N-CLI-2 help text.
+func TestBuildHelpMetavarsAndResourcesDescription(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	root := NewRootCommand(Options{
+		Out: &stdout,
+		Err: io.Discard,
+		In:  strings.NewReader(""),
+	})
+	root.SetArgs([]string{"build", "--help"})
+	require.NoError(t, root.Execute())
+	help := stdout.String()
+	require.Contains(t, help, "-f, --config string")
+	require.Contains(t, help, "-o, --output string")
+	require.Contains(t, help, "rescue-media output path (offline builds)")
+	require.NotContains(t, help, "-f, --config -")
+	require.NotContains(t, help, "-o, --output -")
+	require.NotContains(t, help, "resources-media output path")
+}
+
 // TestReportBuildErrorWritesOneEnvelope keeps a single JSON error document.
 func TestReportBuildErrorWritesOneEnvelope(t *testing.T) {
 	t.Parallel()

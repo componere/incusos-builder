@@ -3,12 +3,14 @@ package cli
 import (
 	"bytes"
 	"context"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 
+	"github.com/componere/incusos-builder/internal/errdefs"
 	"github.com/componere/incusos-builder/internal/ux"
 )
 
@@ -136,7 +138,7 @@ func TestViperPrecedenceFlagBeatsEnvBeatsDefault(t *testing.T) {
 			require.Equal(t, tc.wantEnv, tc.get(vp))
 		})
 		t.Run(tc.name+"/default", func(t *testing.T) {
-			t.Setenv(tc.envKey, "")
+			unsetEnv(t, tc.envKey)
 			vp := executeViper(t, nil)
 			require.Equal(t, tc.wantDef, tc.get(vp))
 		})
@@ -290,7 +292,11 @@ func TestViperPrecedenceResolvedPolicy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(tc.envKey, tc.envVal)
+			if tc.envVal == "" {
+				unsetEnv(t, tc.envKey)
+			} else {
+				t.Setenv(tc.envKey, tc.envVal)
+			}
 			t.Setenv(envCI, "")
 			pol := mustResolvePolicy(t, tty, tc.args)
 			require.Equal(t, tc.want, tc.get(pol))
@@ -366,4 +372,106 @@ func executeViper(t *testing.T, args []string) *viper.Viper {
 
 func ioDiscard() *bytes.Buffer {
 	return &bytes.Buffer{}
+}
+
+// unsetEnv clears key for the test without leaving an empty value that Viper would honor.
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+	t.Setenv(key, "")
+	require.NoError(t, os.Unsetenv(key))
+}
+
+// TestEmptyCacheDirEnvMatchesEmptyFlag pins F-CLI-4: an empty
+// INCUSOS_BUILDER_CACHE_DIR is equivalent to --cache-dir "".
+func TestEmptyCacheDirEnvMatchesEmptyFlag(t *testing.T) {
+	const (
+		want    = "acquisition failed: cache directory is required"
+		httpsOK = "https://example.invalid/os"
+	)
+
+	run := func(t *testing.T, args []string) {
+		t.Helper()
+		var stdout bytes.Buffer
+		root := NewRootCommand(Options{
+			In:        strings.NewReader(""),
+			Out:       &stdout,
+			Err:       ioDiscard(),
+			Viper:     viper.New(),
+			StdinTTY:  func() bool { return true },
+			StdoutTTY: func() bool { return true },
+			StderrTTY: func() bool { return true },
+		})
+		root.SetArgs(args)
+		err := root.Execute()
+		require.Error(t, err)
+		require.ErrorIs(t, err, errdefs.ErrFetch)
+		require.Equal(t, want, err.Error())
+		require.Equal(t, exitFetch, exitCode(err))
+		assertErrorEnvelope(t, stdout.Bytes(), exitFetch, want)
+	}
+
+	t.Run("flag", func(t *testing.T) {
+		unsetEnv(t, "INCUSOS_BUILDER_CACHE_DIR")
+		run(t, []string{
+			"versions", "--json", "--server", httpsOK,
+			"--cache-dir", "", "--color", "never", "--progress", "never",
+		})
+	})
+	t.Run("env", func(t *testing.T) {
+		t.Setenv("INCUSOS_BUILDER_CACHE_DIR", "")
+		run(t, []string{
+			"versions", "--json", "--server", httpsOK,
+			"--color", "never", "--progress", "never",
+		})
+	})
+}
+
+// TestOperandAndUnknownCommandExitTwo pins F-CLI-5: extra words and unknown
+// commands are usage errors (exit 2) with a JSON envelope whose code is 2.
+func TestOperandAndUnknownCommandExitTwo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "unknown command", args: []string{"frobnicate"}},
+		{name: "build extra", args: []string{"build", "extra"}},
+		{name: "validate x", args: []string{"validate", "x"}},
+		{name: "versions x", args: []string{"versions", "x"}},
+		{name: "init x", args: []string{"init", "x"}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var stdout bytes.Buffer
+			root := NewRootCommand(Options{
+				Out: &stdout,
+				Err: ioDiscard(),
+				In:  strings.NewReader(""),
+			})
+			root.SetArgs(tc.args)
+			err := root.Execute()
+			require.Error(t, err)
+			require.True(t, IsUsage(err) || isUnknownCommandError(err), "err=%v", err)
+			require.Equal(t, exitUsage, exitCode(err))
+			require.Empty(t, stdout.String())
+
+			var jsonOut bytes.Buffer
+			jsonRoot := NewRootCommand(Options{
+				Out: &jsonOut,
+				Err: ioDiscard(),
+				In:  strings.NewReader(""),
+			})
+			jsonRoot.SetArgs(append([]string{"--json"}, tc.args...))
+			err = jsonRoot.Execute()
+			require.Error(t, err)
+			require.True(t, IsUsage(err) || isUnknownCommandError(err), "err=%v", err)
+			require.Equal(t, exitUsage, exitCode(err))
+			assertErrorEnvelope(t, jsonOut.Bytes(), exitUsage, err.Error())
+			require.Equal(t, 1, strings.Count(jsonOut.String(), "\n"))
+		})
+	}
 }

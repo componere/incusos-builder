@@ -125,6 +125,17 @@ func TestValidateStdinDashReadsConfig(t *testing.T) {
 	assert.Equal(t, validateOK+"\n", stdout)
 }
 
+// TestValidateDotSlashDashReadsStdin pins F-CLI-6: -f ./- is the stdin sentinel.
+func TestValidateDotSlashDashReadsStdin(t *testing.T) {
+	t.Parallel()
+
+	raw, err := os.ReadFile(validConfigFile)
+	require.NoError(t, err)
+	stdout, _, err := executeValidate(t, bytes.NewReader(raw), "-f", "./-")
+	require.NoError(t, err)
+	assert.Equal(t, validateOK+"\n", stdout)
+}
+
 // TestValidateMissingConfigFlagIsUsage requires -f.
 func TestValidateMissingConfigFlagIsUsage(t *testing.T) {
 	t.Parallel()

@@ -218,6 +218,81 @@ func setAgeKey(t *testing.T) {
 	t.Setenv("SOPS_AGE_KEY", strings.TrimSpace(string(key)))
 }
 
+// TestParseDecryptStraySOPSSanitizesScalar redacts the stray sops scalar
+// and keeps the decrypt diagnostic on one line.
+func TestParseDecryptStraySOPSSanitizesScalar(t *testing.T) {
+	isolateSOPS(t)
+	raw, err := os.ReadFile("testdata/stray-sops.yaml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	_, err = Parse(raw)
+	if err == nil {
+		t.Fatal("Parse() error = nil, want ErrDecrypt")
+	}
+	if !errors.Is(err, ErrDecrypt) {
+		t.Fatalf("Parse() error = %v, want ErrDecrypt", err)
+	}
+	msg := err.Error()
+	if strings.ContainsRune(msg, '\n') {
+		t.Fatalf("decrypt error is multi-line: %q", msg)
+	}
+	if strings.Contains(msg, "not-a-s") {
+		t.Fatalf("decrypt error leaked scalar fragment: %q", msg)
+	}
+}
+
+// TestParseDecryptMissingKeyGolden is the missing-key decrypt wording.
+func TestParseDecryptMissingKeyGolden(t *testing.T) {
+	isolateSOPS(t)
+	raw, err := os.ReadFile("testdata/encrypted.yaml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	_, err = Parse(raw)
+	if err == nil {
+		t.Fatal("Parse() error = nil, want ErrDecrypt")
+	}
+	if !errors.Is(err, ErrDecrypt) {
+		t.Fatalf("Parse() error = %v, want ErrDecrypt", err)
+	}
+	want := "decryption failed: Error getting data key: 0 successful groups required, got 0"
+	if msg := err.Error(); msg != want {
+		t.Fatalf("Parse() error = %q, want %q", msg, want)
+	}
+}
+
+// TestSanitizeYAMLMessage redacts quoted scalars and collapses whitespace.
+func TestSanitizeYAMLMessage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "redacts backtick scalar and flattens yaml unmarshal errors",
+			in:   "Error unmarshalling input yaml: yaml: unmarshal errors:\n  line 5: cannot unmarshal !!str `not-a-s...` into stores.Metadata",
+			want: "Error unmarshalling input yaml: yaml: unmarshal errors: line 5: cannot unmarshal !!str <value> into stores.Metadata",
+		},
+		{
+			name: "preserves missing-key diagnostic",
+			in:   "Error getting data key: 0 successful groups required, got 0",
+			want: "Error getting data key: 0 successful groups required, got 0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := sanitizeYAMLMessage(tt.in)
+			if got != tt.want {
+				t.Fatalf("sanitizeYAMLMessage() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func assertValidSpec(t *testing.T, spec build.Spec) {
 	t.Helper()
 	if spec.Type != build.ImageTypeISO {

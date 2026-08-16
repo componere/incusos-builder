@@ -54,6 +54,11 @@ func TestExitCode(t *testing.T) {
 		{name: "unknown", err: errors.New("boom"), want: exitInternal},
 		{name: "plain wrapped", err: fmt.Errorf("inner: %w", errors.New("boom")), want: exitInternal},
 		{name: "canceled alone", err: context.Canceled, want: exitInternal},
+		{
+			name: "cobra unknown command",
+			err:  fmt.Errorf("unknown command %q for %q", "frobnicate", appName),
+			want: exitUsage,
+		},
 	}
 
 	for _, tc := range tests {
@@ -77,6 +82,17 @@ func TestExitCodeUnknownFlagThroughRoot(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, IsUsage(err), "err=%v", err)
 	require.Equal(t, exitUsage, exitCode(err))
+}
+
+// TestExitCodeCobraUnknownCommand maps Cobra's untyped unknown-command error to exit 2.
+func TestExitCodeCobraUnknownCommand(t *testing.T) {
+	t.Parallel()
+
+	err := fmt.Errorf("unknown command %q for %q", "frobnicate", appName)
+	require.False(t, IsUsage(err), "cobra's error is untyped")
+	require.True(t, isUnknownCommandError(err), "err=%v", err)
+	require.Equal(t, exitUsage, exitCode(err))
+	require.Equal(t, exitInternal, exitCode(errors.New("boom")))
 }
 
 func TestWriteErrorJSON(t *testing.T) {

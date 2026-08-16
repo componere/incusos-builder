@@ -2,14 +2,19 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,6 +23,13 @@ import (
 
 	"github.com/componere/incusos-builder/internal/build"
 	"github.com/componere/incusos-builder/internal/config"
+)
+
+const (
+	// envInitSIGINTHelper is set in the re-exec child that waits for SIGINT.
+	envInitSIGINTHelper = "INCUSOS_BUILDER_TEST_INIT_SIGINT"
+	// envInitSIGINTOutput is the child's -o path.
+	envInitSIGINTOutput = "INCUSOS_BUILDER_TEST_INIT_OUT"
 )
 
 // TestSeedSectionsMatchBuildSeeds asserts the commented seeds list stays in
@@ -94,6 +106,25 @@ func TestRenderInitConfigRoundTripsParse(t *testing.T) {
 				Offline:      false,
 			},
 		},
+		{
+			name: "interactive offline default application",
+			answers: initAnswers{
+				Type:         build.ImageTypeISO,
+				Architecture: build.ArchX8664,
+				Channel:      build.DefaultChannel,
+				Offline:      true,
+			},
+		},
+		{
+			name: "interactive offline named application",
+			answers: initAnswers{
+				Type:         build.ImageTypeRaw,
+				Architecture: build.ArchAarch64,
+				Channel:      "daily",
+				Offline:      true,
+				Application:  "operations-center",
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -105,7 +136,56 @@ func TestRenderInitConfigRoundTripsParse(t *testing.T) {
 			assert.Equal(t, tc.answers.Architecture, spec.Architecture)
 			assert.Equal(t, tc.answers.Channel, spec.Channel)
 			assert.Equal(t, tc.answers.Offline, spec.Offline)
+			if !tc.answers.Offline {
+				return
+			}
+			require.NotNil(t, spec.Seeds.Applications)
+			require.NotEmpty(t, spec.Seeds.Applications.Applications)
+			wantApp := tc.answers.Application
+			if wantApp == "" {
+				wantApp = defaultInitApplication
+			}
+			assert.Equal(t, wantApp, spec.Seeds.Applications.Applications[0].Name)
 		})
+	}
+}
+
+// TestRenderInitConfigFormCombinationsParse validates every type × architecture
+// × offline combination the form can emit.
+func TestRenderInitConfigFormCombinationsParse(t *testing.T) {
+	t.Parallel()
+
+	types := []build.ImageType{build.ImageTypeISO, build.ImageTypeRaw}
+	archs := []build.Architecture{build.ArchX8664, build.ArchAarch64}
+	offlines := []bool{false, true}
+	for _, imageType := range types {
+		for _, arch := range archs {
+			for _, offline := range offlines {
+				answers := initAnswers{
+					Type:         imageType,
+					Architecture: arch,
+					Channel:      build.DefaultChannel,
+					Offline:      offline,
+					Application:  defaultInitApplication,
+				}
+				name := fmt.Sprintf("%s_%s_offline-%t", imageType, arch, offline)
+				t.Run(name, func(t *testing.T) {
+					t.Parallel()
+					body := renderInitConfig(answers, false)
+					spec, err := config.Parse([]byte(body))
+					require.NoError(t, err, "body:\n%s", body)
+					assert.Equal(t, answers.Type, spec.Type)
+					assert.Equal(t, answers.Architecture, spec.Architecture)
+					assert.Equal(t, answers.Channel, spec.Channel)
+					assert.Equal(t, answers.Offline, spec.Offline)
+					if !offline {
+						return
+					}
+					require.NotNil(t, spec.Seeds.Applications)
+					require.Equal(t, defaultInitApplication, spec.Seeds.Applications.Applications[0].Name)
+				})
+			}
+		}
 	}
 }
 
@@ -119,6 +199,20 @@ func TestInitNoInputWritesStdout(t *testing.T) {
 	require.NoError(t, root.Execute())
 	require.Equal(t, renderInitConfig(exampleInitAnswers(), true), stdout.String())
 	require.Empty(t, stderr.String())
+}
+
+// TestInitDotSlashDashIsStdoutNotFile treats ./- as the stdout sentinel.
+func TestInitDotSlashDashIsStdoutNotFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	var stdout bytes.Buffer
+	root := newInitTestCommand(t, &stdout, ioDiscard(), strings.NewReader(""))
+	root.SetArgs([]string{"init", "--no-input", "-o", "./-"})
+
+	require.NoError(t, root.Execute())
+	require.Equal(t, renderInitConfig(exampleInitAnswers(), true), stdout.String())
+	_, err := os.Stat(filepath.Join(dir, "-"))
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
 
 // TestInitNoInputWritesFile writes the example to -o path.
@@ -212,9 +306,19 @@ func TestInitJSONEnvelopeWritesOneDocument(t *testing.T) {
 
 // TestInitJSONWithStdoutIsUsage rejects --json -o -.
 func TestInitJSONWithStdoutIsUsage(t *testing.T) {
+	testInitJSONStdoutUsage(t, "-")
+}
+
+// TestInitJSONWithDotSlashDashIsUsage rejects --json -o ./- as stdout.
+func TestInitJSONWithDotSlashDashIsUsage(t *testing.T) {
+	testInitJSONStdoutUsage(t, "./-")
+}
+
+func testInitJSONStdoutUsage(t *testing.T, output string) {
+	t.Helper()
 	var stdout bytes.Buffer
 	root := newInitTestCommand(t, &stdout, ioDiscard(), strings.NewReader(""))
-	root.SetArgs([]string{"init", "--no-input", "--json", "-o", "-"})
+	root.SetArgs([]string{"init", "--no-input", "--json", "-o", output})
 
 	err := root.Execute()
 	require.Error(t, err)
@@ -243,6 +347,18 @@ func TestInitJSONExistingFileWritesErrorEnvelope(t *testing.T) {
 	require.Contains(t, env.Error.Message, "refusing to overwrite")
 }
 
+// TestInitStrayOperandIsUsage is a usage error (exit 2), not an internal exit 1.
+func TestInitStrayOperandIsUsage(t *testing.T) {
+	root := newInitTestCommand(t, ioDiscard(), ioDiscard(), strings.NewReader(""))
+	root.SetArgs([]string{"init", "--no-input", "extra"})
+
+	err := root.Execute()
+	require.Error(t, err)
+	require.True(t, IsUsage(err), "got %v", err)
+	require.Equal(t, exitUsage, exitCode(err))
+	require.Contains(t, err.Error(), "accepts no arguments")
+}
+
 // TestNewInitFormDoesNotPanic constructs the form (no TTY run).
 func TestNewInitFormDoesNotPanic(t *testing.T) {
 	t.Parallel()
@@ -256,16 +372,17 @@ func TestNewInitFormDoesNotPanic(t *testing.T) {
 	})
 }
 
-// TestRunInitFormHonorsAccessibleEnv drives runInitForm, which is the
-// path that reads ACCESSIBLE, through Huh's line-oriented prompts.
+// TestRunInitFormHonorsAccessibleEnv drives runInitForm through the
+// project-owned line prompts, including descriptions and the offline
+// application question.
 func TestRunInitFormHonorsAccessibleEnv(t *testing.T) {
 	t.Setenv(envCI, "")
-	t.Setenv("TERM", "xterm")
+	t.Setenv(envTerm, "xterm")
 	t.Setenv(envAccessible, "1")
 
 	var stderr bytes.Buffer
-	answers, err := runInitForm(Options{
-		In:  newOneLineReader("2\n2\nnightly\ny\n"),
+	answers, err := runInitForm(context.Background(), Options{
+		In:  strings.NewReader("2\n2\nnightly\ny\noperations-center\n"),
 		Err: &stderr,
 	})
 	require.NoError(t, err)
@@ -273,33 +390,196 @@ func TestRunInitFormHonorsAccessibleEnv(t *testing.T) {
 	require.Equal(t, build.ArchAarch64, answers.Architecture)
 	require.Equal(t, build.Channel("nightly"), answers.Channel)
 	require.True(t, answers.Offline)
-	require.Contains(t, stderr.String(), "Enter a number", "accessible select prompt must run")
+	require.Equal(t, "operations-center", answers.Application)
+	got := stderr.String()
+	require.Contains(t, got, "Enter a number", "accessible select prompt must run")
+	require.Contains(t, got, initDescChannel)
+	require.Contains(t, got, initDescOffline)
+	require.Contains(t, got, initDescApplication)
 }
 
-// newOneLineReader returns one line per Read so each Huh accessible
-// field's [bufio.Scanner] cannot buffer later answers.
-func newOneLineReader(s string) *oneLineReader {
-	return &oneLineReader{rest: []byte(s)}
+// TestRunInitFormAccessibleEmptyChannelDefaultsStable binds a real Channel default.
+func TestRunInitFormAccessibleEmptyChannelDefaultsStable(t *testing.T) {
+	t.Setenv(envCI, "")
+	t.Setenv(envTerm, "xterm")
+	t.Setenv(envAccessible, "1")
+
+	answers, err := runInitForm(context.Background(), Options{
+		In:  strings.NewReader("1\n1\n\nn\n"),
+		Err: io.Discard,
+	})
+	require.NoError(t, err)
+	require.Equal(t, build.ImageTypeISO, answers.Type)
+	require.Equal(t, build.ArchX8664, answers.Architecture)
+	require.Equal(t, build.DefaultChannel, answers.Channel)
+	require.False(t, answers.Offline)
 }
 
-type oneLineReader struct {
-	rest []byte
+// TestRunInitFormAccessibleEOFCancels treats stdin EOF as init cancelled.
+func TestRunInitFormAccessibleEOFCancels(t *testing.T) {
+	t.Setenv(envCI, "")
+	t.Setenv(envTerm, "xterm")
+	t.Setenv(envAccessible, "1")
+
+	_, err := runInitForm(context.Background(), Options{
+		In:  strings.NewReader(""),
+		Err: io.Discard,
+	})
+	require.Error(t, err)
+	require.True(t, IsUsage(err), "got %v", err)
+	require.Equal(t, exitUsage, exitCode(err))
+	require.Contains(t, err.Error(), initCancelledMsg)
 }
 
-func (r *oneLineReader) Read(p []byte) (int, error) {
-	if len(r.rest) == 0 {
-		return 0, io.EOF
+// TestRunInitFormAccessibleContextCancel stops without completing the form.
+func TestRunInitFormAccessibleContextCancel(t *testing.T) {
+	t.Setenv(envCI, "")
+	t.Setenv(envTerm, "xterm")
+	t.Setenv(envAccessible, "1")
+
+	reader, writer := io.Pipe()
+	t.Cleanup(func() { _ = reader.Close(); _ = writer.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	stderr := &safeBuffer{}
+	go func() {
+		_, err := runInitForm(ctx, Options{In: reader, Err: stderr})
+		errCh <- err
+	}()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(stderr.String(), initTitleType) {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for prompt, stderr=%q", stderr.String())
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
-	end := 0
-	for end < len(r.rest) && r.rest[end] != '\n' {
-		end++
+	cancel()
+	_ = writer.Close()
+
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+		require.True(t, IsUsage(err), "got %v", err)
+		require.Equal(t, exitUsage, exitCode(err))
+		require.Contains(t, err.Error(), initCancelledMsg)
+	case <-time.After(5 * time.Second):
+		t.Fatal("runInitForm did not return after context cancel")
 	}
-	if end < len(r.rest) {
-		end++
+}
+
+// TestInitAccessibleSIGINTExitsUsage sends SIGINT to a child ACCESSIBLE=1 init.
+// The child must exit 2 and must not create the output file.
+func TestInitAccessibleSIGINTExitsUsage(t *testing.T) {
+	if os.Getenv(envInitSIGINTHelper) == "1" {
+		runInitAccessibleSIGINTHelper()
+		return
 	}
-	n := copy(p, r.rest[:end])
-	r.rest = r.rest[n:]
-	return n, nil
+
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "config.yaml")
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestInitAccessibleSIGINTExitsUsage$")
+	cmd.Env = append(os.Environ(),
+		envInitSIGINTHelper+"=1",
+		envInitSIGINTOutput+"="+outPath,
+		envAccessible+"=1",
+		envTerm+"=xterm",
+		envCI+"=",
+		"INCUSOS_BUILDER_NO_INPUT=false",
+	)
+	stdin, err := cmd.StdinPipe()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = stdin.Close() })
+	stderrPipe, err := cmd.StderrPipe()
+	require.NoError(t, err)
+	require.NoError(t, cmd.Start())
+	t.Cleanup(func() { _ = cmd.Process.Kill() })
+
+	stderr := &safeBuffer{}
+	copyDone := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(stderr, stderrPipe)
+		close(copyDone)
+	}()
+	waitErr := make(chan error, 1)
+	go func() { waitErr <- cmd.Wait() }()
+
+	require.True(t, waitForPrompt(t, stderr, waitErr, initTitleType), "child exited before prompt")
+	require.NoError(t, cmd.Process.Signal(os.Interrupt))
+
+	select {
+	case err := <-waitErr:
+		<-copyDone
+		var exitErr *exec.ExitError
+		require.ErrorAs(t, err, &exitErr)
+		require.Equal(t, exitUsage, exitErr.ExitCode(), "stderr=%s", stderr.String())
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for SIGINT exit, stderr=%s", stderr.String())
+	}
+	_, statErr := os.Stat(outPath)
+	require.ErrorIs(t, statErr, os.ErrNotExist)
+}
+
+// runInitAccessibleSIGINTHelper is the re-exec child: interactive init that
+// honours process SIGINT via [signal.NotifyContext], matching main.go.
+func runInitAccessibleSIGINTHelper() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	root := NewRootCommand(Options{
+		In:        os.Stdin,
+		Out:       os.Stdout,
+		Err:       os.Stderr,
+		Viper:     viper.New(),
+		StdinTTY:  func() bool { return true },
+		StdoutTTY: func() bool { return true },
+	})
+	root.SetArgs([]string{cmdNameInit, "-o", os.Getenv(envInitSIGINTOutput)})
+	err := root.ExecuteContext(ctx)
+	stop()
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+	}
+	os.Exit(exitCode(err))
+}
+
+// safeBuffer is an [io.Writer] that can be read while another goroutine writes.
+type safeBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
+
+func waitForPrompt(t *testing.T, stderr *safeBuffer, waitErr <-chan error, needle string) bool {
+	t.Helper()
+	deadline := time.Now().Add(8 * time.Second)
+	for {
+		if strings.Contains(stderr.String(), needle) {
+			return true
+		}
+		select {
+		case err := <-waitErr:
+			t.Fatalf("child exited before prompt %q: %v\nstderr=%s", needle, err, stderr.String())
+		case <-time.After(20 * time.Millisecond):
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+	}
 }
 
 // newInitTestCommand builds a root+init tree with no-TTY --no-input auto-on.

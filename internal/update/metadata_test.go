@@ -36,6 +36,8 @@ func TestReleaseMetadataFetchesBothAndReturnsVerbatim(t *testing.T) {
 		"/" + testVersion + "/" + updateJSONName,
 		"/" + testVersion + "/" + updateSJSONName,
 	}, ts.seen)
+	assert.True(t, rep.hasStep(stepMetadata))
+	assert.True(t, rep.hasDone(stepMetadata))
 }
 
 func TestReleaseMetadataCapEnforced(t *testing.T) {
@@ -142,4 +144,16 @@ func TestReleaseMetadataZeroByteSJSON(t *testing.T) {
 	})
 	_, err := ts.newHTTPS(t, nil).ReleaseMetadata(t.Context(), testVersion, []apiimages.UpdateFile{file})
 	require.ErrorIs(t, err, ErrFetch)
+}
+
+func TestReleaseMetadataFailureOmitsDone(t *testing.T) {
+	t.Parallel()
+	file := testFile([]byte("app"))
+	rep := &recordingReporter{}
+	ts := newTestServer(t, map[string][]byte{})
+	src := ts.newHTTPS(t, rep)
+	_, err := src.ReleaseMetadata(t.Context(), testVersion, []apiimages.UpdateFile{file})
+	require.ErrorIs(t, err, ErrFetch)
+	assert.True(t, rep.hasStep(stepMetadata))
+	assert.False(t, rep.hasDone(stepMetadata))
 }

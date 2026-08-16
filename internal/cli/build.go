@@ -111,14 +111,14 @@ func newBuildCommandWith(opts Options, deps buildDeps) *cobra.Command {
 		Use:   cmdNameBuild,
 		Short: "Build seeded IncusOS installation media from a YAML config",
 		Long:  "Build seeded IncusOS installation media from a YAML config. -f - reads the config from stdin; -o - writes the image to stdout.",
-		Args:  cobra.NoArgs,
+		Args:  noArgs(opts),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runBuildCommand(cmd, opts, deps)
 		},
 	}
-	cmd.Flags().StringP(flagConfig, "f", "", "path to config YAML (`-` reads stdin)")
-	cmd.Flags().StringP(flagOutput, "o", "", "image output path (`-` writes stdout)")
-	cmd.Flags().String(flagResourcesOutput, "", "resources-media output path (offline builds)")
+	cmd.Flags().StringP(flagConfig, "f", "", "path to config YAML (- reads stdin)")
+	cmd.Flags().StringP(flagOutput, "o", "", "image output path (- writes stdout)")
+	cmd.Flags().String(flagResourcesOutput, "", "rescue-media output path (offline builds)")
 	cmd.Flags().Bool(flagForce, false, "replace existing output files")
 	return cmd
 }
@@ -257,12 +257,12 @@ func checkBuildSpecUsage(output string, spec build.Spec) error {
 	return nil
 }
 
-// loadBuildSpec reads and validates the config. Path "-" uses stdin.
+// loadBuildSpec reads and validates the config. [isStdout] paths use stdin.
 func loadBuildSpec(deps buildDeps, path string, stdin io.Reader) (build.Spec, error) {
 	if deps.Load != nil {
 		return deps.Load(path, stdin)
 	}
-	if path == stdoutSentinel {
+	if isStdout(path) {
 		raw, err := io.ReadAll(stdin)
 		if err != nil {
 			return build.Spec{}, fmt.Errorf("%w: read stdin: %w", errdefs.ErrConfig, err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/pflag"
 
@@ -48,7 +49,7 @@ func exitCode(err error) int {
 		return exitSuccess
 	}
 	switch {
-	case IsUsage(err), isFlagError(err):
+	case IsUsage(err), isFlagError(err), isUnknownCommandError(err):
 		return exitUsage
 	case errors.Is(err, errdefs.ErrConfig):
 		return exitConfig
@@ -74,6 +75,16 @@ func isFlagError(err error) bool {
 		errors.As(err, &valueRequired) ||
 		errors.As(err, &invalidValue) ||
 		errors.As(err, &invalidSyntax)
+}
+
+// isUnknownCommandError reports whether err is Cobra's untyped
+// `unknown command "..." for "..."` failure (legacyArgs / NoArgs). Those
+// strings are usage errors (exit 2) but do not wrap [ErrUsage].
+func isUnknownCommandError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.HasPrefix(err.Error(), "unknown command ")
 }
 
 // writeErrorJSON writes {"error":{code,message}} for --json failure paths.

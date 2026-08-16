@@ -66,6 +66,13 @@ func (r *recordingReporter) hasStep(name string) bool {
 	return slices.Contains(r.steps, name)
 }
 
+// hasDone reports whether name was recorded as completed.
+func (r *recordingReporter) hasDone(name string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Contains(r.dones, name)
+}
+
 // lastProgressTotal returns the total of the last Progress call, or -1.
 func (r *recordingReporter) lastProgressTotal() int64 {
 	r.mu.Lock()

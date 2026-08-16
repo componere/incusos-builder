@@ -87,7 +87,6 @@ func NewHTTPSSource(serverURL, cacheDir string, reporter build.Reporter, client 
 // it as [apiimages.Index].
 func (s *HTTPSSource) Index(ctx context.Context) (apiimages.Index, error) {
 	s.reporter.Step(stepIndex)
-	defer s.reporter.Done(stepIndex)
 
 	rawURL, err := url.JoinPath(s.base, indexName)
 	if err != nil {
@@ -103,6 +102,7 @@ func (s *HTTPSSource) Index(ctx context.Context) (apiimages.Index, error) {
 	if err := decodeJSON(body, &index, indexName); err != nil {
 		return apiimages.Index{}, err
 	}
+	s.reporter.Done(stepIndex)
 	return index, nil
 }
 
@@ -125,25 +125,26 @@ func (s *HTTPSSource) Asset(
 		return handle, nil
 	}
 	s.cache.warnIfLowSpace(file.Size)
-	return s.fetchAndAdmit(ctx, version, file)
+	s.reporter.Step(stepDownload)
+	handle, err := s.fetchAndAdmit(ctx, version, file)
+	if err != nil {
+		return nil, err
+	}
+	s.reporter.Done(stepDownload)
+	return handle, nil
 }
 
-// openAsset GETs the asset URL and reports download progress via the cache copy.
+// openAsset GETs the asset URL. Download progress is reported by the cache copy.
 func (s *HTTPSSource) openAsset(ctx context.Context, version string, file apiimages.UpdateFile) (io.ReadCloser, error) {
 	rawURL, err := url.JoinPath(s.base, version, file.Filename)
 	if err != nil {
 		return nil, fmt.Errorf("%w: asset URL: %w", ErrFetch, err)
 	}
-	s.reporter.Step(stepDownload)
-	resp, err := s.getOnce(ctx, rawURL) //nolint:bodyclose // transferred to doneCloser, closed by fetchAndAdmit
+	resp, err := s.getOnce(ctx, rawURL)
 	if err != nil {
-		s.reporter.Done(stepDownload)
 		return nil, err
 	}
-	return &doneCloser{
-		inner: resp.Body,
-		done:  func() { s.reporter.Done(stepDownload) },
-	}, nil
+	return resp.Body, nil
 }
 
 // fetchAndAdmit GETs and admits an asset, retrying transient failures.
@@ -384,25 +385,4 @@ func (e *transientError) Error() string {
 // Unwrap returns the wrapped fetch error.
 func (e *transientError) Unwrap() error {
 	return e.cause
-}
-
-// doneCloser closes the inner reader then calls done.
-type doneCloser struct {
-	inner io.ReadCloser
-	done  func()
-}
-
-// Read implements [io.Reader].
-func (c *doneCloser) Read(p []byte) (int, error) {
-	return c.inner.Read(p)
-}
-
-// Close closes the inner reader and runs done once.
-func (c *doneCloser) Close() error {
-	err := c.inner.Close()
-	if c.done != nil {
-		c.done()
-		c.done = nil
-	}
-	return err
 }
