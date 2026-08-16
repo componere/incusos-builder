@@ -113,19 +113,25 @@ Pass/Fail: [ ]
 ### PRE-02 — Environment hygiene
 
 ```console
+$ unset CI NO_COLOR
 $ env | grep '^INCUSOS_BUILDER_'      # expect no output
 $ env | grep '^SOPS_'                 # expect no output
-$ echo "CI=[${CI-unset}]"             # expect CI=[unset]
+$ echo "CI=[${CI-unset}] NO_COLOR=[${NO_COLOR-unset}]"  # expect both unset
 $ test -t 0 && test -t 1 && echo tty  # expect tty
 $ whoami                              # must not be root
 $ umask                               # record it; MED-16 needs a non-default umask
+$ export TEST_TMUX_SOCKET="campaign-${USER}-$$"
 ```
 
 Any stray `INCUSOS_BUILDER_*` invalidates most CLI cases
-(`internal/cli/root.go` `applyViperDefaults`). A non-empty `CI` silently disables
-every prompt (`internal/cli/policy.go` `autoNoInput`), which would make CLI-17,
-CLI-18, CLI-19, CFG-12 prove nothing. Running as root breaks CLI-09, which
-depends on `permission denied` in a `chmod 555` directory.
+(`internal/cli/root.go` `applyViperDefaults`). The harness can set `CI` and
+`NO_COLOR`; unset both before prompt or colour cases. A non-empty `CI` silently
+disables every prompt (`internal/cli/policy.go` `autoNoInput`), which would make
+CLI-17, CLI-18, CLI-19, and CFG-12 prove nothing. `NO_COLOR` silently disables
+the ANSI branch in CLI-17. Run every tmux-based interactive case with the
+private socket `tmux -L "$TEST_TMUX_SOCKET"`. Never run `kill-server` on a
+shared socket; stop only the private session you created. Running as root
+breaks CLI-09, which depends on `permission denied` in a `chmod 555` directory.
 
 Pass/Fail: [ ]
 
@@ -134,8 +140,8 @@ Pass/Fail: [ ]
 ```console
 $ which -a jq shasum bsdtar hdiutil diskutil od stat cmp curl python3 dd tr
 $ command -v sops && sops --version --disable-version-check
-$ command -v syft && syft --version
-$ command -v sha256sum || echo 'sha256sum MISSING (expected on macOS; use shasum -a 256)'
+$ command -v syft && syft version -o json
+$ command -v sha256sum || echo 'sha256sum MISSING (record observation)'
 $ docker info --format '{{.ServerVersion}} {{.OperatingSystem}} {{.Architecture}}'
 $ gh auth status
 ```
@@ -268,7 +274,7 @@ when at least one non-optional case for it has a recorded result.
 | Registered commands are `build`, `validate`, `versions`, `init` | `cli.md:9-10` | CLI-01 (F-CLI-2) |
 | Eight persistent flags with the documented defaults | `cli.md:43-52` | CLI-02 |
 | Per-command flag sets are exactly as documented | `cli.md:74-79,129-131,148-151,171-173` | CLI-02 |
-| Exit 2 = usage errors (11 enumerated triggers) | `automation.md:21` | CLI-03, CLI-04, CLI-05, CLI-15, CLI-18, CFG-11 |
+| Exit 2 = usage errors, including unknown commands and operands | `automation.md:21` | CLI-03, CLI-04, CLI-05, CLI-10, CLI-15, CLI-18, CFG-11 |
 | Exit 3 = invalid seed config | `automation.md:22` | CLI-06, CFG-01..CFG-10 |
 | Exit 4 = SOPS decryption failure | `automation.md:23` | CLI-07, CFG-13..CFG-17 |
 | Exit 5 = acquisition / version resolution | `automation.md:24` | CLI-08, ART-04, ART-13..ART-17 |
@@ -278,7 +284,7 @@ when at least one non-optional case for it has a recorded result.
 | build / validate / versions / init envelopes carry the documented fields | `automation.md:67-149` | CLI-12, ART-02, ART-06, MED-07 |
 | `-f -` reads config from stdin (plaintext and SOPS) | `automation.md:207` | CLI-14, CFG-13 |
 | `-o -` streams image bytes, no summary; `init -o -` writes YAML | `automation.md:208-209` | ART-21, CLI-12 |
-| `-` sentinel also matches paths that clean to `-` | `automation.md:203` | CLI-15 (expected to falsify) |
+| `-` sentinel also matches paths that clean to `-` | `automation.md:203` | CLI-15 |
 | Precedence: flag > `INCUSOS_BUILDER_*` > default; explicit `=false` beats env | `automation.md:151-169` | CLI-16, ART-11 |
 | `CI`, `NO_COLOR`, `TERM=dumb`, `ACCESSIBLE`, `SOPS_AGE_KEY` behaviors | `automation.md:171-179` | CLI-17, CLI-19, CFG-15 |
 | stdout/stderr split; `-q` suppresses only human success | `automation.md:183-191` | CLI-20 |
@@ -308,7 +314,7 @@ when at least one non-optional case for it has a recorded result.
 | Decrypted bytes never touch disk | `internal/config/doc.go:5` | CFG-13, CFG-18 |
 | `validate` performs no network I/O | `sops-encryption.md:66-67` | CFG-18 |
 | `init --no-input` output validates; lists all eleven sections commented | `cli.md:179-185` | CFG-11 |
-| Interactive `init` answers produce a valid config | `internal/cli/init.go:259-291` | CFG-12 (expected to falsify for offline=yes) |
+| Interactive `init` answers produce a valid config | `internal/cli/init.go` `renderInitConfig` | CFG-12 |
 
 ### Live server, cache, artifacts
 
@@ -429,20 +435,20 @@ one reads); commas are siblings that may run in any order; `‖` runs concurrent
 **Wave P — post-tag (5 cases):** SUP-19, SUP-20, SUP-21, SUP-22, SUP-23, in that
 order, against the first real release and before the draft is published.
 
-#### The fifteen cases that exceed five minutes
+#### Cases that can exceed five minutes
 
-Everything else in Wave 2 is a cheap inspection that merely needs a Wave 2
-artifact. These are the ones that actually cost time:
+Warm-cache observations appear first. The retained ceilings allow for cold
+caches, slower hosts, and slower links:
 
 | Case | Wall time | Disk | Downloads |
 |------|-----------|------|-----------|
-| MED-07 offline raw build | 10–20 min | ~4.5 GB | yes |
-| MED-11 offline ISO build | 10–20 min | ~2 GB | yes (ISO asset) |
-| MED-17 `--force` pair replacement | 5–15 min | ~7.5 GB peak | no |
-| SUP-03 `mise run image-local` | 5–12 min | 1–3 GB in the Docker VM | yes (Wolfi) |
+| MED-07 offline raw build | ~5.3 s warm; allow 20 min cold | ~4.5 GB | yes |
+| MED-11 offline ISO build | ~17.4 s warm; allow 20 min cold | ~2 GB | yes (ISO asset) |
+| MED-17 `--force` pair replacement | 5–15 min ceiling | ~7.5 GB peak | no |
+| SUP-03 `mise run image-local` | ~40 s warm; allow 12 min cold | 1–3 GB in the Docker VM | yes (Wolfi) |
 | SUP-12 release rehearsal | ~7 min (remote runner) | none local | n/a |
 | DOC-01 fresh-clone source install | 3–8 min | ~1 GB | yes |
-| DOC-04 README quickstart | 20–45 min | ~10 GB | yes |
+| DOC-04 README quickstart | ~4 min warm; allow 45 min cold | ~10 GB | yes |
 | DOC-10 tutorial walkthrough | 20–45 min | ~10 GB | yes |
 | DOC-12 offline-media how-to | reuses MED-07/11 | — | no |
 | DOC-14 local-mirror how-to (populated half) | reuses ART-12 | — | no |
@@ -452,9 +458,9 @@ artifact. These are the ones that actually cost time:
 | BOOT-07 copy volume, detect `RESCUE_DATA` | 15–40 min | — | Linux host |
 | PRE-07-W2 `root:e2e` bootstrap | 10–25 min | ~5 GB | yes |
 
-ART-05 is 1–3 min on a fast link but sits in Wave 2 as track A's producer:
-everything downstream reads its 3.2 GiB image and warmed cache, and its 415 MiB
-download alone exceeds five minutes on a slower connection.
+ART-05 took about 17 s on the measured warm host but remains in Wave 2 as track
+A's producer. Everything downstream reads its 3.2 GiB image and warmed cache.
+Allow up to three minutes when the 415 MiB asset must cross a slower link.
 
 #### Cases split across waves
 
@@ -510,8 +516,9 @@ Wave 1 and record the deferred half against Wave 2:
   `channel` (default `stable`), `architecture` (default `aarch64` on this host,
   proving the `arm64`→`aarch64` mapping). `init` — `output`(`-o`, default
   `config.yaml`) and **no** `--force`. No flag in code is missing from the docs
-  and none is documented that does not exist. Note `-f`/`-o` render their
-  placeholder as `-` rather than `string` (**F-CLI-3**, cosmetic).
+  and none is documented that does not exist. The `-f` and `-o` value metavars
+  render as `string`. `--resources-output` is described exactly as
+  `rescue-media output path (offline builds)`.
 - Pass/Fail: [ ]
 
 #### CLI-03 — Exit 2, global flag usage errors
@@ -621,7 +628,8 @@ Wave 1 and record the deferred half against Wave 2:
 - Promise: empty cache directory and unreachable/empty sources are acquisition failures.
 - Source: `internal/update/cache.go:44-46`; `internal/update/local.go:136`; `internal/update/client.go` `getOnce`.
 - Wave: **Wave 1**
-- Cost: cheap; the HTTPS case takes ~1 min (three retry attempts).
+- Cost: cheap; the HTTPS retry ladder takes about 1 s (`retryAttempts = 3`,
+  `retryBase = 100ms`, capped at `retryBase * 2^3`).
 - Commands:
   ```console
   $ "$IOB" versions --server "$WORK/mirror" --cache-dir ""; echo "rc=$?"
@@ -629,11 +637,11 @@ Wave 1 and record the deferred half against Wave 2:
   $ "$IOB" versions --server https://127.0.0.1:1/os --cache-dir "$CACHE"; echo "rc=$?"
   $ INCUSOS_BUILDER_CACHE_DIR= "$IOB" versions --server "$WORK/mirror"; echo "rc=$?"
   ```
-- Expected: all `rc=5`. First: `acquisition failed: cache directory is required`.
-  Second: `acquisition failed: open index.json: open <WORK>/mirror/index.json: no such file or directory`.
-  Third: ends in a `connection refused` cause. Fourth is `rc=5` **for the wrong
-  reason** — it fails on `index.json`, proving an empty `INCUSOS_BUILDER_CACHE_DIR`
-  does not override the default the way `--cache-dir ""` does (**F-CLI-4**).
+- Expected: all `rc=5`. First and fourth:
+  `acquisition failed: cache directory is required`; an empty
+  `INCUSOS_BUILDER_CACHE_DIR` is equivalent to `--cache-dir ""`. Second:
+  `acquisition failed: open index.json: no such file or directory`, with no
+  absolute mirror path. Third ends in a `connection refused` cause.
 - Pass/Fail: [ ]
 
 #### CLI-09 — Exit 6 through the real CLI
@@ -653,9 +661,10 @@ Wave 1 and record the deferred half against Wave 2:
   The `--json` run writes one envelope with `error.code == 6`. `ro/` is empty.
 - Pass/Fail: [ ]
 
-#### CLI-10 — Unknown commands and stray operands **[falsifier]**
-- Promise: docs say every command takes no operands and usage errors are exit 2.
-- Source: `cli.md:10,71,126,146,169`; `automation.md:21`; `internal/cli/exit.go:61-63`.
+#### CLI-10 — Unknown commands and stray operands
+- Promise: every command takes no operands and usage errors exit 2.
+- Source: `cli.md:10,71,126,146,169`; `automation.md:21`;
+  `internal/cli/root.go` `noArgs`; `internal/cli/exit.go` `exitCode`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
@@ -666,11 +675,10 @@ Wave 1 and record the deferred half against Wave 2:
   $ "$IOB" versions x; echo "rc=$?"
   $ "$IOB" init x --no-input; echo "rc=$?"
   ```
-- Expected: every case `rc=1` (not 2) with stderr
-  `unknown command "<arg>" for "incusos-builder[ <command>]"`. Cobra's error
-  wraps neither `ErrUsage` nor a pflag error, so it falls through to
-  `exitInternal`. Record as **F-CLI-5**: an automation consumer branching on
-  exit 2 will not see operand mistakes.
+- Expected: every case has `rc=2`. The unknown root command prints
+  `usage error: unknown command "frobnicate" for "incusos-builder"`.
+  Each subcommand prints
+  `usage error: incusos-builder <command> accepts no arguments`.
 - Pass/Fail: [ ]
 
 #### CLI-11 — Error envelope shape across codes 2, 3, 5, 6
@@ -749,24 +757,28 @@ Wave 1 and record the deferred half against Wave 2:
   bytes appear on disk (`ls -a` shows nothing new).
 - Pass/Fail: [ ]
 
-#### CLI-15 — Stream sentinel and the "cleans to `-`" rule **[falsifier]**
-- Promise: `automation.md:203` says `-` "or a path that cleans to `-`" is the sentinel for all uses.
-- Source: `internal/cli/publish.go` `isStdout` (uses `filepath.Clean`) vs `internal/cli/init.go` and `build.go` `loadBuildSpec` (exact compare).
+#### CLI-15 — Stream sentinel and the "cleans to `-`" rule
+- Promise: `-` and paths that clean to `-` select stdin or stdout for every
+  config and output path.
+- Source: `automation.md:203`; `internal/cli/publish.go` `isStdout`;
+  `internal/cli/init.go` `writeInitOutput`; `internal/cli/build.go`
+  `loadBuildSpec`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
   $ mkdir -p dashwork && cd dashwork && cp ../good.yaml .
   $ "$IOB" build --json -f good.yaml -o ./- --server "$WORK/mirror" --cache-dir "$CACHE"; echo "rc=$?"
-  $ "$IOB" init --json --no-input -o ./-; echo "rc=$?"
-  $ ls -la
+  $ "$IOB" init --no-input -o ./- > init-stdout.yaml; echo "rc=$?"
+  $ test ! -e ./- && echo "no dash file"; "$IOB" validate -f init-stdout.yaml --color never; echo "rc=$?"
   $ printf 'version: 1\nimage:\n  type: iso\n  architecture: x86_64\n' | "$IOB" validate -f ./-; echo "rc=$?"
   $ cd "$WORK"
   ```
-- Expected: `build -o ./-` honors the rule (`rc=2`, the `--json`/`-o -` envelope).
-  `init --json -o ./-` does **not**: `rc=0`, `{"result":{"output":"./-"}}`, and a
-  regular file named `-` is created. `validate -f ./-` opens that file instead of
-  stdin. Record as **F-CLI-6**.
+- Expected: `build --json -o ./-` honors the stream conflict rule: `rc=2` and
+  the `--json`/`-o -` error envelope. `init -o ./-` writes the generated YAML to
+  stdout at `rc=0`, creates no file named `-`, and prints no `wrote` line. Both
+  validations print `configuration valid` at `rc=0`; `validate -f ./-` reads
+  stdin.
 - Pass/Fail: [ ]
 
 #### CLI-16 — Precedence: flag > env > default
@@ -835,10 +847,13 @@ Wave 1 and record the deferred half against Wave 2:
 - Pass/Fail: [ ]
 
 #### CLI-19 — `init` interactive form and cancel (real TTY)
-- Promise: form fields, stderr rendering, `ACCESSIBLE` line mode, cancel is exit 2 with no file.
-- Source: `cli.md:186-190`; `internal/cli/init.go` `newInitForm`, `runInitForm`.
+- Promise: form fields and descriptions, stderr rendering, cancellable
+  `ACCESSIBLE` line mode, and exit 2 with no file after cancellation.
+- Source: `cli.md:186-190`; `internal/cli/init.go` `newInitForm`,
+  `runAccessibleInitForm`, `wrapInitFormError`.
 - Wave: **Wave 1**
-- Cost: cheap; interactive.
+- Cost: cheap; interactive. If using tmux, run every command through
+  `tmux -L "$TEST_TMUX_SOCKET"`.
 - Commands:
   ```console
   $ mkdir -p formwork && cd formwork
@@ -846,18 +861,25 @@ Wave 1 and record the deferred half against Wave 2:
   $ echo "rc=$?"; ls
   $ "$IOB" init            # select ISO installer, aarch64, empty channel, no
   $ echo "rc=$?"; cat config.yaml
-  $ ACCESSIBLE=1 "$IOB" init -o acc.yaml   # answer 1, 1, Enter, n
-  $ cat acc.yaml; cd "$WORK"
+  $ ACCESSIBLE=1 "$IOB" init -o acc.yaml   # answer 1, 1, Enter, y, Enter
+  $ "$IOB" validate -f acc.yaml --color never; cat acc.yaml
+  $ ACCESSIBLE=1 "$IOB" init -o acc-cancel.yaml  # press Ctrl-C
+  $ echo "rc=$?"; test ! -e acc-cancel.yaml; cd "$WORK"
   ```
 - Expected: the form renders on **stderr** with group title
   `incusos-builder init` and fields `Image type`, `Architecture`, `Channel`
-  (placeholder `stable`), `Offline install?`. Ctrl-C → `rc=2`
-  `usage error: init cancelled`, **no file created**. The completed run →
-  `wrote config.yaml`, with `type: iso`, `architecture: aarch64`,
-  `channel: stable` (empty defaulted), `offline: false`, and **no** commented
-  `#seeds:` block (that appears only under `--no-input`). `ACCESSIBLE=1`
-  produces numbered `Enter a number between 1 and 2:` prompts. Piping stdin makes
-  the form unreachable — auto no-input writes the commented example instead.
+  (description `Update-server channel; default stable.`), `Offline install?`
+  (description `Also build RESCUE_DATA resources media.`), and conditional
+  `Application name` (description
+  `Offline application to include in resources media; default incus.`).
+  Ctrl-C in either form mode prints `usage error: init cancelled`, exits 2, and
+  creates no output file. The completed online run prints `wrote config.yaml`
+  and writes `type: iso`, `architecture: aarch64`, `channel: stable`,
+  `offline: false`, with no commented `#seeds:` block. The accessible offline
+  run uses numbered `Enter a number between 1 and 2:` prompts, defaults the
+  application to `incus`, writes
+  `seeds.applications.applications[0].name`, and validates at exit 0. Piping
+  stdin makes the form unreachable: auto no-input writes the commented example.
 - Pass/Fail: [ ]
 
 #### CLI-20 — Stream routing, `-q`, `--verbose`, progress gating
@@ -907,12 +929,13 @@ Wave 1 and record the deferred half against Wave 2:
 
 #### CFG-02 — Maximal config: all eleven seed sections populated
 - Promise: eleven sections, every documented field real on the pin.
-- Source: `configuration.md:869-1023` ("Populated eleven-section shape"); `internal/config/schema.go:55-78`.
+- Source: `configuration.md:881-1035` ("Populated eleven-section shape");
+  `internal/config/schema.go:55-78`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
-  $ sed -n '873,1022p' "$REPO/docs/docs/reference/configuration.md" > maximal.yaml
+  $ sed -n '885,1034p' "$REPO/docs/docs/reference/configuration.md" > maximal.yaml
   $ "$IOB" validate -f maximal.yaml --color never; echo "exit=$?"
   $ "$IOB" validate -f maximal.yaml --json
   ```
@@ -923,7 +946,8 @@ Wave 1 and record the deferred half against Wave 2:
   `security`/`target`), `network` (with `dns`/`time`/`interfaces`/`routes`),
   `provider`, `services` (all eight service maps), `update` (with
   `maintenance_windows`), `kernel.console`, and `security.custom_ca_certs` is a
-  real field on the pinned upstream. Re-check the line range if the doc changed.
+  real field on the pinned upstream. Apply CFG-19's fence extractor before
+  trusting this literal range.
 - Pass/Fail: [ ]
 
 #### CFG-03 — Offline requires a non-empty applications list
@@ -944,18 +968,20 @@ Wave 1 and record the deferred half against Wave 2:
 - Pass/Fail: [ ]
 
 #### CFG-04 — `seeds` omitted, null, or empty
-- Promise: `seeds` is optional and may be `{}` or all-empty sections.
-- Source: `configuration.md:33-45,148-149,818-835`.
+- Promise: `seeds` is optional and may be `{}` or contain every accepted
+  section.
+- Source: `configuration.md:33-45,148-149,830-847`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
   $ printf 'version: 1\nimage:\n  type: iso\n  architecture: x86_64\nseeds:\n' | "$IOB" validate -f - --color never; echo "exit=$?"
   $ printf 'version: 1\nimage:\n  type: iso\n  architecture: x86_64\nseeds: {}\n' | "$IOB" validate -f - --color never; echo "exit=$?"
-  $ sed -n '818,835p' "$REPO/docs/docs/reference/configuration.md" | "$IOB" validate -f - --color never; echo "exit=$?"
+  $ sed -n '830,847p' "$REPO/docs/docs/reference/configuration.md" | "$IOB" validate -f - --color never; echo "exit=$?"
   ```
-- Expected: all three `configuration valid`, `exit=0`. The third is the doc's
-  "every accepted seed section present" example with all eleven as `{}`.
+- Expected: all three print `configuration valid` and `exit=0`. The third is
+  the reference's "every accepted seed section present" example: ten sections
+  are `{}`, while `applications` contains one real application entry.
 - Pass/Fail: [ ]
 
 #### CFG-05 — `sort_order` enum, case-insensitive
@@ -975,15 +1001,16 @@ Wave 1 and record the deferred half against Wave 2:
 
 #### CFG-06 — Recovery keys rejected without echoing the secret
 - Promise: `seeds.security.encryption_recovery_keys` is refused and the value never appears in the error.
-- Source: `internal/config/validate.go:147-153`; `configuration.md:741-753,1025-1035`.
+- Source: `internal/config/validate.go:147-153`;
+  `configuration.md:741-753,1037-1047`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
-  $ sed -n '1028,1035p' "$REPO/docs/docs/reference/configuration.md" > recovery.yaml
+  $ sed -n '1040,1047p' "$REPO/docs/docs/reference/configuration.md" > recovery.yaml
   $ "$IOB" validate -f recovery.yaml --color never 2> recovery.err; echo "exit=$?"
   $ cat recovery.err; grep -c 'super-secret-recovery-key' recovery.err
-  $ sed -n '855,866p' "$REPO/docs/docs/reference/configuration.md" | "$IOB" validate -f - --color never; echo "exit=$?"
+  $ sed -n '867,878p' "$REPO/docs/docs/reference/configuration.md" | "$IOB" validate -f - --color never; echo "exit=$?"
   ```
 - Expected: `exit=3` and one stderr line:
   `invalid config: seeds.security.encryption_recovery_keys: it is not possible to set encryption recovery key(s) via the security seed; see https://linuxcontainers.org/incus-os/docs/main/reference/system/security/`.
@@ -1085,28 +1112,33 @@ Wave 1 and record the deferred half against Wave 2:
   `services`, `update`, `kernel`, `security` — `grep -c` prints `11`.
 - Pass/Fail: [ ]
 
-#### CFG-12 — Interactive `init` output validity, including offline **[falsifier]**
-- Promise: `internal/cli/init.go:259-291` claims the emitted body is a valid `config.Parse` input.
-- Source: `internal/cli/init.go:171-229`; `internal/config/validate.go:156-164`.
+#### CFG-12 — Interactive `init` output validity, including offline
+- Promise: every completed interactive answer set emits a valid
+  `config.Parse` input.
+- Source: `internal/cli/init.go` `runInitForm`, `renderInitConfig`;
+  `internal/config/validate.go:156-164`.
 - Wave: **Wave 1**
-- Cost: minutes; real TTY required.
+- Cost: minutes; real TTY required. If using tmux, use
+  `tmux -L "$TEST_TMUX_SOCKET"`.
 - Commands:
   ```console
   $ env -u CI "$IOB" init -o form.yaml        # raw, aarch64, channel "daily", offline no
   $ cat form.yaml; "$IOB" validate -f form.yaml --color never; echo "exit=$?"
-  $ env -u CI "$IOB" init -o form-offline.yaml # iso, x86_64, empty channel, offline YES
+  $ env -u CI "$IOB" init -o form-offline.yaml # iso, x86_64, empty channel, offline yes, default Application name
   $ cat form-offline.yaml; "$IOB" validate -f form-offline.yaml --color never; echo "exit=$?"
   ```
-- Expected: `form.yaml` is exactly `version: 1` / `image:` / `type: raw` /
-  `architecture: aarch64` / `channel: daily` / `offline: false` and validates at
-  `exit=0`. `form-offline.yaml` carries `offline: true` with **no** `seeds`
-  block and therefore **fails**: `invalid config: seeds.applications: required
-  when image.offline is true`, `exit=3`. Every offline=yes answer combination
-  produces an invalid starter config. Record as **F-CFG-2** — a release decision:
-  seed an `applications` entry in the interactive offline path, or qualify the
-  promise in `internal/cli/init.go:260-261` and `cli.md:167-169`. Not covered by
-  any existing test (`internal/cli/init_test.go:240-277` asserts the answers but
-  never validates the rendered config).
+- Expected: `form.yaml` contains `version: 1`, `type: raw`,
+  `architecture: aarch64`, `channel: daily`, and `offline: false`; it validates
+  at `exit=0`. When offline is yes, the form asks for `Application name` with
+  default `incus`. Accepting the default writes:
+  ```yaml
+  seeds:
+    applications:
+      applications:
+        - name: "incus"
+  ```
+  `form-offline.yaml` contains that block with `offline: true` and validates at
+  `exit=0`.
 - Pass/Fail: [ ]
 
 #### CFG-13 — SOPS: decrypt the repo fixture from a file and from stdin
@@ -1167,26 +1199,31 @@ Wave 1 and record the deferred half against Wave 2:
 - Pass/Fail: [ ]
 
 #### CFG-16 — Every decrypt-path failure is exit 4, never 3
-- Promise: wrong key, MAC mismatch, malformed metadata, and a stray `sops` key on plaintext.
-- Source: `internal/config/testdata/README:11-15`; `configuration.md:61-66,156-158`.
+- Promise: wrong key, MAC mismatch, malformed metadata, and a stray `sops` key
+  on plaintext produce single-line, sanitized decryption diagnostics.
+- Source: `internal/config/testdata/README:11-15`; `configuration.md:61-66,156-158`;
+  `internal/config/load.go` `sanitizeYAMLMessage`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
+  $ export SOPS_AGE_KEY="$(tail -n1 "$REPO/internal/config/testdata/age.key")"
   $ cd "$REPO/internal/config/testdata"
-  $ for f in encrypted-wrong-key.yaml encrypted-mac-mismatch.yaml malformed-sops.yaml stray-sops.yaml; do "$IOB" validate -f "$f" --color never; echo "$f exit=$?"; done
+  $ for f in encrypted-wrong-key.yaml encrypted-mac-mismatch.yaml malformed-sops.yaml stray-sops.yaml; do "$IOB" validate -f "$f" --color never 2> "$WORK/$f.err"; rc=$?; echo "$f exit=$rc lines=$(wc -l < "$WORK/$f.err")"; cat "$WORK/$f.err"; done
   $ cd "$WORK"
-  $ printf 'version: 1\nimage:\n  type: iso\n  architecture: x86_64\nsops: true\n' | "$IOB" validate -f - --color never; echo "exit=$?"
+  $ printf 'version: 1\nimage:\n  type: iso\n  architecture: x86_64\nsops: true\n' | "$IOB" validate -f - --color never 2> scalar-sops.err; echo "exit=$? lines=$(wc -l < scalar-sops.err)"; cat scalar-sops.err
   $ env SOPS_AGE_KEY= "$IOB" validate -f maximal.enc.yaml --json > d.json 2> d.txt; echo "exit=$?"; cat d.json d.txt
   ```
-- Expected: `exit=4` for all five, never 3. Wrong key:
+- Expected: each of the five non-JSON failures has `exit=4` and `lines=1`,
+  never exit 3. Wrong key is exactly
   `decryption failed: Error getting data key: 0 successful groups required, got 0`.
-  MAC mismatch:
+  MAC mismatch is exactly
   `decryption failed: Failed to decrypt original mac: Could not decrypt with AES_GCM: cipher: message authentication failed`.
-  Malformed: `decryption failed: No keys found in file`. Stray key and scalar
-  `sops: true`: `decryption failed: Error unmarshalling input yaml: yaml: unmarshal errors:`
-  naming `stores.Metadata` — presence of the key alone selects decryption. The
-  `--json` run writes exactly
+  Malformed metadata is `decryption failed: No keys found in file`. The stray
+  key and scalar `sops: true` produce
+  `decryption failed: Error unmarshalling input yaml: yaml: unmarshal errors: line 5: cannot unmarshal !!str <value> into stores.Metadata`;
+  neither diagnostic contains the original scalar. The `--json` run writes
+  exactly
   `{"error":{"code":4,"message":"decryption failed: Error getting data key: 0 successful groups required, got 0"}}`.
 - Pass/Fail: [ ]
 
@@ -1236,18 +1273,24 @@ Wave 1 and record the deferred half against Wave 2:
 - Pass/Fail: [ ]
 
 #### CFG-19 — Every YAML example in the configuration reference behaves as documented
-- Promise: the eight fenced examples in `configuration.md` are accurate.
-- Source: `configuration.md:775-1035`.
+- Promise: the eight examples under `## Examples` in `configuration.md` are accurate.
+- Source: `configuration.md:787-1047`.
 - Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
-  $ for r in 779,782 788,796 803,811 818,835 841,849 855,866 873,1022 1028,1035; do sed -n "${r}p" "$REPO/docs/docs/reference/configuration.md" | "$IOB" validate -f - --color never; echo "$r exit=$?"; done
+  $ awk '/^```yaml$/{s=NR} /^```$/{if(s){print s+1"-"NR-1; s=0}}' "$REPO/docs/docs/reference/configuration.md"
+  $ for r in 791,794 800,808 815,823 830,847 853,861 867,878 885,1034 1040,1047; do sed -n "${r}p" "$REPO/docs/docs/reference/configuration.md" | "$IOB" validate -f - --color never; echo "$r exit=$?"; done
   ```
-- Expected: the first seven print `configuration valid` at `exit=0`; the last
-  ("Rejected recovery keys") prints the `encryption_recovery_keys` refusal at
-  `exit=3`. Any deviation means the reference drifted — re-check the line ranges
-  before failing the case.
+- Expected: the extractor reports nine fenced YAML ranges. The first,
+  `34-38`, is the introduction's document-shape skeleton, not one of the eight
+  Examples. Before every execution, re-derive the remaining eight ranges with
+  this extractor and replace the literals above if they shifted; do not trust
+  stored line numbers. At this revision the eight ranges are `791-794`,
+  `800-808`, `815-823`, `830-847`, `853-861`, `867-878`, `885-1034`, and
+  `1040-1047`. The first seven examples print `configuration valid` at
+  `exit=0`; the last ("Rejected recovery keys") prints the
+  `encryption_recovery_keys` refusal at `exit=3`.
 - Pass/Fail: [ ]
 
 ---
@@ -1325,9 +1368,10 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Promise: the whole online build path plus the documented human summary.
 - Source: `internal/cli/build.go:466-485`; `internal/cli/e2e_helpers_test.go:111-263`.
 - Wave: **Wave 2**
-- Cost: **expensive**: ~1–3 min wall, ~3.9 GB disk (≈415 MiB cached asset +
-  3,432,026,112 B output). Re-select the smallest raw image first — the live
-  index moves.
+- Cost: about 17 s on the measured warm host; allow up to 3 min on a slower
+  host or link. Disk use is ~3.9 GB (≈415 MiB cached asset +
+  3,432,026,112 B output). Re-select the smallest raw image first because the
+  live index moves.
 - Preconditions: ≥8 GB free; network.
 - Commands:
   ```console
@@ -1355,7 +1399,8 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Promise: envelope fields; `result.sha256` == a second hash; a warm cache skips the download.
 - Source: `automation.md:67-98`; `cache.md:72-78`; `internal/update/client.go:122-126`.
 - Wave: **Wave 2**
-- Cost: minutes; no download; ~3.2 GB written again (delete `$OUT` first if tight).
+- Cost: seconds with the warm asset cache; ~3.2 GB is written again (delete
+  `$OUT` first if space is tight).
 - Commands:
   ```console
   $ ls -l "$CACHE/sha256/"
@@ -1363,11 +1408,13 @@ it. Keep one shared `--cache-dir` for the whole block.
   $ echo "exit=$?"; cat build2.json
   $ jq -r '.result.sha256' build2.json; shasum -a 256 seeded2.img; shasum -a 256 "$OUT"
   ```
-- Expected: `exit=0`. stderr shows `==> acquire` followed directly by
-  `==> probe` — **no** `==> download` and no progress lines. stdout is one line
-  with `output`, `type`, `architecture`, `version`, `channel`, `seed_bytes`,
-  `sha256` and **no** `resources_*` keys. `.result.sha256` equals
-  `shasum -a 256 seeded2.img`, which equals `$OUT`'s digest from ART-05.
+- Expected: `exit=0`. The index fetch may emit one `progress 100%
+  (<index-bytes>/<index-bytes>)` line. stderr then includes `==> acquire`,
+  `done acquire`, and `==> probe`. It contains no `==> download` and no
+  **download** progress lines. stdout is one line with `output`, `type`,
+  `architecture`, `version`, `channel`, `seed_bytes`, and `sha256`, with no
+  `resources_*` keys. `.result.sha256` equals `shasum -a 256 seeded2.img`,
+  which equals `$OUT`'s digest from ART-05.
 - Pass/Fail: [ ]
 
 #### ART-07 — Cache layout, content addressing, mode, no residue
@@ -1437,7 +1484,8 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Promise: `cli.md:92-94`, `automation.md:97-98`.
 - Source: `internal/cli/build.go:389-400`.
 - Wave: **Wave 2**
-- Cost: expensive: ~1–2 min recompression, ~450 MiB; no download.
+- Cost: about 2.9 s on the measured warm host; allow up to 2 min on a slower
+  host. Uses ~450 MiB and performs no download.
 - Commands:
   ```console
   $ "$IOB" build --json -f live11.yaml -o seeded.img.gz --cache-dir "$CACHE" --color never --progress never > buildgz.json
@@ -1470,8 +1518,9 @@ it. Keep one shared `--cache-dir` for the whole block.
   `/nonexistent-should-be-ignored`. Both exit 0.
 - Pass/Fail: [ ]
 
-#### ART-12 — Local mirror: build with `--server <directory>`, network off
-- Promise: a directory mirror serves the same build through the same cache.
+#### ART-12 — Local mirror: build with `--server <directory>` in a network sandbox
+- Promise: a directory mirror serves the same build through the same cache
+  without network access.
 - Source: `use-local-mirror.md:23-76`; `internal/update/local.go:38-67`.
 - Wave: **Wave 2**
 - Cost: minutes; ~415 MiB mirror copy + 3.2 GiB output; no download.
@@ -1481,16 +1530,19 @@ it. Keep one shared `--cache-dir` for the whole block.
   $ cp index.json "$MIRROR/index.json"
   $ cp "$CACHE/sha256/$DIGEST" "$MIRROR/$VER/$ARCH/IncusOS_$VER.img.gz"
   $ shasum -a 256 "$MIRROR/$VER/$ARCH/IncusOS_$VER.img.gz"; find "$MIRROR" | sort
-  $ networksetup -setairportpower en0 off
+  $ printf '(version 1)\n(allow default)\n(deny network*)\n' > deny-net.sb
+  $ sandbox-exec -f deny-net.sb /usr/bin/curl -sS -o /dev/null https://images.linuxcontainers.org/os/index.json; echo "curl_control_exit=$?"
+  $ sandbox-exec -f deny-net.sb "$IOB" versions --cache-dir "$CACHE" --architecture "$ARCH" --color never; echo "builder_control_exit=$?"
   $ export MCACHE="$WORK/cache-mirror" && mkdir -p "$MCACHE"
-  $ "$IOB" versions --server "$MIRROR" --cache-dir "$MCACHE" --architecture "$ARCH" --color never
-  $ "$IOB" build --json -f live11.yaml -o mirror-seeded.img --server "$MIRROR" --cache-dir "$MCACHE" --color never --progress always; echo "exit=$?"
-  $ networksetup -setairportpower en0 on
+  $ sandbox-exec -f deny-net.sb "$IOB" versions --server "$MIRROR" --cache-dir "$MCACHE" --architecture "$ARCH" --color never
+  $ sandbox-exec -f deny-net.sb "$IOB" build --json -f live11.yaml -o mirror-seeded.img --server "$MIRROR" --cache-dir "$MCACHE" --color never --progress always; echo "exit=$?"
   ```
-- Expected: the copied file hashes to `$DIGEST`. With Wi-Fi off, `versions`
-  still prints the table and `build` exits 0 with the same `sha256` as ART-05.
-  `$MCACHE/sha256/$DIGEST` is created mode 0444 — a local server still admits
-  into the cache.
+- Expected: the copied file hashes to `$DIGEST`. Both controls fail because the
+  sandbox denies network access: curl is non-zero and the builder's HTTPS
+  control exits 5 with a DNS or network error. Under the same verified sandbox,
+  local-mirror `versions` prints the table and `build` exits 0 with the same
+  `sha256` as ART-05. `$MCACHE/sha256/$DIGEST` is created mode 0444. Do not
+  disable shared Wi-Fi to run this case.
 - Pass/Fail: [ ]
 
 #### ART-13 — Tampered mirror byte is refused at admission, with no residue
@@ -1544,15 +1596,21 @@ it. Keep one shared `--cache-dir` for the whole block.
   $ mv "$TINY/index.json" "$TINY/index.json.bak"; run; mv "$TINY/index.json.bak" "$TINY/index.json"  # i) missing index
   ```
 - Expected: all `exit=5`.
-  (a) `acquisition failed: gzip: …` — admission **passed** and the GPT probe
-  rejected the fake payload; `$TC/sha256/$TD` exists mode 0444.
+  (a) exactly `acquisition failed: gzip: invalid header` — one `gzip:` prefix.
+  Admission passed and the GPT probe rejected the fake payload;
+  `$TC/sha256/$TD` exists mode 0444.
   (b)(c) `acquisition failed: sha256 "…" rejected; untrusted metadata; possible tampering`
   (64 lowercase hex only). (d) `size 0 rejected; …`.
   (e) `size 8589934593 rejected; …` (bound is 8 GiB = 8589934592).
   (f) `filename "../evil.img.gz" rejected; …`, and nothing is created outside
   `$TINY`. (g) the admission wording from ART-13.
-  (h) `acquisition failed: open aarch64/absent.img.gz: …no such file or directory`.
-  (i) `acquisition failed: open index.json: …no such file or directory`.
+  (h) exactly
+  `acquisition failed: open aarch64/absent.img.gz: no such file or directory`;
+  the error contains no absolute mirror path, and `==> download` is not followed
+  by `done download`.
+  (i) exactly `acquisition failed: open index.json: no such file or directory`;
+  the error contains no absolute mirror path, and `==> index` is not followed
+  by `done index`. Failed steps never emit a `done <step>` line.
   For (b)–(f) the cache is never touched at all.
 - Pass/Fail: [ ]
 
@@ -1690,15 +1748,18 @@ it. Keep one shared `--cache-dir` for the whole block.
   $ DEV=$(hdiutil attach -nomount ram://262144) && echo "$DEV"
   $ diskutil erasevolume HFS+ CACHESMALL "$DEV"
   $ df -k /Volumes/CACHESMALL
+  $ test ! -e /Volumes/CACHESMALL/cache && echo "first-use cache absent"
   $ "$IOB" build -f live11.yaml -o small.img --cache-dir /Volumes/CACHESMALL/cache --color never --progress never; echo "exit=$?"
   $ diskutil eject /Volumes/CACHESMALL
   ```
-- Expected: stderr contains the two literal lines
+- Expected: this is a first-use cache path: the cache directory is absent before
+  the build. stderr contains the two literal lines
   `==> warning: cache free space below asset size` and
-  `done warning: cache free space below asset size`, emitted **before** the
-  download and not treated as an error. The build then fails when the volume
-  fills: `exit=5`, `acquisition failed: write cache temp: …no space left on device`.
-  No output file is published.
+  `done warning: cache free space below asset size` **before the first
+  admission creates the directory** and before the download. The warning is not
+  an error. The build then fails when the volume fills: `exit=5`,
+  `acquisition failed: write cache temp: …no space left on device`. No output
+  file is published.
 - Pass/Fail: [ ]
 
 #### ART-21 — `build -o -` streams image bytes to stdout
@@ -1791,8 +1852,8 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Promise: two artifacts, both digests in the envelope, both matching on disk.
 - Source: `build-offline-media.md:60-133`; `internal/cli/publish.go:436-444`.
 - Wave: **Wave 2**
-- Cost: **expensive**: ~10–20 min, ~4.5 GB. Run under a non-default umask so
-  MED-16 rides along.
+- Cost: about 5.3 s with the measured warm cache; allow up to 20 min cold.
+  Uses ~4.5 GB. Run under a non-default umask so MED-16 rides along.
 - Commands:
   ```console
   $ ( umask 077; "$IOB" build --json -f offline.yaml -o "$WORK/seeded-off.img" --cache-dir "$CACHE" --color never --progress never ) > envelope.json
@@ -1880,7 +1941,8 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Promise: `.iso` default naming, both digests.
 - Source: `build-offline-media.md:135-154`; `internal/cli/publish.go:309-318`.
 - Wave: **Wave 2**
-- Cost: expensive: ~10–20 min, ~2 GB (application asset reused from `$CACHE`).
+- Cost: about 17.4 s with the measured warm cache; allow up to 20 min cold.
+  Uses ~2 GB; the application asset is reused from `$CACHE`.
 - Commands:
   ```console
   $ "$IOB" build --json -f offline-iso.yaml -o "$WORK/seeded.iso" --cache-dir "$CACHE" --color never --progress never > iso-envelope.json
@@ -1910,7 +1972,8 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Pass/Fail: [ ]
 
 #### MED-13 — ISO is 2048-aligned, PVD-truncated, labeled, and macOS-recognizable
-- Promise: `internal/media/iso.go:66-101`.
+- Promise: `internal/media/iso.go:66-101`; record the emitted label bytes and
+  the Linux label-detection risk.
 - Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
@@ -1921,11 +1984,14 @@ it. Keep one shared `--cache-dir` for the whole block.
   $ P=$(dd if=$I bs=1 skip=32848 count=4 2>/dev/null | od -An -tu4 | tr -d ' '); echo "pvd_bytes=$((P * 2048))"
   $ hdiutil attach -nomount $I && hdiutil detach /dev/diskN
   ```
-- Expected: `remainder=0`; identifier `CD001`; volume identifier `RESCUE_DATA`
-  plus space padding; `pvd_bytes` equals `size` exactly; `hdiutil attach
-  -nomount` succeeds and does **not** print `image not recognized`. If you mount
-  it instead, macOS shows 8.3 fallback names because macOS implements no Rock
-  Ridge — cosmetic, not a failure; MED-12 is the authoritative name check.
+- Expected: `remainder=0`; identifier `CD001`; the 32-byte volume identifier is
+  `RESCUE_DATA` followed by 21 NUL (`\0`) bytes; `pvd_bytes` equals `size`
+  exactly; `hdiutil attach -nomount` succeeds and does not print
+  `image not recognized`. ISO 9660 specifies space padding, so the observed NUL
+  padding is retained as an interoperability risk rather than treated as a case
+  failure. BOOT-07 gates whether Linux `blkid` still reports
+  `LABEL="RESCUE_DATA"`. If mounted on macOS, 8.3 fallback names are cosmetic;
+  MED-12 is the authoritative Rock Ridge name check.
 - Pass/Fail: [ ]
 
 #### MED-14 — Bad rescue input is refused before publishing
@@ -1942,9 +2008,11 @@ it. Keep one shared `--cache-dir` for the whole block.
   $ "$IOB" build -f offline-mirror.yaml -o neg.img --server "$M" --cache-dir "$(mktemp -d)"; echo "exit=$?"
   $ ls neg.img neg.resources.img 2>&1
   ```
-- Expected: `exit=5` with an `acquisition failed:` line naming `update.sjson`
-  (the metadata validator rejects the non-`multipart/signed` document before the
-  media writer's own guard). Neither `neg.img` nor `neg.resources.img` exists.
+- Expected: `exit=5` with the exact line
+  `acquisition failed: parse update.sjson: EOF`. A zero-byte `update.sjson`
+  fails in JSON parsing before the `multipart/signed` validator. This validation
+  order is expected; the safety contract is that neither `neg.img` nor
+  `neg.resources.img` exists.
 - Pass/Fail: [ ]
 
 #### MED-15 — Payload provenance: media bytes trace to `index.json` and the cache
@@ -2031,7 +2099,8 @@ mandatory on the first real release, before the draft is published.
 - Promise: the documented local image path works on macOS arm64.
 - Source: `mise.toml:55-71`.
 - Wave: **Wave 2**
-- Cost: **expensive**: ~5–12 min first run, ~1–3 GB inside the Docker VM.
+- Cost: about 40 s with a warm OrbStack VM; allow up to 12 min on a cold host.
+  Uses ~1–3 GB inside the Docker VM.
 - Commands:
   ```console
   $ mise run image-local
@@ -2098,24 +2167,37 @@ mandatory on the first real release, before the draft is published.
 #### SUP-08 — apko per-build SBOM exists and is inspectable
 - Wave: **Wave 2**
 - Promise / Source: `apko.yaml:1-6`; apko's `--sbom` defaults true. Cost: cheap.
-- Commands: `ls -l *.spdx.json && jq -r '.spdxVersion, (.packages | length)' <one of them>`
-- Expected: at least one SPDX JSON next to `image.tar` (the task passes no
-  `--sbom-path`, so they land in the repo root); `spdxVersion` present and a
-  package count > 0. Record the literal filenames — the repo fixes them nowhere.
+- Commands:
+  ```console
+  $ ls -l *.spdx.json
+  $ for f in sbom-aarch64.spdx.json sbom-index.spdx.json; do echo "== $f"; jq -r '.spdxVersion, (.packages | length), (.packages[].name)' "$f"; done
+  ```
+- Expected: both documents sit next to `image.tar`, declare `SPDX-2.3`, and
+  have a package count greater than zero. The **per-architecture**
+  `sbom-aarch64.spdx.json` package list names `incusos-builder`. The image-index
+  SBOM legitimately describes manifests and source provenance rather than
+  installed image contents, so `sbom-index.spdx.json` is not required to name
+  `incusos-builder`. Record this as expected `F-SBOM-2` behavior, not a product
+  defect.
 - Pass/Fail: [ ]
 
 #### SUP-09 — syft can describe the local image (stand-in for the attested SBOM)
 - Wave: **Wave 2**
-- Promise / Source: `release.yml:409-412`; rehearsed at `release-dry-run.yml:281-289`. Cost: minutes.
+- Promise / Source: `release.yml:409-412`; rehearsed at
+  `release-dry-run.yml:304-318`. Cost: minutes.
 - Commands:
   ```console
-  $ syft --version
+  $ syft version -o json
+  $ go version -m "$(command -v syft)" | grep 'github.com/anchore/syft'
   $ syft docker:incusos-builder:dev -o spdx-json=/tmp/image.spdx.json
   $ jq -e '.packages | length > 0' /tmp/image.spdx.json
   ```
-- Expected: `true` — the same assertion the rehearsal makes. The package list
-  includes `incusos-builder` plus the Wolfi base packages. Skip and record if
-  `syft` is unavailable (it is not mise-pinned).
+- Expected: `syft version -o json` records the runtime, schema, and stamped
+  version fields. A binary installed with `go install` may report
+  `"version":"[not provided]"`; the `go version -m` line must then supply its
+  `github.com/anchore/syft` module version. `jq` prints `true`, and the package
+  list includes `incusos-builder` plus the Wolfi base packages. Skip and record
+  if syft is unavailable locally.
 - Pass/Fail: [ ]
 
 #### SUP-10 — `run-in-ci.md` snippets against the real container image
@@ -2165,17 +2247,25 @@ mandatory on the first real release, before the draft is published.
   $ gh run view <RUN_ID> --repo componere/incusos-builder --json conclusion,jobs --jq '{conclusion, jobs:[.jobs[]|{name,conclusion}]}'
   $ gh api /repos/componere/incusos-builder/actions/runs/<RUN_ID>/artifacts --jq '[.artifacts[].name]'
   $ gh run view <RUN_ID> --repo componere/incusos-builder --log --job <BINARY_JOB_ID> | grep -E 'release-assets|checksums.txt|incusos-builder 0.0.0-dryrun'
-  $ gh run view <RUN_ID> --repo componere/incusos-builder --log --job <CONTAINER_JOB_ID> | grep -E 'linux/(amd64|arm64)|65532|incusos-builder 0.0.0-dryrun'
+  $ gh run view <RUN_ID> --repo componere/incusos-builder --log --job <CONTAINER_JOB_ID> | grep -E 'Loaded image: incusos-builder:dry-run-(amd64|arm64)|observed image platforms:|observed image user:|observed image SBOM packages:|incusos-builder 0.0.0-dryrun'
   ```
 - Expected: `conclusion: success` with exactly four jobs — `Binary Release Dry
   Run`, `Melange Build Dry Run (amd64)`, `Melange Build Dry Run (arm64)`,
   `Container Image Dry Run` — all `success`. Artifacts are exactly
   `["apk-amd64","apk-arm64"]`. The binary job log shows nine
   `dist/release-assets/...` paths (4 binaries, 4 `.sbom.json`, `checksums.txt`)
-  and the smoke line `incusos-builder 0.0.0-dryrun.<run>.<attempt> …`. The
-  container job asserts both platforms, the version smoke line, `65532`, and the
-  syft SBOM. No `gh release upload`, `apko publish`, `cosign sign`, or attestation
-  step appears — that is the declared fidelity boundary.
+  and the smoke line `incusos-builder 0.0.0-dryrun.<run>.<attempt> … built
+  <UTC timestamp>Z`. The container version smoke line also ends in `Z`, and the
+  recorded Syft JSON reports version `1.43.0`. The container log must contain
+  both load proxies,
+  `Loaded image: incusos-builder:dry-run-amd64` and
+  `Loaded image: incusos-builder:dry-run-arm64`, plus the emitted values
+  `observed image platforms: linux/amd64,linux/arm64`,
+  `observed image user: 65532`, and
+  `observed image SBOM packages: <positive integer>`. These emitted values, not
+  echoed script bodies, prove the architecture, uid, and SBOM assertions. No
+  publishing step runs: no release upload, image publish, signature, or
+  attestation.
 - Pass/Fail: [ ]
 
 #### SUP-13 — Release Please PR is correct before merge
@@ -2194,10 +2284,12 @@ mandatory on the first real release, before the draft is published.
   `CHANGELOG.md`, `apko.yaml`, `melange.yaml` — with the same version in the
   manifest, `melange.yaml` `version:` (x-release-please marker), and
   `apko.yaml` `org.opencontainers.image.version`. The changelog section lists
-  only `feat`/`fix` entries (`docs`/`chore` are hidden). `gh pr checks` reports
-  the four contexts from `.github/repository-settings.toml:82-87` (`ci`,
-  `GitHub Pages`, `Binary Release Dry Run`, `Container Image Dry Run`) — the two
-  dry-run jobs actually execute on a `release-please--` branch.
+  only `feat`/`fix` entries (`docs`/`chore` are hidden). The required contexts
+  are `ci`, `GitHub Pages`, `Binary Release Dry Run`, and
+  `Container Image Dry Run`; all four must be present and successful. Tolerate
+  additional contexts. The observed PR reported seven: those four required
+  contexts, a skipped `Deploy GitHub Pages`, and two Melange matrix legs. The
+  two dry-run jobs actually execute on a `release-please--` branch.
   **Two decisions this case forces** (both true of the currently open PR #10,
   `chore(master): release 0.1.2`):
   1. The proposed version is **0.1.2, not 1.0.0** — `bump-minor-pre-major` +
@@ -2429,7 +2521,8 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 
 #### DOC-04 — README quickstart, literally
 - Wave: **Wave 2**
-- Promise / Source: `README.md:55-67`. Cost: expensive: ~20–45 min, ~10 GB.
+- Promise / Source: `README.md:55-67`. Cost: about 4 min on the measured warm
+  host; allow up to 45 min on a cold or slower host. Uses ~10 GB.
 - Commands:
   ```console
   $ go run ./cmd/incusos-builder init --no-input
@@ -2597,16 +2690,21 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 
 #### DOC-15 — How-to: recover an interrupted `--force` build
 - Wave: **Wave 2**
-- Promise / Source: `docs/docs/how-to/recover-interrupted-build.md`. Cost: minutes if ART-18/MED-07 artifacts are reused.
-- Commands: follow the guide's inventory → classify → restore → verify sequence,
-  substituting `shasum -a 256` (**F-DOC-2**), against a `SIGKILL`-ed build.
-- Expected: the post-kill directory state matches one row of the decision table
-  at `:112-119`; backups are named `<path>.incusos-builder.bak`; temps are
-  `.<base>-<digits>.tmp` in the destination directory; a 0-byte final is an
-  `O_CREAT|O_EXCL` claim, not an artifact. After the restore, the digest equals
-  the one recorded from the `.bak`, the `.bak` is gone, and no temps remain.
-  Also confirm the scope claims: `-o -` creates no `.bak` and `init` has no
-  `--force`.
+- Promise / Source: `docs/docs/how-to/recover-interrupted-build.md`. Cost:
+  minutes if ART-18/MED-07 artifacts are reused.
+- Commands: follow the guide's inventory → classify → restore → verify sequence
+  against a `SIGKILL`-ed build. Use a real interrupt to classify the observed
+  state. To exercise a `.bak` restore after the real runs, synthesize the narrow
+  decision-table state and label that evidence as synthesized.
+- Expected: a real interrupt on a warm cache normally produces decision-table
+  row 1: destination-local `.<base>-<digits>.tmp` files, unchanged finals, and
+  no `.incusos-builder.bak` files. A 0-byte final is an `O_CREAT|O_EXCL` claim,
+  not an artifact. The `.bak` interval is too narrow to rely on as an
+  interrupt target; any `.bak` restore proof from a constructed row must be
+  recorded as synthesized, not as the observed interrupt outcome. After that
+  restore, the digest equals the one recorded from the synthetic `.bak`, the
+  `.bak` is gone, and no temps remain. Also confirm that `-o -` creates no
+  `.bak` and `init` has no `--force`.
 - Pass/Fail: [ ]
 
 #### DOC-16 — How-to: verify boot acceptance, read-through (no boot)
@@ -2618,14 +2716,16 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
   $ for c in cp losetup lsblk blockdev sha256sum incus remote-viewer; do printf '%s: ' "$c"; command -v "$c" || echo MISSING; done
   ```
 - Expected: the guide's own step-1 config validates (`configuration valid`,
-  exit 0). The tool sweep shows `losetup`, `lsblk`, `blockdev`, `sha256sum`,
-  `incus`, `remote-viewer` MISSING on macOS and `cp` without
-  `--reflink`/`--sparse` — the guide is GNU/Linux-only by construction and says
-  so (**F-DOC-7**, consistent, not a defect). Also confirm by reading: boot
-  priorities installer 30 > target 20 > dummy root 10; the vTPM is added before
-  first start; `security.secureboot=false` is still UEFI, not legacy BIOS;
-  recovery attaches the copied volume to the **same** VM; and the guide refuses
-  invented success strings.
+  exit 0). Treat the tool sweep as an observation: record every resolved path
+  and every missing command rather than requiring a fixed macOS inventory. On
+  the measured host both `sha256sum` and a Homebrew `incus` client are present.
+  Their presence does not make macOS an `x86_64` Linux Incus host, and BSD
+  `cp` still lacks the guide's GNU `--reflink`/`--sparse` behavior. The guide is
+  GNU/Linux-only by construction and says so (**F-DOC-7**, not a defect). Also
+  confirm by reading: boot priorities installer 30 > target 20 > dummy root 10;
+  the vTPM is added before first start; `security.secureboot=false` is still
+  UEFI, not legacy BIOS; recovery attaches the copied volume to the **same** VM;
+  and the guide refuses invented success strings.
 - Pass/Fail: [ ]
 
 #### DOC-17 — Pre-audit regression sweep (confirm the §5 findings)
@@ -2638,19 +2738,24 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
   $ printf 'version: 1\nimage:\n  type: disk\n  architecture: x86_64\n' | "$IOB" validate -f - --color never; echo "binary_exit=$?"
   $ printf 'version: 1\nimage:\n  type: iso\n  architecture: x86_64\nseeds:\n  bogus: {}\n' | "$IOB" validate --json -f - --color never
   $ "$IOB" versions --server http://example.invalid/os; echo "exit=$?"
+  $ cp good.yaml doc17-existing.img
+  $ "$IOB" build --no-input -f good.yaml -o doc17-existing.img --server "$WORK/mirror" --cache-dir "$CACHE"; echo "exit=$?"
   $ command -v sha256sum || echo 'sha256sum MISSING'
   $ "$IOB" init --no-input -o -
   ```
 - Expected: `go_run_exit=1` with a stray `exit status 3` line versus
-  `binary_exit=3` → **F-DOC-1**. The unknown-field envelope reads
-  `{"error":{"code":3,"message":"invalid config: seeds.bogus: unknown to incus-os v0.0.0-20260815030500-0f5b8057f2fc; a newer incusos-builder may accept this"}}`,
-  not the string printed at `run-in-ci.md:102` → **F-DOC-3**. The `--server`
-  error carries the `usage error: ` prefix that `run-in-ci.md:49` omits →
-  **F-DOC-4**. `sha256sum MISSING` → **F-DOC-2**. `init --no-input -o -` shows
-  all eleven commented seed keys in the documented order. `--version` matches
-  the tutorial and `go.mod:14` → **F-DOC-8** tripwire green. For **F-DOC-5**,
-  re-run `build` over an existing `-o` from a real terminal and record whether
-  the prompt or the refusal appears.
+  `binary_exit=3` → **F-DOC-1**. The unknown-field envelope names the dotted
+  field and upstream pin rather than printing `invalid config: field
+  seeds.install` → **F-DOC-3**. The **overwrite** refusal prints
+  `usage error: refusing to overwrite doc17-existing.img; re-run with --force`;
+  this is the refusal whose old rendering at `run-in-ci.md:49` omitted the
+  `usage error: ` prefix (**F-DOC-4**). Keep the plain-HTTP `--server` result
+  separate; it exercises F-DOC-9, not F-DOC-4. Record whether `sha256sum`
+  resolves and its path instead of expecting it to be missing. `init
+  --no-input -o -` shows all eleven commented seed keys in the documented order.
+  `--version` matches the tutorial and `go.mod:14` → **F-DOC-8** tripwire green.
+  For **F-DOC-5**, re-run `build` over an existing `-o` from a real terminal and
+  record whether the prompt or refusal appears.
 - Pass/Fail: [ ]
 
 #### DOC-18 — Explanation-page claims: routing, not duplication
@@ -2678,16 +2783,19 @@ This is the one surface that has never passed anywhere. Treat BOOT-01 as a
 release-blocking decision, not a formality.
 
 #### BOOT-01 — Decide the execution venue
-- Promise / Source: `verify-boot-acceptance.md:8,20-30`; `docs/notes/phase-5-boot-probe.md:1-6,58-63`.
+- Promise / Source: `verify-boot-acceptance.md:8,20-30`;
+  `docs/notes/phase-5-boot-probe.md:1-6,58-63`.
 - Wave: **Wave 1**
 - Cost: cheap (the decision); the chosen path is expensive.
 - Commands:
   ```console
   $ uname -m; command -v incus || echo 'incus MISSING'; ls /dev/kvm 2>&1
   ```
-- Expected: on this host `arm64`, `incus MISSING`, no `/dev/kvm` — the
-  checklist's first prerequisite ("an `x86_64` Linux Incus host with `/dev/kvm`")
-  is not satisfiable locally. Record one option and its verdict:
+- Expected: record the architecture, whether an `incus` client resolves, and
+  whether `/dev/kvm` exists. Do not require `incus` to be missing: the measured
+  macOS host has a Homebrew client. The local verdict is still unchanged:
+  `arm64` macOS with no `/dev/kvm` does not satisfy the prerequisite for an
+  `x86_64` Linux Incus host with `/dev/kvm`. Record one option and its verdict:
   - **Remote `x86_64` Linux host with Incus** — the only documented path.
     **Viable and required for a real pass.** Needs nested-virt/KVM, pool
     `default`, network `incusbr0`, `sudo` for `losetup`, and a SPICE client.
@@ -2842,11 +2950,27 @@ release-blocking decision, not a formality.
 
 ---
 
-## 5. Known findings to confirm or fix
+## 5. Campaign findings and dispositions
 
-These were found while grounding this plan against the source at `5337e7e`.
-Each is reproducible; the cases named re-confirm them. Every one is a decision
-the release owner must make before tagging — fix it, document it, or accept it.
+The tables below preserve what the campaign observed at commits `5337e7e` and
+`59c268b`. They are historical evidence, not a list of current defects. Commit
+`6c740f9` resolved the product and workflow findings named in the first row
+below. The next execution uses the corrected cases in §4 to detect regressions.
+
+### Dispositions before the next execution
+
+| IDs | Disposition | Next-execution rule |
+|---|---|---|
+| `F-CLI-3`, `F-CLI-4`, `F-CLI-5`, `F-CLI-6`, `F-CFG-2`, `N-CLI-1`, `N-CLI-2`, `N-CLI-5`, `N-ART-1`, `N-ART-2`, `N-ART-3`, `N-AMIR-1`, `N-CFG-A`, `N-CFG-B`, `F-GATE-1`, `F-SUP-3`, `F-SUP-4`, `F-SBOM-1` | **Resolved in `6c740f9`.** | Verify the corrected behavior in CLI-02/08/10/15/19, CFG-12/16, ART-14/20, PRE-06, SUP-09/12. Do not re-record the historical symptom when the corrected expectation passes. |
+| `D-1..D-18`, `D-A4` | **Test-plan defects corrected in this revision.** | Use the corrected ranges, costs, commands, and Expected blocks. Re-derive configuration fences with the CFG-19 extractor. |
+| `D-A1`, `D-A2`, `D-A3` | **Not defects; positive appendix evidence.** | Preserve the successful config extraction, ART-05 step order, and ART-06 warm-cache transcript in `WAVE2_TRACKA_RESULTS.md`. |
+| `N-CLI-4` | **Not a product defect.** The harness inherited `NO_COLOR=1`. | PRE-02 unsets `NO_COLOR` before colour cases. |
+| `N-CLI-6` | **Not a product defect.** A sibling killed a shared tmux socket; the cases passed on a private socket. | Use `tmux -L "$TEST_TMUX_SOCKET"` and never `kill-server` on a shared socket. |
+| `N-ART-6` | **Plan mismatch, not a product defect.** A warm asset cache still fetches the index. | ART-06 permits index progress and forbids download progress. |
+| `N-MED-14` | **Plan mismatch, not a product defect.** Zero-byte JSON fails before multipart validation. | MED-14 expects `acquisition failed: parse update.sjson: EOF` and still requires no publication. |
+| `F-SBOM-2` | **Expected behavior, not a product defect.** | SUP-08 requires `incusos-builder` only in the per-architecture SBOM. |
+
+### Historical findings
 
 ### Contract-level (an automation consumer can be misled)
 
@@ -2862,9 +2986,9 @@ the release owner must make before tagging — fix it, document it, or accept it
 | ID | Finding | Evidence | Case |
 |----|---------|----------|------|
 | F-DOC-1 | The tutorial aliases `incusos-builder` to `go run ./cmd/incusos-builder` (`first-seeded-iso.md:30`) and then asserts exit codes 2 and 3 (`:76`, `:114`). `go run` exits 1 and injects a stray `exit status 3` line. Fix: build the binary in the prerequisites, or state that `go run` does not propagate exit codes. | side-by-side run: `go run` → rc 1; `bin/incusos-builder` → rc 3 | DOC-17 |
-| F-DOC-2 | `sha256sum` does not exist on stock macOS but appears in two guides that advertise macOS support (`build-offline-media.md:127`, `recover-interrupted-build.md:87,194`). | `/usr/bin/sha256sum` absent; `/usr/bin/shasum` present | DOC-17 |
+| F-DOC-2 | The guides assumed a fixed macOS tool inventory. `sha256sum` is present as an Apple-signed base-system binary on the measured macOS 26 host but can be absent on older macOS releases. | Record the resolved path or absence; do not infer it from the OS name. | DOC-16, DOC-17 |
 | F-DOC-3 | `run-in-ci.md:101-104` shows `{"error":{"code":3,"message":"invalid config: field seeds.install"}}`. No code path emits `invalid config: field <path>`; real messages are `invalid config: <field path>: <reason>`. | observed unknown-field envelope names `seeds.bogus: unknown to incus-os v0.0.0-…` | DOC-13, DOC-17 |
-| F-DOC-4 | The same refusal is quoted two ways: `run-in-ci.md:48-50` omits the `usage error: ` prefix that `usagef` always prepends; `build-offline-media.md:196-199` includes it. | live `--server` error carries the prefix | DOC-17 |
+| F-DOC-4 | The same **overwrite refusal** is quoted two ways: `run-in-ci.md:48-50` omits the `usage error: ` prefix that `usagef` always prepends; `build-offline-media.md:196-199` includes it. | live overwrite refusal carries the prefix | DOC-17 |
 | F-DOC-5 | The tutorial (`:157-158`) describes only the non-interactive refusal on re-build, but at a TTY the tool prompts `overwrite existing output? [y/N] `. | `cli.md:98-101`; `internal/cli/build.go:42` | DOC-10 |
 | F-DOC-6 | Every how-to prerequisite says "`incusos-builder` on `PATH`", which is unreachable pre-release; combined with F-DOC-1 the alias choice is load-bearing. | `README.md:7` | DOC-11..DOC-15 |
 | F-DOC-8 | The tutorial hard-codes the upstream pin `v0.0.0-20260815030500-0f5b8057f2fc` (`:54`). Exact today; any pin bump staleses it silently. Treat as a release-checklist re-read. | matches `go.mod:14` | DOC-17 |
@@ -2943,19 +3067,21 @@ Full evidence in `WAVE2_TRACKA_RESULTS.md`. 31/31 executed: 25 pass, 5 deviation
 | **N-DOC-E** | advisory | The `--force` `.bak` window is effectively unobservable on a warm cache; the realistic post-kill state is decision-table row 1 (temps, no `.bak`). | DOC-15 |
 
 Also recorded: DOC-04's quickstart yields `seed_bytes 1024` — an empty seed tar,
-because the starter config comments out every `seeds` section. Plan corrections
-D-13..D-18 (cost estimates ~10× pessimistic; ART-06's "no progress lines" wording;
-MED-13's padding; MED-14's error source; ART-12's Wi-Fi instruction; DOC-15's
-realistic state) are in `WAVE2_TRACKA_RESULTS.md`.
+because the starter config comments out every `seeds` section.
 
-Track B plan corrections D-9..D-12 (SUP-03 costs ~40 s not 5–12 min; SUP-12's
-greps match only echoed script bodies; SUP-08's expectation must target the
-per-arch SBOM; SUP-09 cannot read a version from a `go install`-ed syft) are
-detailed in `WAVE2_TRACKB_RESULTS.md`.
+This revision applies D-13..D-18 and D-A4 from
+`WAVE2_TRACKA_RESULTS.md`: calibrated warm costs with slower-host ceilings,
+download-only progress assertions for ART-06, observed NUL padding for MED-13,
+the parser-layer error for MED-14, per-process network isolation for ART-12,
+and realistic versus synthesized DOC-15 states.
 
-Plan defects found while executing (D-1..D-8) are listed in `WAVE1_RESULTS.md`;
-the load-bearing one is **D-1**: all eight `configuration.md` line ranges shifted
-+12 at commit 59c268b and must be re-derived, not trusted.
+It also applies D-9..D-12 from `WAVE2_TRACKB_RESULTS.md`: the SUP-03 warm cost,
+emitted SUP-12 evidence, the per-architecture SUP-08 assertion, and the
+build-info fallback for a `go install`-ed Syft binary.
+
+Finally, it applies D-1..D-8 from `WAVE1_RESULTS.md`. CFG-19 retains the
+load-bearing rule: derive the configuration fences with the awk extractor
+before each execution rather than trusting stored line numbers.
 
 ### Repository state that blocks documented promises (observed 2026-08-16)
 
