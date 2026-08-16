@@ -173,9 +173,16 @@ Settings that accept both a flag and an environment variable, highest first:
 
 `--json=false` and `--no-input=false` beat a true environment value.
 
-An empty `INCUSOS_BUILDER_CACHE_DIR` is an explicit value. It has the
-same effect as `--cache-dir ""` and does not fall through to the built-in
-default.
+An exported-but-empty `INCUSOS_BUILDER_*` variable for any setting in the
+table is an explicit empty value. It has the same effect as passing an empty
+value for the corresponding flag and does not fall through to the built-in
+default. For example, an empty `INCUSOS_BUILDER_CACHE_DIR` has the same effect
+as `--cache-dir ""`.
+
+If `INCUSOS_BUILDER_SERVER` is exported with an empty value, the command
+reports `usage error: --server "" is neither an https URL nor an existing
+directory` and exits with status `2` instead of using the default server.
+Leave the variable unset to use the default.
 
 Not in that table:
 

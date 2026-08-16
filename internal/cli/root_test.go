@@ -426,6 +426,43 @@ func TestEmptyCacheDirEnvMatchesEmptyFlag(t *testing.T) {
 	})
 }
 
+// TestViperEmptyServerEnvIsExplicitValue pins F-CLI-4 for --server: an
+// exported-but-empty INCUSOS_BUILDER_SERVER is an explicit value and fails
+// like --server "", while an absent variable uses the documented default.
+func TestViperEmptyServerEnvIsExplicitValue(t *testing.T) {
+	const want = `usage error: --server "" is neither an https URL nor an existing directory`
+
+	t.Run("empty env", func(t *testing.T) {
+		t.Setenv("INCUSOS_BUILDER_SERVER", "")
+		vp := executeViper(t, nil)
+		require.Empty(t, vp.GetString(flagServer))
+
+		var stdout bytes.Buffer
+		root := NewRootCommand(Options{
+			In:        strings.NewReader(""),
+			Out:       &stdout,
+			Err:       ioDiscard(),
+			Viper:     viper.New(),
+			StdinTTY:  func() bool { return true },
+			StdoutTTY: func() bool { return true },
+			StderrTTY: func() bool { return true },
+		})
+		root.SetArgs([]string{"versions", "--json", "--color", "never", "--progress", "never"})
+		err := root.Execute()
+		require.Error(t, err)
+		require.True(t, IsUsage(err), "err=%v", err)
+		require.Equal(t, want, err.Error())
+		require.Equal(t, exitUsage, exitCode(err))
+		assertErrorEnvelope(t, stdout.Bytes(), exitUsage, want)
+	})
+
+	t.Run("absent env", func(t *testing.T) {
+		unsetEnv(t, "INCUSOS_BUILDER_SERVER")
+		vp := executeViper(t, nil)
+		require.Equal(t, defaultServer, vp.GetString(flagServer))
+	})
+}
+
 // TestOperandAndUnknownCommandExitTwo pins F-CLI-5: extra words and unknown
 // commands are usage errors (exit 2) with a JSON envelope whose code is 2.
 func TestOperandAndUnknownCommandExitTwo(t *testing.T) {

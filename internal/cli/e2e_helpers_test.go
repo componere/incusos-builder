@@ -105,7 +105,16 @@ func requireLiveE2E(t *testing.T) {
 	if os.Getenv(envLiveE2E) != "1" {
 		t.Skip("live T3 suite requires INCUSOS_BUILDER_E2E=1")
 	}
-	t.Setenv("INCUSOS_BUILDER_SERVER", "")
+	// Isolate from a developer-exported server. An empty value is explicit
+	// under AllowEmptyEnv and would fail as --server "".
+	unsetEnv(t, "INCUSOS_BUILDER_SERVER")
+}
+
+// unsetEnv clears key for the test without leaving an empty value that Viper would honor.
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+	t.Setenv(key, "")
+	require.NoError(t, os.Unsetenv(key))
 }
 
 // liveOnlineRawConfig is a fully populated eleven-section online raw config.
