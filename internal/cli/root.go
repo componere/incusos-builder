@@ -100,6 +100,12 @@ func NewRootCommand(options Options) *cobra.Command {
 	root.SetErr(options.Err)
 	root.SetFlagErrorFunc(flagUsageError)
 	registerPersistentFlags(root)
+	root.AddCommand(
+		newBuildCommand(options),
+		newValidateCommand(options),
+		newVersionsCommand(options),
+		newInitCommand(options),
+	)
 	return root
 }
 

@@ -25,6 +25,10 @@ func TestNoInputAutoOn(t *testing.T) {
 		{name: "CI set", ci: "1", stdinTTY: true, stdoutTTY: true, want: true},
 		{name: "both ttys no CI", ci: "", stdinTTY: true, stdoutTTY: true, want: false},
 		{name: "flag forces on", ci: "", stdinTTY: true, stdoutTTY: true, args: []string{"--no-input"}, want: true},
+		{name: "flag overrides tty", ci: "", stdinTTY: true, stdoutTTY: true, args: []string{"--no-input=true"}, want: true},
+		{name: "flag overrides CI", ci: "1", stdinTTY: true, stdoutTTY: true, args: []string{"--no-input"}, want: true},
+		{name: "flag overrides non-tty stdin", stdinTTY: false, stdoutTTY: true, args: []string{"--no-input"}, want: true},
+		{name: "flag overrides non-tty stdout", stdinTTY: true, stdoutTTY: false, args: []string{"--no-input"}, want: true},
 	}
 
 	for _, tc := range tests {
@@ -54,6 +58,7 @@ func TestProgressAutoRequiresBothTTYs(t *testing.T) {
 		{name: "both ttys stay auto", stdoutTTY: true, stderrTTY: true, want: ux.ProgressModeAuto},
 		{name: "stdout pipe becomes never", stdoutTTY: false, stderrTTY: true, want: ux.ProgressModeNever},
 		{name: "stderr pipe becomes never", stdoutTTY: true, stderrTTY: false, want: ux.ProgressModeNever},
+		{name: "both pipes become never", stdoutTTY: false, stderrTTY: false, want: ux.ProgressModeNever},
 		{
 			name:      "always overrides",
 			stdoutTTY: false,
@@ -62,9 +67,23 @@ func TestProgressAutoRequiresBothTTYs(t *testing.T) {
 			want:      ux.ProgressModeAlways,
 		},
 		{
+			name:      "always overrides mixed ttys",
+			stdoutTTY: true,
+			stderrTTY: false,
+			args:      []string{"--progress", "always"},
+			want:      ux.ProgressModeAlways,
+		},
+		{
 			name:      "never overrides",
 			stdoutTTY: true,
 			stderrTTY: true,
+			args:      []string{"--progress", "never"},
+			want:      ux.ProgressModeNever,
+		},
+		{
+			name:      "never overrides pipes",
+			stdoutTTY: false,
+			stderrTTY: false,
 			args:      []string{"--progress", "never"},
 			want:      ux.ProgressModeNever,
 		},

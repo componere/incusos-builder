@@ -8,6 +8,8 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+
+	"github.com/componere/incusos-builder/internal/ux"
 )
 
 const (
@@ -137,6 +139,161 @@ func TestViperPrecedenceFlagBeatsEnvBeatsDefault(t *testing.T) {
 			t.Setenv(tc.envKey, "")
 			vp := executeViper(t, nil)
 			require.Equal(t, tc.wantDef, tc.get(vp))
+		})
+	}
+}
+
+// TestViperPrecedenceResolvedPolicy asserts flags > INCUSOS_BUILDER_* > defaults
+// on the resolved policy for all six Viper-backed settings (18 rows).
+func TestViperPrecedenceResolvedPolicy(t *testing.T) {
+	tty := Options{
+		StdinTTY:  func() bool { return true },
+		StdoutTTY: func() bool { return true },
+		StderrTTY: func() bool { return true },
+	}
+
+	tests := []struct {
+		name   string
+		envKey string
+		envVal string
+		args   []string
+		get    func(policy) any
+		want   any
+	}{
+		{
+			name:   "server/flag",
+			envKey: "INCUSOS_BUILDER_SERVER",
+			envVal: envServer,
+			args:   []string{"--server", flagServerV},
+			get:    func(p policy) any { return p.Server },
+			want:   flagServerV,
+		},
+		{
+			name:   "server/env",
+			envKey: "INCUSOS_BUILDER_SERVER",
+			envVal: envServer,
+			get:    func(p policy) any { return p.Server },
+			want:   envServer,
+		},
+		{
+			name:   "server/default",
+			envKey: "INCUSOS_BUILDER_SERVER",
+			get:    func(p policy) any { return p.Server },
+			want:   defaultServer,
+		},
+		{
+			name:   "cache-dir/flag",
+			envKey: "INCUSOS_BUILDER_CACHE_DIR",
+			envVal: envCache,
+			args:   []string{"--cache-dir", flagCache},
+			get:    func(p policy) any { return p.CacheDir },
+			want:   flagCache,
+		},
+		{
+			name:   "cache-dir/env",
+			envKey: "INCUSOS_BUILDER_CACHE_DIR",
+			envVal: envCache,
+			get:    func(p policy) any { return p.CacheDir },
+			want:   envCache,
+		},
+		{
+			name:   "cache-dir/default",
+			envKey: "INCUSOS_BUILDER_CACHE_DIR",
+			get:    func(p policy) any { return p.CacheDir },
+			want:   defaultCacheDir(),
+		},
+		{
+			name:   "json/flag",
+			envKey: "INCUSOS_BUILDER_JSON",
+			envVal: "true",
+			args:   []string{"--json=false"},
+			get:    func(p policy) any { return p.JSON },
+			want:   false,
+		},
+		{
+			name:   "json/env",
+			envKey: "INCUSOS_BUILDER_JSON",
+			envVal: "true",
+			get:    func(p policy) any { return p.JSON },
+			want:   true,
+		},
+		{
+			name:   "json/default",
+			envKey: "INCUSOS_BUILDER_JSON",
+			get:    func(p policy) any { return p.JSON },
+			want:   false,
+		},
+		{
+			name:   "color/flag",
+			envKey: "INCUSOS_BUILDER_COLOR",
+			envVal: envColor,
+			args:   []string{"--color", flagColorV},
+			get:    func(p policy) any { return p.Color },
+			want:   ux.ColorModeAlways,
+		},
+		{
+			name:   "color/env",
+			envKey: "INCUSOS_BUILDER_COLOR",
+			envVal: envColor,
+			get:    func(p policy) any { return p.Color },
+			want:   ux.ColorModeNever,
+		},
+		{
+			name:   "color/default",
+			envKey: "INCUSOS_BUILDER_COLOR",
+			get:    func(p policy) any { return p.Color },
+			want:   ux.ColorModeAuto,
+		},
+		{
+			name:   "progress/flag",
+			envKey: "INCUSOS_BUILDER_PROGRESS",
+			envVal: envColor,
+			args:   []string{"--progress", flagColorV},
+			get:    func(p policy) any { return p.Progress },
+			want:   ux.ProgressModeAlways,
+		},
+		{
+			name:   "progress/env",
+			envKey: "INCUSOS_BUILDER_PROGRESS",
+			envVal: envColor,
+			get:    func(p policy) any { return p.Progress },
+			want:   ux.ProgressModeNever,
+		},
+		{
+			name:   "progress/default",
+			envKey: "INCUSOS_BUILDER_PROGRESS",
+			get:    func(p policy) any { return p.Progress },
+			want:   ux.ProgressModeAuto,
+		},
+		{
+			name:   "no-input/flag",
+			envKey: "INCUSOS_BUILDER_NO_INPUT",
+			envVal: "true",
+			args:   []string{"--no-input=false"},
+			get:    func(p policy) any { return p.NoInput },
+			want:   false,
+		},
+		{
+			name:   "no-input/env",
+			envKey: "INCUSOS_BUILDER_NO_INPUT",
+			envVal: "true",
+			get:    func(p policy) any { return p.NoInput },
+			want:   true,
+		},
+		{
+			name:   "no-input/default",
+			envKey: "INCUSOS_BUILDER_NO_INPUT",
+			get:    func(p policy) any { return p.NoInput },
+			want:   false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(tc.envKey, tc.envVal)
+			t.Setenv(envCI, "")
+			pol := mustResolvePolicy(t, tty, tc.args)
+			require.Equal(t, tc.want, tc.get(pol))
 		})
 	}
 }
