@@ -59,7 +59,7 @@ with no multi-gigabyte downloads and no Docker.
 | Wave | Content | Cases | Wall time | Disk | Detached? |
 |------|---------|-------|-----------|------|-----------|
 | **Wave 1** — fast lane | Every case ≤5 min: full CLI contract, config/SOPS, all usage-error and metadata-rejection paths, synthetic mirrors, docs site, repository/release-plumbing reads | 74 | 2.5–4 h | <500 MB | — |
-| **Wave 2** — long lane | Every case >5 min plus its dependants: the live build chain, rescue media, the container image, the release rehearsal, the two full doc walkthroughs, and boot acceptance | 49 | 6–10 h local + 3–8 h on a Linux host | ~25 GB local, ~40 GB on the boot host | yes — own shell, own `$WORK`, own cache |
+| **Wave 2** — long lane | Every case >5 min plus its dependants: the live build chain, rescue media, the container image, the release rehearsal, the two full doc walkthroughs, and boot acceptance | 49 | 6–10 h local + 3–8 h on a Linux host | ~25 GB local; boot host ~22 GB with sparse/reflink copies and a thin/COW pool, or ~120 GiB with thick provisioning | yes — own shell, own `$WORK`, own cache |
 | **Wave P** — post-tag | Signature, attestation, SBOM, checksum, and asset verification against the first real release | 5 | ~1 h | ~1 GB | yes — after the tag, before publishing the draft |
 
 **The detachment contract.** Wave 2 has no dependency on Wave 1 and Wave 1 has
@@ -453,7 +453,7 @@ caches, slower hosts, and slower links:
 | DOC-12 offline-media how-to | reuses MED-07/11 | — | no |
 | DOC-14 local-mirror how-to (populated half) | reuses ART-12 | — | no |
 | DOC-15 interrupted-build how-to | reuses ART-18/MED-07 | — | no |
-| BOOT-02 build release-gate media | 25–60 min | ~15 GB | yes |
+| BOOT-02 build release-gate media | 25–60 min | ~15 GB local workspace; ~3.76 GB artifact transfer | yes |
 | BOOT-05 install and watch console | 20–60 min | — | Linux host |
 | BOOT-07 copy volume, detect `RESCUE_DATA` | 15–40 min | — | Linux host |
 | PRE-07-W2 `root:e2e` bootstrap | 10–25 min | ~5 GB | yes |
@@ -1989,7 +1989,8 @@ it. Keep one shared `--cache-dir` for the whole block.
   exactly; `hdiutil attach -nomount` succeeds and does not print
   `image not recognized`. ISO 9660 specifies space padding, so the observed NUL
   padding is retained as an interoperability risk rather than treated as a case
-  failure. BOOT-07 gates whether Linux `blkid` still reports
+  failure. BOOT-07's required raw run does not read the ISO identifier. The
+  optional `BOOT-07-ISO` run gates whether Linux `blkid` reports
   `LABEL="RESCUE_DATA"`. If mounted on macOS, 8.3 fallback names are cosmetic;
   MED-12 is the authoritative Rock Ridge name check.
 - Pass/Fail: [ ]
@@ -2782,6 +2783,13 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 This is the one surface that has never passed anywhere. Treat BOOT-01 as a
 release-blocking decision, not a formality.
 
+Track C transfers about **3.76 GB** for the seeded raw image and rescue artifact
+together. The separate **~15 GB** figure is the build host's local workspace
+budget, not the transfer size. On the Linux host, **~22 GB free is sufficient
+only when the installer copy remains sparse or reflinked and the Incus pool is
+thin-provisioned or copy-on-write**. Budget roughly **120 GiB free** when the
+pool thick-provisions the 50 GiB target and its 50 GiB installed-volume copy.
+
 #### BOOT-01 — Decide the execution venue
 - Promise / Source: `verify-boot-acceptance.md:8,20-30`;
   `docs/notes/phase-5-boot-probe.md:1-6,58-63`.
@@ -2812,7 +2820,9 @@ release-blocking decision, not a formality.
 
 #### BOOT-02 — Build the release-gate media
 - Wave: **Wave 2**
-- Promise / Source: `verify-boot-acceptance.md:31-63`. Cost: expensive: ~25–60 min, ~15 GB. The build host may be macOS.
+- Promise / Source: `verify-boot-acceptance.md:31-63`. Cost: expensive:
+  ~25–60 min, ~15 GB of local workspace, and about 3.76 GB to transfer the two
+  artifacts to a separate Linux host. The build host may be macOS.
 - Commands:
   ```console
   $ cat > release-gate.yaml <<'YAML'
@@ -2840,7 +2850,9 @@ release-blocking decision, not a formality.
 
 #### BOOT-03 — Map the raw files to block devices and record hashes
 - Wave: **Wave 2**
-- Promise / Source: `verify-boot-acceptance.md:65-103`. Cost: minutes; ~7 GB on the Linux host.
+- Promise / Source: `verify-boot-acceptance.md:65-103`. Cost: minutes; ~7 GB
+  for the installer and rescue work files on the Linux host, before Incus pool
+  allocations. Apply the conditional ~22 GB / ~120 GiB Track C budget above.
 - Commands: run the guide's script at `:72-103` verbatim.
 - Expected: the `uname -m = x86_64` and `test -b /dev/kvm` assertions pass; two
   loop devices are reported; `artifact-sha256.txt` shows `$SOURCE_RAW` and
@@ -2861,46 +2873,121 @@ release-blocking decision, not a formality.
   `virtio-blk`. The TPM was added before the first start.
 - Pass/Fail: [ ]
 
-#### BOOT-05 — Observation 1: record the seed, then install
+#### BOOT-05 — Observation 1: capture the source seed input baseline, then install
 - Wave: **Wave 2**
-- Promise / Source: `verify-boot-acceptance.md:143-171`. Cost: expensive: ~20–60 min interactive.
-- Commands: run `:148-167` verbatim — locate `seed-data` via
-  `lsblk -nrpo NAME,PARTLABEL`, capture `seed-partition.before.sha256` and
-  `seed.before.list`, grep for `install.(json|ya?ml)`, then `incus start` and
-  watch `incus console --type=vga` plus `incus console --show-log | tee install-serial.log`.
-- Expected: `SEED_PART` is non-empty and the pre-boot tar listing contains an
-  `install.*` entry (the baseline BOOT-06 depends on). Secure Boot enrollment may
-  run before the installer UI. The installer must **report completion on VGA or
-  serial** — network traffic is explicitly not success.
+- Promise / Source: `verify-boot-acceptance.md` §4. Cost: expensive:
+  ~20–60 min interactive.
+- Commands: run the guide's §4 commands verbatim — locate `seed-data` on
+  `$SOURCE_BLOCK` via `lsblk -nrpo NAME,PARTLABEL`, capture
+  `source-seed.before.sha256` and `source-seed.before.list`, assert that the
+  listing contains `install.(json|ya?ml)`, then `incus start` and watch
+  `incus console --type=vga` plus
+  `incus console --show-log | tee install-serial.log`.
+- Expected: `SEED_PART` is non-empty and `source-seed.before.list` contains an
+  `install.*` entry. These files are an **input baseline** for BOOT-06, not
+  evidence that the installer later modifies the source. Secure Boot enrollment
+  may run before the installer UI. The installer must **report completion on VGA
+  or serial** — network traffic is explicitly not success.
 - Pass/Fail: [ ]
 
-#### BOOT-06 — Observation 2: prove the installer seed was consumed **(never yet observed)**
-- Promise / Source: `verify-boot-acceptance.md:173-195`.
+#### BOOT-06 — Observation 2: prove the target seed was consumed **(never yet observed)**
+- Promise / Source: `verify-boot-acceptance.md` §5;
+  `reference/incus-os/incus-osd/internal/install/install.go:893-894`;
+  `reference/incus-os/incus-osd/internal/seed/seed.go:31-36`.
 - Wave: **Wave 2**
-- Cost: minutes, after BOOT-05.
-- Commands: run `:175-189` verbatim — stop the VM, remove `install-media` and
-  `install-target`, `blockdev --flushbufs`, re-read the seed partition into
-  `seed-partition.after.sha256` / `seed.after.list`, then assert
-  `test "$BEFORE" != "$AFTER"` and
-  `! grep -Eq '(^|/)install\.(json|ya?ml)$' seed.after.list`.
-- Expected: **both** assertions pass. Stop the whole gate if either fails.
-  **This step has never succeeded anywhere.** `phase-5-boot-probe.md:44` records
-  `seed_consumption_observed: false`; `:43` records that the blank target disk
-  did not grow; `:46-48` records that source-overlay growth and three guest
-  network frames were the only positive signals and neither is seed consumption.
-  Do not accept a changed file size, cache growth, or network traffic as a
-  substitute.
+- Cost: minutes after BOOT-05; the helper VM needs a small Linux root disk.
+- Commands: after the installer reports completion, stop the gate VM, detach
+  its installer media and target, and attach the target volume as the only test
+  artifact on a throwaway Linux VM. Then capture and assert the target-side
+  oracle:
+  ```bash
+  incus stop "$VM"
+  incus config device remove "$VM" install-media
+  incus config device remove "$VM" install-target
+
+  INSPECT_VM=phase5-target-inspector
+  incus init images:ubuntu/24.04/cloud "$INSPECT_VM" --vm \
+    --profile "$PROFILE" --device root,boot.priority=10
+  incus config device add "$INSPECT_VM" inspect-target disk \
+    pool="$POOL" source="$TARGET_VOL" io.bus=virtio-scsi boot.priority=0
+  incus start "$INSPECT_VM"
+  incus exec "$INSPECT_VM" -- udevadm settle
+
+  incus exec "$INSPECT_VM" -- \
+    lsblk -o NAME,SIZE,TYPE,PTTYPE,FSTYPE,LABEL,PARTLABEL \
+    | tee "$EVIDENCE/target-block-layout.txt"
+  TARGET_SEED=$(incus exec "$INSPECT_VM" -- \
+    lsblk -nrpo NAME,PARTLABEL |
+    awk '$2 == "seed-data" {print $1; exit}')
+  test -n "$TARGET_SEED"
+  incus exec "$INSPECT_VM" -- \
+    dd if="$TARGET_SEED" bs=4M status=none \
+    | sha256sum | tee "$EVIDENCE/target-seed.after.sha256"
+  incus exec "$INSPECT_VM" -- \
+    dd if="$TARGET_SEED" bs=4M status=none \
+    | tar -tf - >"$EVIDENCE/target-seed.after.list"
+
+  grep -Eq '(^|/)install\.(json|ya?ml)$' \
+    "$EVIDENCE/source-seed.before.list"
+  ! grep -Eq '(^|/)install\.(json|ya?ml)$' \
+    "$EVIDENCE/target-seed.after.list"
+  SOURCE_DIGEST=$(cut -d" " -f1 "$EVIDENCE/source-seed.before.sha256")
+  TARGET_DIGEST=$(cut -d" " -f1 "$EVIDENCE/target-seed.after.sha256")
+  test "$SOURCE_DIGEST" != "$TARGET_DIGEST"
+
+  # Optional but cheap: the read-only source should still match its baseline.
+  sudo blockdev --flushbufs "$SOURCE_BLOCK"
+  sudo dd if="$SEED_PART" bs=4M status=none \
+    | sha256sum | tee "$EVIDENCE/source-seed.after.sha256"
+  SOURCE_AFTER=$(cut -d" " -f1 "$EVIDENCE/source-seed.after.sha256")
+  test "$SOURCE_DIGEST" = "$SOURCE_AFTER"
+
+  incus stop "$INSPECT_VM"
+  incus delete "$INSPECT_VM"
+  ```
+- Expected: the source baseline contains `install.*`; the target listing lacks
+  it; and the source and target partition digests differ. The optional source
+  readback is byte-identical to the baseline. Stop the gate if a required
+  assertion fails. **This target-side result has never been observed
+  anywhere.** The Phase 5 probe's target-growth oracle was valid in principle:
+  a successful installer writes a GPT and copies partitions to the target. Its
+  zero target growth means the installer never reached that write path, not that
+  it ran and ignored the seed. In a failed run, no `gpt` in the helper's
+  `PTTYPE` output confirms that writes never began; a GPT without a `seed-data`
+  partition is a different installation failure. Do not accept source-overlay
+  growth, cache growth, or network traffic as a substitute.
 - Pass/Fail: [ ]
 
-#### BOOT-07 — Observation 3: copy the installed volume and detect `RESCUE_DATA`
+#### BOOT-07 — Observation 3: copy the installed volume and detect raw `RESCUE_DATA`
 - Wave: **Wave 2**
-- Promise / Source: `verify-boot-acceptance.md:197-234`. Cost: expensive: ~15–40 min.
-- Commands: run `:199-211` then `:220-229` verbatim.
-- Expected: `rescue-block-layout.txt` shows a FAT or ISO data partition whose
-  `LABEL`/`PARTLABEL` is `RESCUE_DATA`; the installed target boots; and there is
-  console evidence that IncusOS **detected** `RESCUE_DATA`. The copy attaches to
-  the original VM because a cloned VM is not promised to keep the enrolled UEFI
+- Promise / Source: `verify-boot-acceptance.md` §§6–7. Cost: expensive:
+  ~15–40 min.
+- Commands: run the guide's installed-volume copy, raw rescue attachment, and
+  recovery-console commands verbatim.
+- Expected: `rescue-block-layout.txt` shows the raw rescue artifact's GPT
+  partition with `PARTLABEL=RESCUE_DATA`; the installed target boots; and the
+  console shows that IncusOS detected `RESCUE_DATA`. The copy attaches to the
+  original VM because a cloned VM is not promised to retain the enrolled UEFI
   NVRAM and vTPM identity.
+
+  This required raw run does **not** exercise **N-MEDIA-3**. Track C sets
+  `image.type: raw`, so recovery matches a GPT partition label. It never reads
+  the NUL-padded ISO volume identifier.
+
+  **Optional `BOOT-07-ISO` variant — separate from the raw Track C verdict.**
+  Rerun BOOT-02 through BOOT-09 in a fresh namespace with distinct VM, volume,
+  loop-device, and evidence names. Change only `image.type` from `raw` to `iso`
+  and use `.iso` paths for both outputs. Do not reuse or replace any raw-run
+  evidence. In the ISO run, also record:
+  ```bash
+  sudo blkid -p -s LABEL -o value "$RESCUE_BLOCK" \
+    | tee "$EVIDENCE/rescue-iso-label.txt"
+  ```
+  The optional variant closes N-MEDIA-3 only if this prints exactly
+  `RESCUE_DATA` and the IncusOS console shows detection. **[INFERENCE]**
+  Current util-linux likely trims the identifier at its first NUL, but the raw
+  run supplies no empirical evidence for that behavior. Skipping this optional
+  variant does not fail BOOT-07.
 - Pass/Fail: [ ]
 
 #### BOOT-08 — Observation 4: recovery payload accepted and applied **(never yet observed)**
@@ -2920,15 +3007,18 @@ release-blocking decision, not a formality.
 
 #### BOOT-09 — Archive evidence, then clean up
 - Wave: **Wave 2**
-- Promise / Source: `verify-boot-acceptance.md:248-277`. Cost: minutes.
-- Expected: the release record holds all ten artifacts listed at `:252-259`
-  (`incus-version.txt`, `install-config.yaml`, `recovery-config.yaml`,
-  `artifact-sha256.txt`, `seed-partition.before.sha256`, `seed.before.list`,
-  `seed-partition.after.sha256`, `seed.after.list`, `install-serial.log`,
-  `recovery-serial.log`, `rescue-block-layout.txt`). Cleanup order holds: stop
-  before delete, custom volumes deleted explicitly, both loop devices detached,
-  `$SOURCE_WORK` deleted **only after** archiving. A missing evidence item fails
-  the gate on its own.
+- Promise / Source: `verify-boot-acceptance.md` §8. Cost: minutes.
+- Expected: the release record holds all twelve required artifacts:
+  `incus-version.txt`, `install-config.yaml`, `recovery-config.yaml`,
+  `artifact-sha256.txt`, `source-seed.before.sha256`,
+  `source-seed.before.list`, `target-block-layout.txt`,
+  `target-seed.after.sha256`, `target-seed.after.list`, `install-serial.log`,
+  `recovery-serial.log`, and `rescue-block-layout.txt`. If the optional source
+  readback ran, also archive `source-seed.after.sha256`. If `BOOT-07-ISO` ran,
+  keep its distinct evidence directory with the release record. Cleanup order
+  holds: stop before delete, custom volumes deleted explicitly, both loop
+  devices detached, and `$SOURCE_WORK` deleted **only after** archiving. A
+  missing required evidence item fails the gate on its own.
 - Pass/Fail: [ ]
 
 #### BOOT-10 — Record the release verdict honestly
@@ -2963,6 +3053,7 @@ below. The next execution uses the corrected cases in §4 to detect regressions.
 |---|---|---|
 | `F-CLI-3`, `F-CLI-4`, `F-CLI-5`, `F-CLI-6`, `F-CFG-2`, `N-CLI-1`, `N-CLI-2`, `N-CLI-5`, `N-ART-1`, `N-ART-2`, `N-ART-3`, `N-AMIR-1`, `N-CFG-A`, `N-CFG-B`, `F-GATE-1`, `F-SUP-3`, `F-SUP-4`, `F-SBOM-1` | **Resolved in `6c740f9`.** | Verify the corrected behavior in CLI-02/08/10/15/19, CFG-12/16, ART-14/20, PRE-06, SUP-09/12. Do not re-record the historical symptom when the corrected expectation passes. |
 | `D-1..D-18`, `D-A4` | **Test-plan defects corrected in this revision.** | Use the corrected ranges, costs, commands, and Expected blocks. Re-derive configuration fences with the CFG-19 extractor. |
+| `F-DOC-11` | **Plan and product-documentation defect corrected in this revision set.** | Treat the source seed as the BOOT-05 input baseline. Inspect the detached target volume in BOOT-06 and apply the source-contains / target-lacks / digests-differ oracle. |
 | `D-A1`, `D-A2`, `D-A3` | **Not defects; positive appendix evidence.** | Preserve the successful config extraction, ART-05 step order, and ART-06 warm-cache transcript in `WAVE2_TRACKA_RESULTS.md`. |
 | `N-CLI-4` | **Not a product defect.** The harness inherited `NO_COLOR=1`. | PRE-02 unsets `NO_COLOR` before colour cases. |
 | `N-CLI-6` | **Not a product defect.** A sibling killed a shared tmux socket; the cases passed on a private socket. | Use `tmux -L "$TEST_TMUX_SOCKET"` and never `kill-server` on a shared socket. |
@@ -3058,7 +3149,7 @@ Full evidence in `WAVE2_TRACKA_RESULTS.md`. 31/31 executed: 25 pass, 5 deviation
 | **N-AMIR-1** | **medium — the one track A failure** | The low-disk warning **never fires on a first-use cache directory**. `warnIfLowSpace` (`internal/update/cache.go:220-232`) calls `freeBytes(c.dir)` and swallows the error; on a first-use cache the `statfs` hits a directory that does not exist yet (created only on first admission, `cache.go:42-51`), returns ENOENT, and the warning is dropped. Invoked at `cache.go:91` and `client.go:127`, both before creation. The first build against any new cache location — the common case, and the one most likely to be on a too-small volume — gets no advance warning and hits a mid-download ENOSPC instead. | ART-20 |
 | **N-MEDIA-1** | medium | **Raw rescue media is not byte-reproducible.** Five builds of one identical offline config produced the same installer digest every time and five *different* `resources_sha256` values, from a random GPT disk GUID plus FAT32 volume serial. No doc says the rescue artifact is non-deterministic, and `result.resources_sha256` reads like a reproducible property. | MED-07, DOC-12 |
 | **N-MEDIA-2** | advisory | **Mounting rescue media on macOS mutates it** — macOS writes `.fseventsd/fseventsd-uuid` into the FAT volume, changing its digest. Verification must mount read-only or expect the change; never compare a post-mount digest to the envelope. | MED-10 |
-| **N-MEDIA-3** | cosmetic | The ISO volume identifier is NUL-padded, not space-padded per ISO 9660 §8.4.4 (go-diskfs behaviour). `hdiutil` and `bsdtar` resolve it; a strict Linux `blkid` label match is the residual risk, gated by BOOT-07. | MED-13 |
+| **N-MEDIA-3** | cosmetic | The ISO volume identifier is NUL-padded, not space-padded per ISO 9660 §8.4.4 (go-diskfs behaviour). `hdiutil` and `bsdtar` resolve it. BOOT-07's required raw configuration matches a GPT partlabel and does not exercise this ISO identifier; only the optional `BOOT-07-ISO` variant gates strict Linux `blkid` handling. **[INFERENCE]** Current util-linux likely trims at the first NUL and reports `RESCUE_DATA`. | MED-13, BOOT-07-ISO |
 | **N-DOC-F** | medium (UX) | The README quickstart **dirties a clean clone**: `config.yaml` and a 3.4 GB `incusos.iso` land in the checkout root and neither is gitignored. | DOC-04 |
 | **N-DOC-A** | doc | `README.md:65` implies `--resources-output` is required for rescue media; offline builds emit it with no flag, and the flag on a non-offline config is exit 2. | DOC-04 |
 | **N-DOC-B** | doc | `build-offline-media.md:198` quotes a one-path refusal; the tool names both finals, comma-separated. | DOC-12 |
@@ -3082,6 +3173,14 @@ build-info fallback for a `go install`-ed Syft binary.
 Finally, it applies D-1..D-8 from `WAVE1_RESULTS.md`. CFG-19 retains the
 load-bearing rule: derive the configuration fences with the awk extractor
 before each execution rather than trusting stored line numbers.
+
+### Found during pinned-upstream source review (2026-08-16)
+
+This finding came from reading the pinned source, not from executing BOOT-06.
+
+| ID | Severity | Finding | Case |
+|----|----------|---------|------|
+| **F-DOC-11** | high (plan and product documentation) | BOOT-06 and `verify-boot-acceptance.md` inspected the source installer media and required its seed digest to change and `install.*` to disappear. The case was unpassable as written. At pinned commit `0f5b8057f2fc`, the installer calls `CleanupPostInstall` on the **target** partition (`reference/incus-os/incus-osd/internal/install/install.go:893-894`), and the helper deletes `install.json`, `install.yaml`, and `install.yml` from that target (`reference/incus-os/incus-osd/internal/seed/seed.go:31-36`). The source media remains the input baseline; BOOT-06 must inspect the detached target volume. | BOOT-06 |
 
 ### Repository state that blocks documented promises (observed 2026-08-16)
 
