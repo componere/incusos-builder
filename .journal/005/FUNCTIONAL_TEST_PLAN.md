@@ -48,30 +48,40 @@ recorded evidence, which promises the project keeps and which it does not.
 - It does not require every case to pass. Several cases are written to **falsify**
   a documented claim; those are listed in §5 and are decisions, not surprises.
 
-### Scale and sequencing
+### Execution waves
 
-| Block | Cases | Wall time | Disk | Network |
-|-------|-------|-----------|------|---------|
-| Preflight | PRE-01..07 | 30–60 min | ~2 GB | yes |
-| CLI contract | CLI-01..20 | 60–90 min | <100 MB | light |
-| Config and SOPS | CFG-01..19 | 45–60 min | <100 MB | none |
-| Artifacts and cache | ART-01..20 | 3–5 h | ~15 GB peak | heavy |
-| Rescue media | MED-01..17 | 2–4 h | ~10 GB peak | heavy |
-| Supply chain (pre-tag) | SUP-01..18 | 1–2 h | ~3 GB | yes |
-| Documentation | DOC-01..18 | 2–3 h | shares ART/MED artifacts | yes |
-| Boot acceptance | BOOT-01..10 | 3–8 h on a Linux host | ~40 GB there | yes |
-| Supply chain (post-tag) | SUP-19..23 | 1 h, after the tag | ~1 GB | yes |
+Cases are split by wall time into two waves that share nothing but the
+repository and the operator's judgement. **Any case that takes more than five
+minutes lives in Wave 2**, together with every cheap case that can only run
+against a Wave 2 artifact. Wave 1 therefore runs start to finish on a laptop
+with no multi-gigabyte downloads and no Docker.
 
-Two working days for everything except BOOT (which needs an `x86_64` Linux Incus
-host) and the post-tag block. Suggested order:
+| Wave | Content | Cases | Wall time | Disk | Detached? |
+|------|---------|-------|-----------|------|-----------|
+| **Wave 1** — fast lane | Every case ≤5 min: full CLI contract, config/SOPS, all usage-error and metadata-rejection paths, synthetic mirrors, docs site, repository/release-plumbing reads | 74 | 2.5–4 h | <500 MB | — |
+| **Wave 2** — long lane | Every case >5 min plus its dependants: the live build chain, rescue media, the container image, the release rehearsal, the two full doc walkthroughs, and boot acceptance | 49 | 6–10 h local + 3–8 h on a Linux host | ~25 GB local, ~40 GB on the boot host | yes — own shell, own `$WORK`, own cache |
+| **Wave P** — post-tag | Signature, attestation, SBOM, checksum, and asset verification against the first real release | 5 | ~1 h | ~1 GB | yes — after the tag, before publishing the draft |
 
-- **Day 1 morning:** PRE, CLI, CFG (all cheap, no large downloads).
-- **Day 1 afternoon:** ART-05 first (it warms the shared cache), then the rest of
-  ART, then MED. Run these with one shared `--cache-dir` so assets download once.
-- **Day 2 morning:** SUP pre-tag, DOC (reuses ART/MED artifacts).
-- **Day 2 afternoon:** BOOT-01 venue decision; execute or record deferral.
-- **After tagging:** SUP-19..23 against the first real release, before publishing
-  the draft.
+**The detachment contract.** Wave 2 has no dependency on Wave 1 and Wave 1 has
+no dependency on Wave 2. Each wave needs only PRE-01..PRE-06; Wave 2 then runs
+its own bootstrap (PRE-07-W2). Nothing in Wave 1 reads an artifact Wave 2
+produced, and nothing in Wave 2 reads state Wave 1 left behind. They may run on
+different days, in different terminals, or on different machines, in either
+order, or simultaneously — the only shared resource is network bandwidth to the
+update server. Wave 2 track C additionally needs a host Wave 1 never touches.
+
+Suggested schedule:
+
+- **Wave 1 — half a day.** PRE-01..06, then CLI, CFG, the cheap ART/MED/SUP/DOC
+  cases, BOOT-01. Produces every contract-level finding.
+- **Wave 2 — one to two days, started whenever convenient.** Dispatch SUP-12
+  (the GitHub rehearsal) first so it runs remotely while local work proceeds,
+  then run track A, then track B; track C needs the Linux host.
+- **Wave P — after tagging**, before the draft release is published.
+
+Wave 2 is where the money is spent: 15 of its cases each exceed five minutes,
+but they share one warmed cache, so the real bill is roughly one 415 MiB asset
+download plus ~25 GB of transient disk, not 15 independent downloads.
 
 ---
 
@@ -182,22 +192,20 @@ Use `mise x --` for every moon/golangci invocation: a global `moon` and a global
 
 Pass/Fail: [ ]
 
-### PRE-06 — Automated pre-screen
+### PRE-06 — Automated pre-screen (shared, ≤5 min)
 
 ```console
 $ mise x -- moon run root:check
-$ INCUSOS_BUILDER_E2E=1 mise x -- moon run root:e2e
 ```
 
-Expected: both exit 0. `root:check` runs format, lint, build, test,
-check-upstream, docs:build (`moon.yml:110-116`). `root:e2e` live-proves versions
-parsing, a smallest-image build, the eleven-section seed round-trip, and an
-exact ISO/FAT32 rescue read-back. A failure here means stop; do not start the
-manual block.
+Expected: exit 0. `root:check` runs format, lint, build, test, check-upstream,
+docs:build (`moon.yml:110-116`). A failure here means stop; do not start either
+wave. The live suite `root:e2e` is **not** run here — it downloads multi-gigabyte
+assets and belongs to Wave 2's bootstrap (PRE-07-W2).
 
 Pass/Fail: [ ]
 
-### PRE-07 — Session scaffold
+### PRE-07-W1 — Wave 1 session scaffold
 
 ```console
 $ export WORK=$(mktemp -d) && cd "$WORK"
@@ -211,8 +219,35 @@ $ echo "$WORK"
 
 `good.yaml` and `bad.yaml` are the literal fixtures from
 `internal/cli/testdata/script/exit_codes.txtar`; `offline.yaml` is from
-`build_offline.txtar`. Record `$WORK` in the results log — later cases refer to
-it.
+`build_offline.txtar`. Record `$WORK` in the results log — every Wave 1 case
+refers to it. This directory never exceeds a few hundred megabytes; nothing in
+Wave 1 downloads an image.
+
+Pass/Fail: [ ]
+
+### PRE-07-W2 — Wave 2 bootstrap (separate shell, separate `$WORK`)
+
+Run this **only** when starting Wave 2. It is deliberately independent of
+PRE-07-W1: a different scratch tree, a different cache, and its own fixtures, so
+the two waves cannot contaminate each other's evidence.
+
+```console
+$ export WORK2=$(mktemp -d) && cd "$WORK2"
+$ export CACHE="$WORK2/cache" && mkdir -p "$CACHE"
+$ cp "$WORK/good.yaml" "$WORK/bad.yaml" "$WORK/offline.yaml" . 2>/dev/null || {
+    printf 'version: 1\nimage:\n  type: raw\n  architecture: x86_64\n  channel: stable\n' > good.yaml
+    printf 'version: 1\nimage:\n  type: raw\n  architecture: x86_64\n  channel: stable\n  offline: true\nseeds:\n  applications:\n    applications:\n      - name: incus\n' > offline.yaml; }
+$ df -h "$WORK2"                                   # need ≥25 GB free
+$ INCUSOS_BUILDER_E2E=1 mise x -- moon run root:e2e
+$ gh workflow run release-dry-run.yml --repo componere/incusos-builder --ref master   # SUP-12, runs remotely
+```
+
+Expected: ≥25 GB free. `root:e2e` exits 0 — it live-proves versions parsing, a
+smallest-image build, the eleven-section seed round-trip, and an exact ISO/FAT32
+rescue read-back; if it fails, the whole of Wave 2 track A will fail too, so stop
+here. The rehearsal dispatch returns immediately; collect its result in SUP-12
+while track A runs locally. The `cp` fallback exists so Wave 2 can start on a
+machine that never ran Wave 1.
 
 Pass/Fail: [ ]
 
@@ -355,17 +390,90 @@ when at least one non-optional case for it has a recorded result.
 
 ## 4. Test cases
 
-Every case carries: the promises it observes, the source of those promises, its
-cost, the literal commands, the observable expectation, and a pass/fail box.
-All commands assume the PRE-07 shell (`$REPO`, `$IOB`, `$WORK`, `$CACHE`).
-Cases marked **[falsifier]** are expected to fail as documented; their value is
-the recorded evidence for the decision in §5.
+Every case carries: its wave, the promises it observes, the source of those
+promises, its cost, the literal commands, the observable expectation, and a
+pass/fail box. Wave 1 commands assume the PRE-07-W1 shell (`$REPO`, `$IOB`,
+`$WORK`, `$CACHE`); Wave 2 commands assume the PRE-07-W2 shell, where `$WORK`
+means `$WORK2`. Cases marked **[falsifier]** are expected to fail as documented;
+their value is the recorded evidence for the decision in §5.
+
+Cases stay grouped by surface so the document reads as a reference. Run them by
+wave, not by section order — §4.0 is the running order.
+
+### 4.0 Wave assignment
+
+**Wave 1 — fast lane (74 cases, none over 5 minutes).** Run in one sitting:
+
+| Surface | Cases |
+|---------|-------|
+| CLI | CLI-01 .. CLI-20 (all 20) |
+| Config / SOPS | CFG-01 .. CFG-19 (all 19) |
+| Server metadata | ART-01, ART-02, ART-03, ART-04, ART-14, ART-15, ART-16 |
+| Rescue usage errors | MED-01 .. MED-06 |
+| Supply chain | SUP-01, SUP-02, SUP-11, SUP-13, SUP-14, SUP-15, SUP-16, SUP-17, SUP-18 |
+| Documentation | DOC-02, DOC-03, DOC-05, DOC-06, DOC-07, DOC-08, DOC-09, DOC-11, DOC-13, DOC-16, DOC-17, DOC-18 |
+| Boot | BOOT-01 (venue decision only) |
+
+**Wave 2 — long lane (49 cases), three independent tracks.** Track A and track B
+share only the machine; track C needs a different host entirely.
+
+| Track | Cases, in order | Gate |
+|-------|-----------------|------|
+| **A — live build chain, artifacts, media, doc walkthroughs** | ART-05 → ART-06, ART-07, ART-08, ART-09, ART-10, ART-11 → ART-12 → ART-13 → ART-17, ART-18, ART-21 → ART-19 → ART-20 → MED-07 → MED-08, MED-09, MED-10, MED-16 → MED-11 → MED-12, MED-13, MED-15 → MED-14 → MED-17 → DOC-04, DOC-10, DOC-12, DOC-14, DOC-15 | PRE-07-W2 |
+| **B — container image and release rehearsal** | SUP-12 (dispatch first, collect last) ‖ SUP-03 → SUP-04, SUP-05, SUP-06, SUP-07, SUP-08, SUP-09, SUP-10 | PRE-07-W2 + a Docker daemon |
+| **C — boot acceptance** | BOOT-02 → BOOT-03 → BOOT-04 → BOOT-05 → BOOT-06 → BOOT-07 → BOOT-08 → BOOT-09 → BOOT-10 | BOOT-01 chose a real `x86_64` Linux Incus host |
+
+`→` is a hard dependency (the left case produces an artifact or state the right
+one reads); commas are siblings that may run in any order; `‖` runs concurrently.
+
+**Wave P — post-tag (5 cases):** SUP-19, SUP-20, SUP-21, SUP-22, SUP-23, in that
+order, against the first real release and before the draft is published.
+
+#### The fifteen cases that exceed five minutes
+
+Everything else in Wave 2 is a cheap inspection that merely needs a Wave 2
+artifact. These are the ones that actually cost time:
+
+| Case | Wall time | Disk | Downloads |
+|------|-----------|------|-----------|
+| MED-07 offline raw build | 10–20 min | ~4.5 GB | yes |
+| MED-11 offline ISO build | 10–20 min | ~2 GB | yes (ISO asset) |
+| MED-17 `--force` pair replacement | 5–15 min | ~7.5 GB peak | no |
+| SUP-03 `mise run image-local` | 5–12 min | 1–3 GB in the Docker VM | yes (Wolfi) |
+| SUP-12 release rehearsal | ~7 min (remote runner) | none local | n/a |
+| DOC-01 fresh-clone source install | 3–8 min | ~1 GB | yes |
+| DOC-04 README quickstart | 20–45 min | ~10 GB | yes |
+| DOC-10 tutorial walkthrough | 20–45 min | ~10 GB | yes |
+| DOC-12 offline-media how-to | reuses MED-07/11 | — | no |
+| DOC-14 local-mirror how-to (populated half) | reuses ART-12 | — | no |
+| DOC-15 interrupted-build how-to | reuses ART-18/MED-07 | — | no |
+| BOOT-02 build release-gate media | 25–60 min | ~15 GB | yes |
+| BOOT-05 install and watch console | 20–60 min | — | Linux host |
+| BOOT-07 copy volume, detect `RESCUE_DATA` | 15–40 min | — | Linux host |
+| PRE-07-W2 `root:e2e` bootstrap | 10–25 min | ~5 GB | yes |
+
+ART-05 is 1–3 min on a fast link but sits in Wave 2 as track A's producer:
+everything downstream reads its 3.2 GiB image and warmed cache, and its 415 MiB
+download alone exceeds five minutes on a slower connection.
+
+#### Cases split across waves
+
+Four cases have a cheap part and an expensive part. Run the cheap part in
+Wave 1 and record the deferred half against Wave 2:
+
+| Case | Wave 1 portion | Wave 2 portion |
+|------|----------------|----------------|
+| CLI-20 | everything except the last command | the final `--verbose` build against the warm cache |
+| DOC-11 | steps 1–4 and Verification (validate only) | optional step 5 `build -f config.enc.yaml` |
+| DOC-13 | every `validate` snippet and the exit table | the `build` snippets and the container run (with SUP-10) |
+| DOC-14 | the four documented failure modes | the populated-mirror build (with ART-12) |
 
 ### 4.1 CLI contract
 
 #### CLI-01 — Bare invocation, `--help`, `--version`
 - Promise: bare run is silent exit 0; two-line version banner; command list.
 - Source: `docs/docs/reference/cli.md:9-10,26-35`; `internal/cli/root.go` `SetVersionTemplate`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -389,6 +497,7 @@ the recorded evidence for the decision in §5.
 #### CLI-02 — Flag inventory conformance sweep
 - Promise: the registered flag set equals the reference tables, defaults included.
 - Source: `internal/cli/root.go` `registerPersistentFlags`; each `new*Command`; `cli.md:43-52,74-79,129-131,148-151,171-173`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -408,6 +517,7 @@ the recorded evidence for the decision in §5.
 #### CLI-03 — Exit 2, global flag usage errors
 - Promise: invalid `--color`/`--progress`, `--verbose` with `-q`, unknown flags, missing flag arguments.
 - Source: `internal/cli/policy.go` `parseColor`/`parseProgress`; `internal/cli/exit.go:50-52`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -429,6 +539,7 @@ the recorded evidence for the decision in §5.
 #### CLI-04 — Exit 2, `build` and `init` usage errors
 - Promise: the ten enumerated build/init usage triggers.
 - Source: `internal/cli/build.go` `checkBuildFlags`; `internal/cli/publish.go` `resolvePaths`; `internal/cli/init.go`.
+- Wave: **Wave 1**
 - Cost: cheap (no network: all fail before acquisition).
 - Commands:
   ```console
@@ -459,6 +570,7 @@ the recorded evidence for the decision in §5.
 #### CLI-05 — Exit 2, `--server` classification
 - Promise: plain `http://` and non-directory values are usage errors before any request.
 - Source: `internal/cli/build.go` `selectImageSource`; `cli.md:57-59`; `use-local-mirror.md:96-113`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -476,6 +588,7 @@ the recorded evidence for the decision in §5.
 #### CLI-06 — Exit 3 through the real CLI
 - Promise: invalid seed config on both `validate` and `build`, including an unreadable path.
 - Source: `internal/errdefs/errors.go` `ErrConfig`; `internal/cli/exit.go:53-54`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -492,6 +605,7 @@ the recorded evidence for the decision in §5.
 #### CLI-07 — Exit 4 through the real CLI
 - Promise: a top-level `sops` key selects decryption; failure is 4, never 3.
 - Source: `internal/config/load.go` `Parse`; `internal/cli/exit.go:55-56`. Full matrix in CFG-13..CFG-17.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -506,6 +620,7 @@ the recorded evidence for the decision in §5.
 #### CLI-08 — Exit 5 through the real CLI
 - Promise: empty cache directory and unreachable/empty sources are acquisition failures.
 - Source: `internal/update/cache.go:44-46`; `internal/update/local.go:136`; `internal/update/client.go` `getOnce`.
+- Wave: **Wave 1**
 - Cost: cheap; the HTTPS case takes ~1 min (three retry attempts).
 - Commands:
   ```console
@@ -524,6 +639,7 @@ the recorded evidence for the decision in §5.
 #### CLI-09 — Exit 6 through the real CLI
 - Promise: an artifact write failure is exit 6 with the `output write failed:` prefix.
 - Source: `internal/cli/publish.go` `createTemp`/`outputWrap`; `exit_codes.txtar:2-3`.
+- Wave: **Wave 1**
 - Cost: cheap (fails in `Begin`, before any download).
 - Commands:
   ```console
@@ -540,6 +656,7 @@ the recorded evidence for the decision in §5.
 #### CLI-10 — Unknown commands and stray operands **[falsifier]**
 - Promise: docs say every command takes no operands and usage errors are exit 2.
 - Source: `cli.md:10,71,126,146,169`; `automation.md:21`; `internal/cli/exit.go:61-63`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -559,6 +676,7 @@ the recorded evidence for the decision in §5.
 #### CLI-11 — Error envelope shape across codes 2, 3, 5, 6
 - Promise: `{"error":{"code","message"}}`, one document, `code` == exit code, message also on stderr.
 - Source: `automation.md:39-65`; `internal/cli/exit.go:31-43,79-96`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -577,6 +695,7 @@ the recorded evidence for the decision in §5.
 #### CLI-12 — Success envelopes for `validate`, `versions`, `init`, and `-q` behavior
 - Promise: documented field sets; `-q` suppresses human output but not JSON or streamed bytes.
 - Source: `automation.md:100-149,190-191`.
+- Wave: **Wave 1**
 - Cost: cheap (one live `index.json` fetch).
 - Commands:
   ```console
@@ -597,6 +716,7 @@ the recorded evidence for the decision in §5.
 #### CLI-13 — `--json` on a flag-parse failure
 - Promise: flag-parse errors are enveloped only when `--json` is on the command line.
 - Source: `automation.md:41-42`; `internal/cli/root.go` `SetFlagErrorFunc`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -614,6 +734,7 @@ the recorded evidence for the decision in §5.
 #### CLI-14 — `-f -` reads the config from stdin
 - Promise: stdin configs, plaintext and SOPS-encrypted, on `validate` and `build`.
 - Source: `automation.md:207`; `stdin_config.txtar`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -631,6 +752,7 @@ the recorded evidence for the decision in §5.
 #### CLI-15 — Stream sentinel and the "cleans to `-`" rule **[falsifier]**
 - Promise: `automation.md:203` says `-` "or a path that cleans to `-`" is the sentinel for all uses.
 - Source: `internal/cli/publish.go` `isStdout` (uses `filepath.Clean`) vs `internal/cli/init.go` and `build.go` `loadBuildSpec` (exact compare).
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -650,6 +772,7 @@ the recorded evidence for the decision in §5.
 #### CLI-16 — Precedence: flag > env > default
 - Promise: unpassed flag defaults cannot mask env; explicit `=false` beats a true env value.
 - Source: `automation.md:151-169`; `internal/cli/root.go` `bindParsedFlags`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -671,6 +794,7 @@ the recorded evidence for the decision in §5.
 #### CLI-17 — `CI`, `NO_COLOR`, `TERM=dumb`, `ACCESSIBLE` (real TTY)
 - Promise: auto no-input and color/prompt style selection.
 - Source: `automation.md:171-179,193-199`; `internal/cli/policy.go` `autoNoInput`; `internal/ux/reporter.go` `colorAutoEnabled`.
+- Wave: **Wave 1**
 - Cost: cheap; **must be run in a real Terminal window, not a pipe**.
 - Commands:
   ```console
@@ -690,6 +814,7 @@ the recorded evidence for the decision in §5.
 #### CLI-18 — Overwrite prompt on a real TTY: `y`, `n`, EOF, `--force`
 - Promise: the prompt text, the accepted answers, and the non-interactive refusal.
 - Source: `cli.md:96-109`; `internal/cli/build.go` `confirmPrompt`; `no_input.txtar`.
+- Wave: **Wave 1**
 - Cost: cheap (each run stops at exit 5 against the empty mirror right after the prompt).
 - Commands (type the answers at the prompt):
   ```console
@@ -712,6 +837,7 @@ the recorded evidence for the decision in §5.
 #### CLI-19 — `init` interactive form and cancel (real TTY)
 - Promise: form fields, stderr rendering, `ACCESSIBLE` line mode, cancel is exit 2 with no file.
 - Source: `cli.md:186-190`; `internal/cli/init.go` `newInitForm`, `runInitForm`.
+- Wave: **Wave 1**
 - Cost: cheap; interactive.
 - Commands:
   ```console
@@ -737,6 +863,7 @@ the recorded evidence for the decision in §5.
 #### CLI-20 — Stream routing, `-q`, `--verbose`, progress gating
 - Promise: stdout/stderr split; `-q` suppresses only human success; `--verbose` debug lines.
 - Source: `automation.md:183-199`; `internal/cli/build.go` `logBuildPlan`; `internal/ux/plain.go`.
+- Wave: **Wave 1** — except the final `--verbose` build, deferred to Wave 2 track A
 - Cost: cheap, except the final `--verbose` build which reuses the ART-05 warm cache.
 - Commands:
   ```console
@@ -764,6 +891,7 @@ the recorded evidence for the decision in §5.
 #### CFG-01 — Minimal document, image matrix, channel default
 - Promise: `version: 1` + `image.type` + `image.architecture` suffice; iso/raw × x86_64/aarch64; channel/release are free text.
 - Source: `configuration.md:775-783,126-128`; `internal/build/spec.go:12-38`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -780,6 +908,7 @@ the recorded evidence for the decision in §5.
 #### CFG-02 — Maximal config: all eleven seed sections populated
 - Promise: eleven sections, every documented field real on the pin.
 - Source: `configuration.md:869-1023` ("Populated eleven-section shape"); `internal/config/schema.go:55-78`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -800,6 +929,7 @@ the recorded evidence for the decision in §5.
 #### CFG-03 — Offline requires a non-empty applications list
 - Promise: `image.offline: true` without applications is exit 3, before any download.
 - Source: `internal/config/validate.go:156-164`; `configuration.md:124,260-261`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -816,6 +946,7 @@ the recorded evidence for the decision in §5.
 #### CFG-04 — `seeds` omitted, null, or empty
 - Promise: `seeds` is optional and may be `{}` or all-empty sections.
 - Source: `configuration.md:33-45,148-149,818-835`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -830,6 +961,7 @@ the recorded evidence for the decision in §5.
 #### CFG-05 — `sort_order` enum, case-insensitive
 - Promise: empty / `smallest` / `largest` accepted in any case; anything else exit 3.
 - Source: `internal/config/validate.go:134-144`; `configuration.md:122`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -844,6 +976,7 @@ the recorded evidence for the decision in §5.
 #### CFG-06 — Recovery keys rejected without echoing the secret
 - Promise: `seeds.security.encryption_recovery_keys` is refused and the value never appears in the error.
 - Source: `internal/config/validate.go:147-153`; `configuration.md:741-753,1025-1035`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -861,6 +994,7 @@ the recorded evidence for the decision in §5.
 #### CFG-07 — `version` required and pinned to 1
 - Promise: missing version, unsupported version, and a document with no `image`.
 - Source: `internal/config/validate.go:26-34`; `configuration.md:160-169`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -876,6 +1010,7 @@ the recorded evidence for the decision in §5.
 #### CFG-08 — Strict decode: unknown keys carry a dotted path and the pin string
 - Promise: unknown keys rejected with the upstream pin named; enums case-sensitive.
 - Source: `internal/config/load.go:135-189`; `configuration.md:75-96`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -896,6 +1031,7 @@ the recorded evidence for the decision in §5.
 #### CFG-09 — Wrong types rejected with sanitized literals
 - Promise: scalar values are replaced by `<value>` so secrets never leak.
 - Source: `internal/config/load.go:191-211`; `configuration.md:59-60,90-91`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -913,6 +1049,7 @@ the recorded evidence for the decision in §5.
 #### CFG-10 — Malformed YAML, duplicate keys, empty document
 - Promise: all parse failures are exit 3 with sanitized diagnostics.
 - Source: `internal/config/load.go:95-110`; `configuration.md:58-60`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -929,6 +1066,7 @@ the recorded evidence for the decision in §5.
 #### CFG-11 — `init --no-input` round-trip and body
 - Promise: the generated example validates and lists all eleven sections commented, in order.
 - Source: `internal/cli/init.go:44-61,259-317`; `cli.md:179-185`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -950,6 +1088,7 @@ the recorded evidence for the decision in §5.
 #### CFG-12 — Interactive `init` output validity, including offline **[falsifier]**
 - Promise: `internal/cli/init.go:259-291` claims the emitted body is a valid `config.Parse` input.
 - Source: `internal/cli/init.go:171-229`; `internal/config/validate.go:156-164`.
+- Wave: **Wave 1**
 - Cost: minutes; real TTY required.
 - Commands:
   ```console
@@ -973,6 +1112,7 @@ the recorded evidence for the decision in §5.
 #### CFG-13 — SOPS: decrypt the repo fixture from a file and from stdin
 - Promise: a top-level `sops` key triggers in-memory decryption keyed by `SOPS_AGE_KEY`.
 - Source: `internal/config/testdata/README`; `internal/config/load.go:29-57`; `sops-encryption.md` §§3–4.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -992,6 +1132,7 @@ the recorded evidence for the decision in §5.
 #### CFG-14 — SOPS: encrypt your own maximal config
 - Promise: an operator-produced encrypted document behaves identically.
 - Source: `internal/config/testdata/gen.go:43-54`; `sops-encryption.md` §§1–2.
+- Wave: **Wave 1**
 - Cost: cheap. Skip if `sops` is unavailable (PRE-03) and note the gap.
 - Commands:
   ```console
@@ -1012,6 +1153,7 @@ the recorded evidence for the decision in §5.
 #### CFG-15 — SOPS: no key source at all is exit 4
 - Promise: absence of every key source fails at 4 with `decryption failed`.
 - Source: `internal/config/load.go:37-41`; `sops-encryption.md:104-110`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1027,6 +1169,7 @@ the recorded evidence for the decision in §5.
 #### CFG-16 — Every decrypt-path failure is exit 4, never 3
 - Promise: wrong key, MAC mismatch, malformed metadata, and a stray `sops` key on plaintext.
 - Source: `internal/config/testdata/README:11-15`; `configuration.md:61-66,156-158`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1050,6 +1193,7 @@ the recorded evidence for the decision in §5.
 #### CFG-17 — `SOPS_AGE_KEY_FILE` interaction **[falsifier]**
 - Promise: `sops-encryption.md:36-38` says an empty `SOPS_AGE_KEY_FILE` makes SOPS ignore `SOPS_AGE_KEY`.
 - Source: `sops-encryption.md:36-38`; `configuration.md:759-761`; `go.mod` `getsops/sops/v3 v3.11.0`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1069,6 +1213,7 @@ the recorded evidence for the decision in §5.
 #### CFG-18 — `validate` performs no network I/O
 - Promise: `validate` never fetches, even with a `--server` that cannot resolve.
 - Source: `internal/cli/validate.go:36,46-48`; `sops-encryption.md:66-67`.
+- Wave: **Wave 1**
 - Cost: cheap (one control fetch).
 - Commands:
   ```console
@@ -1093,6 +1238,7 @@ the recorded evidence for the decision in §5.
 #### CFG-19 — Every YAML example in the configuration reference behaves as documented
 - Promise: the eight fenced examples in `configuration.md` are accurate.
 - Source: `configuration.md:775-1035`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1114,6 +1260,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-01 — `versions` human table against the real default server
 - Promise: table columns, host-architecture default, live data.
 - Source: `cli.md:144-159`; `internal/ux/render.go:117-124`.
+- Wave: **Wave 1**
 - Cost: cheap (~35 KB `index.json`).
 - Commands:
   ```console
@@ -1129,6 +1276,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-02 — `versions --json` envelope and architecture filtering
 - Promise: documented entry fields; `channels` never null; no per-image `type` in the body.
 - Source: `automation.md:113-139`; `internal/cli/versions.go:105-154`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1147,6 +1295,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-03 — Unknown channel is an empty list, not an error
 - Promise: `cli.md:146`.
 - Source: `internal/cli/versions.go:108-131`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1160,6 +1309,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-04 — Empty cache directory is an acquisition failure
 - Promise: `cache.md:27-28`.
 - Source: `internal/update/cache.go:44-46`.
+- Wave: **Wave 1**
 - Cost: cheap (fails before any request).
 - Commands:
   ```console
@@ -1174,6 +1324,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-05 — Real end-to-end build of the smallest live image
 - Promise: the whole online build path plus the documented human summary.
 - Source: `internal/cli/build.go:466-485`; `internal/cli/e2e_helpers_test.go:111-263`.
+- Wave: **Wave 2**
 - Cost: **expensive**: ~1–3 min wall, ~3.9 GB disk (≈415 MiB cached asset +
   3,432,026,112 B output). Re-select the smallest raw image first — the live
   index moves.
@@ -1203,6 +1354,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-06 — `--json` envelope, digest equality, cache reuse
 - Promise: envelope fields; `result.sha256` == a second hash; a warm cache skips the download.
 - Source: `automation.md:67-98`; `cache.md:72-78`; `internal/update/client.go:122-126`.
+- Wave: **Wave 2**
 - Cost: minutes; no download; ~3.2 GB written again (delete `$OUT` first if tight).
 - Commands:
   ```console
@@ -1221,6 +1373,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-07 — Cache layout, content addressing, mode, no residue
 - Promise: `<cache-dir>/sha256/<64hex>`, mode 0444, no `.fetch-*` temps.
 - Source: `cache.md:35-57`; `internal/update/cache.go:19-27,153-161`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1237,6 +1390,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-08 — Extract the seed region at the documented byte offset
 - Promise: `seed-data` at byte 2,148,532,224; uncompressed tar; eleven entries, mode 0600, writeSeed order.
 - Source: `internal/build/probe.go:18-22`; `internal/seed/seed.go:44-78,99-120`; `seed-injection.md:26-28,56-63`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Arithmetic (do not guess): offset `O = 2148532224`; `O/512 = 4196352`;
   `O/1048576 = 2049` exactly; tar length is always a multiple of 512, so
@@ -1262,6 +1416,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-09 — Splice invariant: everything outside the tar is untouched
 - Promise: only `[offset, offset+len(tar))` is rewritten.
 - Source: `seed-injection.md:69-85`; `internal/build/build.go:154-157`.
+- Wave: **Wave 2**
 - Cost: expensive: ~1–2 min, +3.2 GiB temporary disk.
 - Commands:
   ```console
@@ -1281,6 +1436,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-10 — `.gz` output: digest covers the compressed stored bytes
 - Promise: `cli.md:92-94`, `automation.md:97-98`.
 - Source: `internal/cli/build.go:389-400`.
+- Wave: **Wave 2**
 - Cost: expensive: ~1–2 min recompression, ~450 MiB; no download.
 - Commands:
   ```console
@@ -1298,6 +1454,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-11 — `--cache-dir` override and env precedence
 - Promise: `cache.md:17-25`; flag beats env beats the macOS default.
 - Source: `internal/cli/root.go:166-209`.
+- Wave: **Wave 2**
 - Cost: minutes plus one extra ~415 MiB download for the fresh-cache half.
 - Commands:
   ```console
@@ -1316,6 +1473,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-12 — Local mirror: build with `--server <directory>`, network off
 - Promise: a directory mirror serves the same build through the same cache.
 - Source: `use-local-mirror.md:23-76`; `internal/update/local.go:38-67`.
+- Wave: **Wave 2**
 - Cost: minutes; ~415 MiB mirror copy + 3.2 GiB output; no download.
 - Commands:
   ```console
@@ -1338,6 +1496,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-13 — Tampered mirror byte is refused at admission, with no residue
 - Promise: `asset failed size/digest admission; untrusted metadata; possible tampering`, exit 5.
 - Source: `internal/update/cache.go:143-149`; `use-local-mirror.md:154-176`.
+- Wave: **Wave 2**
 - Cost: minutes (hashes 415 MiB locally).
 - Preconditions: **a fresh cache directory is mandatory** — a warm cache
   short-circuits before the mirror file is read and the tamper would go
@@ -1363,6 +1522,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-14 — Metadata-rejection matrix on a synthetic tiny mirror
 - Promise: allowlist before any URL/filesystem use; missing index/asset messages.
 - Source: `internal/update/validate.go:10-74`; `internal/update/local.go:117,136`; `cache.md:59-70`.
+- Wave: **Wave 1**
 - Cost: cheap (a few KB; every case fails before a large read).
 - Commands:
   ```console
@@ -1399,6 +1559,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-15 — Pin resolution: highest-in-channel by default, exact pin when set
 - Promise: `configuration.md:126-128`.
 - Source: `internal/build/resolve.go:68-90`.
+- Wave: **Wave 1**
 - Cost: cheap (assets are deliberately absent; the error names the selected file).
 - Commands:
   ```console
@@ -1419,6 +1580,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-16 — A pin the live index does not carry
 - Promise: `version not found: release "<pin>" not in channel "<chan>"; available: <sorted list>`, exit 5.
 - Source: `internal/build/resolve.go:94-103,198-228`; `use-local-mirror.md:146-152`.
+- Wave: **Wave 1**
 - Cost: cheap (only `index.json` is fetched).
 - Commands:
   ```console
@@ -1434,6 +1596,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-17 — Interrupt a build (SIGINT): exit code, no partial artifact, clean re-run
 - Promise: cancelled fetch is exit 5; nothing partial at the final path; temps cleaned.
 - Source: `cmd/incusos-builder/main.go:26`; `internal/cli/publish.go:246-253`; `recover-interrupted-build.md:53-56`.
+- Wave: **Wave 2**
 - Cost: minutes with a warm cache. Interrupt during **splice**, not download.
 - Commands:
   ```console
@@ -1457,6 +1620,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-18 — `--force` backups and the documented restore drill
 - Promise: refusal without `--force`; `.incusos-builder.bak` created and removed; documented recovery works.
 - Source: `recover-interrupted-build.md:29-61,102-198`; `internal/cli/publish.go:489-585`.
+- Wave: **Wave 2**
 - Cost: minutes (two builds against a warm cache; delete between runs to bound disk).
 - Commands:
   ```console
@@ -1484,6 +1648,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-19 — Offline three-way metadata binding (tamper test)
 - Promise: `update.sjson` cleartext must list every selected Filename+Sha256; `update.json` Version must match.
 - Source: `internal/update/metadata.go:105-159`; `use-local-mirror.md:129-132,178-181`.
+- Wave: **Wave 2**
 - Cost: **expensive**: ~2–4 min, ~4.2 GB. Metadata is validated after the image
   is acquired and spliced, so a fake image cannot shortcut it.
 - Commands:
@@ -1518,6 +1683,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-20 — Low-free-space warning on the cache filesystem
 - Promise: `cache.md:92-95` — a warning, never an error.
 - Source: `internal/update/cache.go:218-232`.
+- Wave: **Wave 2**
 - Cost: minutes; a 128 MiB RAM disk; the download aborts partway.
 - Commands:
   ```console
@@ -1538,6 +1704,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### ART-21 — `build -o -` streams image bytes to stdout
 - Promise: no summary, no rescue media, bytes only.
 - Source: `automation.md:208`; `internal/cli/build.go` `streamBuild`; `build_stdout.txtar`.
+- Wave: **Wave 2**
 - Cost: expensive: ~3.2 GiB written to the redirect target; no download.
 - Commands:
   ```console
@@ -1555,12 +1722,14 @@ it. Keep one shared `--cache-dir` for the whole block.
 ### 4.4 Rescue media and offline builds
 
 #### MED-01 — Offline config refuses `-o -`
+- Wave: **Wave 1**
 - Promise / Source: `internal/cli/build.go:252-257`; `build_offline.txtar:5-6`. Cost: cheap.
 - Commands: `"$IOB" build -f offline.yaml -o - --cache-dir "$CACHE"; echo "exit=$?"`
 - Expected: stderr exactly `usage error: offline builds cannot use -o -`, `exit=2`, no files created.
 - Pass/Fail: [ ]
 
 #### MED-02 — Offline without applications is rejected before download
+- Wave: **Wave 1**
 - Promise / Source: `internal/config/validate.go:160-161`; `build-offline-media.md:47-58`. Cost: cheap.
 - Commands:
   ```console
@@ -1571,18 +1740,21 @@ it. Keep one shared `--cache-dir` for the whole block.
 - Pass/Fail: [ ]
 
 #### MED-03 — `--resources-output` on an online config
+- Wave: **Wave 1**
 - Promise / Source: `internal/cli/publish.go:279-284`. Cost: cheap.
 - Commands: `"$IOB" build -f good.yaml -o out.img --resources-output r.img --cache-dir "$CACHE"; echo "exit=$?"`
 - Expected: `usage error: --resources-output requires offline: true in the config`, `exit=2`.
 - Pass/Fail: [ ]
 
 #### MED-04 — `--resources-output -`
+- Wave: **Wave 1**
 - Promise / Source: `internal/cli/publish.go:286-291`; `automation.md:211-212`. Cost: cheap.
 - Commands: `"$IOB" build -f offline.yaml -o out.img --resources-output - --cache-dir "$CACHE"; echo "exit=$?"`
 - Expected: `usage error: resources path cannot be -`, `exit=2`.
 - Pass/Fail: [ ]
 
 #### MED-05 — Image and rescue paths must be distinct after cleaning
+- Wave: **Wave 1**
 - Promise / Source: `internal/cli/publish.go:285-297`. Cost: cheap.
 - Commands:
   ```console
@@ -1595,6 +1767,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-06 — Default rescue-media naming matrix (no download)
 - Promise: `<stem>.resources.<ext>` where `<stem>` drops only the last extension and `<ext>` follows `image.type`, not the `-o` suffix.
 - Source: `internal/cli/publish.go:301-318`; `cli.md:87-90`.
+- Wave: **Wave 1**
 - Cost: cheap. The overwrite pre-check runs before any download and names the
   computed path, so pre-creating the expected name makes the refusal the oracle.
 - Commands:
@@ -1617,6 +1790,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-07 — Offline raw build publishes both artifacts with matching digests
 - Promise: two artifacts, both digests in the envelope, both matching on disk.
 - Source: `build-offline-media.md:60-133`; `internal/cli/publish.go:436-444`.
+- Wave: **Wave 2**
 - Cost: **expensive**: ~10–20 min, ~4.5 GB. Run under a non-default umask so
   MED-16 rides along.
 - Commands:
@@ -1638,6 +1812,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-08 — Raw media is GPT + one `RESCUE_DATA` partition at 1 MiB
 - Promise: protective MBR, `EFI PART`, FirstLBA 2048, `Microsoft Basic Data`, FAT32.
 - Source: `internal/media/fat.go:15-53`; `internal/media/rescue.go:38-43,63-69`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1662,6 +1837,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-09 — Raw media size is the exact proportional-with-floor value
 - Promise: partition = `max(content+1 MiB, 256 MiB)` × 51/50, 512-aligned; disk = +2 MiB.
 - Source: `internal/media/fat.go:56-73`; `internal/media/doc.go:27-35`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1677,6 +1853,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-10 — Raw media read-back with exact logical byte counts
 - Promise: exactly three files, `aarch64/` prefix preserved, byte-identical to source, no `hotfix.sh.sig`.
 - Source: `internal/media/rescue.go:253-271`; `internal/cli/e2e_helpers_test.go:500-527`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1702,6 +1879,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-11 — Offline ISO build publishes ISO rescue media
 - Promise: `.iso` default naming, both digests.
 - Source: `build-offline-media.md:135-154`; `internal/cli/publish.go:309-318`.
+- Wave: **Wave 2**
 - Cost: expensive: ~10–20 min, ~2 GB (application asset reused from `$CACHE`).
 - Commands:
   ```console
@@ -1716,6 +1894,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-12 — ISO carries Rock Ridge long names and exact bytes
 - Promise: the intended file set with full case-sensitive names.
 - Source: `internal/media/iso.go:44-58`; `docs/notes/spike-1b-rescue.md:121-141`.
+- Wave: **Wave 2**
 - Cost: cheap. `bsdtar` (libarchive) is the independent Rock Ridge reader.
 - Commands:
   ```console
@@ -1732,6 +1911,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 
 #### MED-13 — ISO is 2048-aligned, PVD-truncated, labeled, and macOS-recognizable
 - Promise: `internal/media/iso.go:66-101`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1751,6 +1931,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-14 — Bad rescue input is refused before publishing
 - Promise: nothing partial is left at either final path.
 - Source: `internal/update/metadata.go:117-133`; `internal/media/rescue.go:127-170`.
+- Wave: **Wave 2**
 - Cost: minutes.
 - Commands:
   ```console
@@ -1768,6 +1949,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 
 #### MED-15 — Payload provenance: media bytes trace to `index.json` and the cache
 - Promise: `cache.md:39-46,76-86`; media assets are the verified cached blobs.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1784,6 +1966,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-16 — Rescue inode replacement is visible in the published file mode
 - Promise: the publisher reopens by path after `WriteRescue` replaces the inode.
 - Source: `internal/media/rescue.go:172-185`; `internal/cli/publish.go:402-444`.
+- Wave: **Wave 2**
 - Cost: cheap (piggybacks on MED-07's `umask 077` run).
 - Commands: `stat -f '%Lp %N' "$WORK/seeded-off.img" "$WORK/seeded-off.resources.img"`
 - Expected: the installer is `644` (explicitly chmodded to `claimMode`) while the
@@ -1797,6 +1980,7 @@ it. Keep one shared `--cache-dir` for the whole block.
 #### MED-17 — `--force` replaces the artifact pair
 - Promise: refusal names both finals; `--force` replaces both and cleans backups.
 - Source: `build-offline-media.md:185-227`; `internal/cli/publish.go:493-513`.
+- Wave: **Wave 2**
 - Cost: expensive: ~5–15 min warm, peak ~7.5 GB (both previous finals are renamed aside).
 - Commands:
   ```console
@@ -1822,6 +2006,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-01 — Toolchain preflight and pinned supply-chain CLIs
 - Promise: every tool comes from mise with lockfile integrity.
 - Source: `mise.toml:17-49`; `mise.lock`.
+- Wave: **Wave 1**
 - Cost: cheap (a cold `mise install` adds minutes).
 - Commands:
   ```console
@@ -1835,6 +2020,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-02 — Docker prerequisite for melange's Linux sandbox
+- Wave: **Wave 1**
 - Promise / Source: `mise.toml:51-54`. Cost: cheap.
 - Commands: `docker info --format '{{.ServerVersion}} {{.OperatingSystem}} {{.Architecture}}'`
 - Expected: one line naming a reachable server (e.g. `29.4.0 OrbStack aarch64`).
@@ -1844,6 +2030,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-03 — `mise run image-local` builds the signed apk and loads the image
 - Promise: the documented local image path works on macOS arm64.
 - Source: `mise.toml:55-71`.
+- Wave: **Wave 2**
 - Cost: **expensive**: ~5–12 min first run, ~1–3 GB inside the Docker VM.
 - Commands:
   ```console
@@ -1860,6 +2047,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-04 — apk signature is actually enforced (negative control)
 - Promise: apko trusts the local apk only via the appended public key.
 - Source: `mise.toml:67` (`--keyring-append ./melange.rsa.pub`).
+- Wave: **Wave 2**
 - Cost: minutes; reuses SUP-03's apk.
 - Commands: `mise x -- apko build apko.yaml incusos-builder:untrusted /tmp/untrusted.tar --arch arm64; echo "exit=$?"`
 - Expected: **non-zero exit** — apko cannot install the `@local` apk without the
@@ -1870,6 +2058,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-05 — Stamped version/commit/date match the source revision
 - Promise: `--vars-file` ldflags reach the binary; Go build info survives stripping.
 - Source: `mise.toml:62-64`; `melange.yaml:25-40`; `internal/cli/pin.go:20-26`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1886,6 +2075,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-06 — Image runs as nonroot 65532 with the contractual entrypoint
+- Wave: **Wave 2**
 - Promise / Source: `apko.yaml:21-34`; asserted in CI at `release.yml:396-402`. Cost: cheap.
 - Commands:
   ```console
@@ -1898,6 +2088,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-07 — The local image build leaves no repo residue
+- Wave: **Wave 2**
 - Promise / Source: `.gitignore:23-33`; `mise.toml:59-64`. Cost: cheap.
 - Commands: `git status --porcelain; ls melange.rsa melange.rsa.pub image.tar .melange-vars.local.yaml *.spdx.json 2>/dev/null`
 - Expected: `git status --porcelain` prints nothing; every generated path is
@@ -1905,6 +2096,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-08 — apko per-build SBOM exists and is inspectable
+- Wave: **Wave 2**
 - Promise / Source: `apko.yaml:1-6`; apko's `--sbom` defaults true. Cost: cheap.
 - Commands: `ls -l *.spdx.json && jq -r '.spdxVersion, (.packages | length)' <one of them>`
 - Expected: at least one SPDX JSON next to `image.tar` (the task passes no
@@ -1913,6 +2105,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-09 — syft can describe the local image (stand-in for the attested SBOM)
+- Wave: **Wave 2**
 - Promise / Source: `release.yml:409-412`; rehearsed at `release-dry-run.yml:281-289`. Cost: minutes.
 - Commands:
   ```console
@@ -1928,6 +2121,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-10 — `run-in-ci.md` snippets against the real container image
 - Promise: one JSON document to stdout, `-f -` stdin, documented exit codes, through the image.
 - Source: `run-in-ci.md` §2,§5; `automation.md:103`.
+- Wave: **Wave 2**
 - Cost: cheap.
 - Commands:
   ```console
@@ -1945,6 +2139,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-11 — ghd asset staging and checksum logic (stand-in for the 9-asset promise)
+- Wave: **Wave 1**
 - Promise / Source: `.github/scripts/stage_ghd_release_assets.py:17-23,234-287` and its unit suite. Cost: cheap.
 - Commands:
   ```console
@@ -1960,6 +2155,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-12 — Non-publishing release rehearsal
 - Promise: the rehearsal exercises every release path short of publication.
 - Source: `.github/workflows/release-dry-run.yml` (jobs at `:30,:106,:175`).
+- Wave: **Wave 2**
 - Cost: minutes (~7 min of runner time). Prior green rehearsal: run 31963560870.
 - Commands:
   ```console
@@ -1985,6 +2181,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-13 — Release Please PR is correct before merge
 - Promise: version bump reaches manifest + melange + apko; changelog filtered; draft-producing.
 - Source: `release-please-config.json:1-24`; `.github/workflows/release-please.yml:7-12`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -2012,6 +2209,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-14 — Release Please credentials and tag-protection prerequisites
+- Wave: **Wave 1**
 - Promise / Source: `release-please.yml:1-5,44-45`; `.github/repository-settings.toml:89-104`. Cost: cheap.
 - Commands:
   ```console
@@ -2028,6 +2226,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-15 — Repository settings plan (read-only) reports the unapplied delta
+- Wave: **Wave 1**
 - Promise / Source: `.github/repository-settings.toml`; `configure_github_repo.py` plan mode is GET-only. Cost: cheap.
 - Commands: `mise x -- uv run .github/scripts/configure_github_repo.py plan --repo componere/incusos-builder; echo "exit=$?"`
 - Expected: exit 0, output beginning `Planned changes:` then
@@ -2041,6 +2240,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-16 — SECURITY.md's reporting channel actually works
+- Wave: **Wave 1**
 - Promise / Source: `SECURITY.md:11`; `.github/repository-settings.toml:38`. Cost: cheap.
 - Commands:
   ```console
@@ -2056,6 +2256,7 @@ mandatory on the first real release, before the draft is published.
 #### SUP-17 — Consumer verification tooling and syntax (pre-tag negative control)
 - Promise: the exact verify commands the release summary hands to consumers are valid.
 - Source: `release.yml:466,476-477`; `attest.yml:9-10`; `ghd.toml:3-4`.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -2072,6 +2273,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-18 — README install sections match reality pre-tag
+- Wave: **Wave 1**
 - Promise / Source: `README.md:7,26-53`. Cost: cheap.
 - Commands:
   ```console
@@ -2088,6 +2290,7 @@ mandatory on the first real release, before the draft is published.
 > release before publishing the draft. Pre-tag substitutes are SUP-12 and SUP-17.
 
 #### SUP-19 — POST-TAG: binary provenance verifies against the isolated signer workflow
+- Wave: **Wave P**
 - Promise / Source: `release.yml:466`; `attest.yml:1-15,62-66`. Cost: minutes.
 - Commands:
   ```console
@@ -2103,6 +2306,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-20 — POST-TAG: image provenance and attestation inventory
+- Wave: **Wave P**
 - Promise / Source: `release.yml:414-420,432-436`; `attest.yml:79-85`. Cost: minutes.
 - Commands:
   ```console
@@ -2117,6 +2321,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-21 — POST-TAG: cosign keyless signature on the image digest
+- Wave: **Wave P**
 - Promise / Source: `release.yml:404-407,477`. Cost: minutes.
 - Commands:
   ```console
@@ -2132,6 +2337,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-22 — POST-TAG: assets, checksums, multi-arch, nonroot, annotations
+- Wave: **Wave P**
 - Promise / Source: `stage_ghd_release_assets.py:234-266`; `release.yml:355-402`; `apko.yaml:36-44`. Cost: minutes, ~1 GB.
 - Commands:
   ```console
@@ -2155,6 +2361,7 @@ mandatory on the first real release, before the draft is published.
 - Pass/Fail: [ ]
 
 #### SUP-23 — POST-TAG: ghd install path and the human publish decision
+- Wave: **Wave P**
 - Promise / Source: `README.md:26-42`; `ghd.toml`; `release.yml:438-481`. Cost: minutes.
 - Commands:
   ```console
@@ -2177,6 +2384,7 @@ mandatory on the first real release, before the draft is published.
 Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 
 #### DOC-01 — README "From source" install, in a fresh clone
+- Wave: **Wave 2**
 - Promise / Source: `README.md:13-24`. Cost: minutes (~3–8 min cold).
 - Commands:
   ```console
@@ -2192,6 +2400,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-02 — README "From a GitHub release" (ghd) method
+- Wave: **Wave 1**
 - Promise / Source: `README.md:26-42`; `ghd.toml`. Cost: cheap.
 - Commands:
   ```console
@@ -2208,6 +2417,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-03 — README "Container image" method
+- Wave: **Wave 1**
 - Promise / Source: `README.md:44-53`. Cost: cheap.
 - Commands: `docker pull ghcr.io/componere/incusos-builder:v0.0.0`
 - Expected: fails with a registry error, consistent with "No image has been
@@ -2218,6 +2428,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-04 — README quickstart, literally
+- Wave: **Wave 2**
 - Promise / Source: `README.md:55-67`. Cost: expensive: ~20–45 min, ~10 GB.
 - Commands:
   ```console
@@ -2235,6 +2446,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-05 — README capability and status statements
+- Wave: **Wave 1**
 - Promise / Source: `README.md:3,7,9,24,65,67,69-71`. Cost: cheap.
 - Commands:
   ```console
@@ -2250,6 +2462,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-06 — Docs site builds under `--strict`
+- Wave: **Wave 1**
 - Promise / Source: `docs/moon.yml:42-50`; `docs/mkdocs.yml:9`. Cost: minutes.
 - Commands: `mise x -- moon run docs:build && ls docs/build/index.html`
 - Expected: exit 0 with no MkDocs WARNING lines; `docs/build/index.html` exists.
@@ -2258,6 +2471,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-07 — Docs site serves and every nav entry renders
+- Wave: **Wave 1**
 - Promise / Source: `docs/moon.yml:52-60`; `docs/mkdocs.yml:20-72`. Cost: minutes.
 - Commands: `mise x -- moon run docs:serve` then browse `http://127.0.0.1:8000/`.
 - Expected: MkDocs binds `127.0.0.1:8000`. Click all 15 nav entries: each renders
@@ -2267,6 +2481,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-08 — Nav covers every page (orphan sweep)
+- Wave: **Wave 1**
 - Promise / Source: `docs/mkdocs.yml:7,36-55`. Cost: cheap.
 - Commands:
   ```console
@@ -2279,6 +2494,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-09 — CONTRIBUTING local setup and task list
+- Wave: **Wave 1**
 - Promise / Source: `CONTRIBUTING.md:32-59`; `moon.yml:43-123`. Cost: minutes.
 - Commands: `mise x -- moon run root:check` and `mise x -- moon query tasks`
 - Expected: `root:check` exits 0 with exactly the six dependencies claimed —
@@ -2288,6 +2504,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-10 — Tutorial walkthrough, literal, top to bottom
+- Wave: **Wave 2**
 - Promise / Source: `docs/docs/tutorials/first-seeded-iso.md`. Cost: expensive: ~20–45 min, ~10 GB.
 - Commands:
   ```console
@@ -2327,6 +2544,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-11 — How-to: SOPS encryption, literal walkthrough
+- Wave: **Wave 1** — optional step 5 (`build -f config.enc.yaml`) deferred to Wave 2 track A
 - Promise / Source: `docs/docs/how-to/sops-encryption.md`. Cost: minutes.
 - Commands: follow the guide's steps 1–4 and its Verification section; the
   equivalent commands are CFG-13..CFG-17 with the guide's own config.
@@ -2341,6 +2559,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-12 — How-to: build offline media, literal walkthrough
+- Wave: **Wave 2**
 - Promise / Source: `docs/docs/how-to/build-offline-media.md`. Cost: expensive (reuse MED-07/MED-11 artifacts).
 - Commands: follow the guide verbatim, substituting `shasum -a 256` for
   `sha256sum` (**F-DOC-2**).
@@ -2353,6 +2572,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-13 — How-to: run in CI, literal walkthrough
+- Wave: **Wave 1** — the `build` snippets and the container run (SUP-10) deferred to Wave 2
 - Promise / Source: `docs/docs/how-to/run-in-ci.md`. Cost: cheap (reuse artifacts for the build steps).
 - Commands: run every snippet in §§2–6 against `./bin/incusos-builder` and, for
   §5, against the container image (SUP-10).
@@ -2366,6 +2586,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-14 — How-to: use a local mirror, literal walkthrough
+- Wave: **Wave 1** for the four documented failure modes; **Wave 2 track A** for the populated-mirror build (needs ART-12)
 - Promise / Source: `docs/docs/how-to/use-local-mirror.md`. Cost: minutes (negatives) / expensive (populated mirror — reuse ART-12).
 - Expected: the two documented usage errors reproduce verbatim at exit 2; a
   regular file as `--server` is also exit 2; an empty mirror directory fails at
@@ -2375,6 +2596,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-15 — How-to: recover an interrupted `--force` build
+- Wave: **Wave 2**
 - Promise / Source: `docs/docs/how-to/recover-interrupted-build.md`. Cost: minutes if ART-18/MED-07 artifacts are reused.
 - Commands: follow the guide's inventory → classify → restore → verify sequence,
   substituting `shasum -a 256` (**F-DOC-2**), against a `SIGKILL`-ed build.
@@ -2388,6 +2610,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 - Pass/Fail: [ ]
 
 #### DOC-16 — How-to: verify boot acceptance, read-through (no boot)
+- Wave: **Wave 1**
 - Promise / Source: `docs/docs/how-to/verify-boot-acceptance.md`. Cost: cheap.
 - Commands:
   ```console
@@ -2407,6 +2630,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 
 #### DOC-17 — Pre-audit regression sweep (confirm the §5 findings)
 - Promise: the findings below are real and reproducible at this commit.
+- Wave: **Wave 1**
 - Cost: cheap.
 - Commands:
   ```console
@@ -2431,6 +2655,7 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 
 #### DOC-18 — Explanation-page claims: routing, not duplication
 - Promise: no explanation claim is silently dropped.
+- Wave: **Wave 1**
 - Cost: cheap; no assertions here — file each claim under its owning prefix:
   - `--server` classification, `http://` rejection, redirect-downgrade refusal — `trust-model.md:42-58` → CLI-05, §6
   - filename allowlist, 64-hex digests, 8 GiB size bound, admission, cache re-hash — `trust-model.md:70-96` → ART-13, ART-14
@@ -2454,6 +2679,7 @@ release-blocking decision, not a formality.
 
 #### BOOT-01 — Decide the execution venue
 - Promise / Source: `verify-boot-acceptance.md:8,20-30`; `docs/notes/phase-5-boot-probe.md:1-6,58-63`.
+- Wave: **Wave 1**
 - Cost: cheap (the decision); the chosen path is expensive.
 - Commands:
   ```console
@@ -2477,6 +2703,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-02 — Build the release-gate media
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:31-63`. Cost: expensive: ~25–60 min, ~15 GB. The build host may be macOS.
 - Commands:
   ```console
@@ -2504,6 +2731,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-03 — Map the raw files to block devices and record hashes
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:65-103`. Cost: minutes; ~7 GB on the Linux host.
 - Commands: run the guide's script at `:72-103` verbatim.
 - Expected: the `uname -m = x86_64` and `test -b /dev/kvm` assertions pass; two
@@ -2514,6 +2742,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-04 — Create the profile, install target, and VM
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:105-141`. Cost: minutes.
 - Commands: run `:109-132` verbatim.
 - Expected: `incus config show "$VM" --expanded` shows `security.secureboot=false`,
@@ -2525,6 +2754,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-05 — Observation 1: record the seed, then install
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:143-171`. Cost: expensive: ~20–60 min interactive.
 - Commands: run `:148-167` verbatim — locate `seed-data` via
   `lsblk -nrpo NAME,PARTLABEL`, capture `seed-partition.before.sha256` and
@@ -2538,6 +2768,7 @@ release-blocking decision, not a formality.
 
 #### BOOT-06 — Observation 2: prove the installer seed was consumed **(never yet observed)**
 - Promise / Source: `verify-boot-acceptance.md:173-195`.
+- Wave: **Wave 2**
 - Cost: minutes, after BOOT-05.
 - Commands: run `:175-189` verbatim — stop the VM, remove `install-media` and
   `install-target`, `blockdev --flushbufs`, re-read the seed partition into
@@ -2554,6 +2785,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-07 — Observation 3: copy the installed volume and detect `RESCUE_DATA`
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:197-234`. Cost: expensive: ~15–40 min.
 - Commands: run `:199-211` then `:220-229` verbatim.
 - Expected: `rescue-block-layout.txt` shows a FAT or ISO data partition whose
@@ -2564,6 +2796,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-08 — Observation 4: recovery payload accepted and applied **(never yet observed)**
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:236-246`. Cost: minutes after BOOT-07.
 - Commands: observe `recovery-serial.log` and the VGA console; then query the
   booted system for the post-recovery OS or application version.
@@ -2578,6 +2811,7 @@ release-blocking decision, not a formality.
 - Pass/Fail: [ ]
 
 #### BOOT-09 — Archive evidence, then clean up
+- Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:248-277`. Cost: minutes.
 - Expected: the release record holds all ten artifacts listed at `:252-259`
   (`incus-version.txt`, `install-config.yaml`, `recovery-config.yaml`,
@@ -2591,6 +2825,7 @@ release-blocking decision, not a formality.
 
 #### BOOT-10 — Record the release verdict honestly
 - Promise / Source: `phase-5-boot-probe.md`; `trust-model.md:36-40`; `first-seeded-iso.md:160-170`.
+- Wave: **Wave 2**
 - Cost: cheap; this is a written record attached to the release.
 - Expected: the record states, in these terms:
   1. Which of BOOT-05..BOOT-08 were **observed**, each with the evidence filename.
@@ -2696,29 +2931,47 @@ remains.
 
 ### Release blockers — all must be green
 
-1. **PRE-01..PRE-07** pass, including `moon run root:check` and
-   `INCUSOS_BUILDER_E2E=1 moon run root:e2e`.
+Each blocker names the wave that produces it, so a wave can be signed off on its
+own. Waves 1 and 2 may complete in either order; both must be green before a tag.
+
+**From Wave 1**
+
+1. **PRE-01..PRE-06 and PRE-07-W1** pass, including `moon run root:check`.
 2. **Exit taxonomy reachable through the real CLI:** CLI-03..CLI-09 (codes 2–6)
    and CLI-11 (envelope shape) pass.
-3. **Artifact correctness under third-party tools:** ART-05, ART-06, ART-08,
+3. **F-REPO-1 is fixed** (SUP-16): private vulnerability reporting is enabled, or
+   `SECURITY.md` is rewritten to give a channel that works. Shipping a security
+   policy with a dead reporting link is not acceptable.
+4. **Documentation builds and its nav is complete:** DOC-06 and DOC-08 pass.
+5. **BOOT-01 is decided and recorded.**
+
+**From Wave 2, track A**
+
+6. **PRE-07-W2** passes, including `INCUSOS_BUILDER_E2E=1 moon run root:e2e`.
+7. **Artifact correctness under third-party tools:** ART-05, ART-06, ART-08,
    ART-09 pass — the seed tar is at byte 2,148,532,224 with the eleven expected
    entries at mode 0600, and everything outside the tar is byte-identical to the
    fetched image.
-4. **Integrity gates hold:** ART-13 and ART-14 pass — tampered bytes and hostile
+8. **Integrity gates hold:** ART-13 and ART-14 pass — tampered bytes and hostile
    metadata are refused with the documented wording and leave no cache residue.
-5. **Offline media is structurally correct:** MED-07 through MED-13 pass on both
+   (ART-14 is Wave 1; ART-13 is Wave 2.)
+9. **Offline media is structurally correct:** MED-07 through MED-13 pass on both
    raw and ISO, with byte-exact payload read-back.
-6. **The image is what it claims:** SUP-03, SUP-04, SUP-05, SUP-06 pass —
-   signed apk, correct stamping, nonroot 65532, contractual entrypoint.
-7. **The release rehearsal is green:** SUP-12 passes on the tested commit.
-8. **Documentation builds and its central paths execute:** DOC-06, DOC-08,
-   DOC-10 pass.
-9. **F-REPO-1 is fixed:** private vulnerability reporting is enabled, or
-   `SECURITY.md` is rewritten to give a channel that works. Shipping a security
-   policy with a dead reporting link is not acceptable.
-10. **BOOT-01 is decided and recorded**, and **BOOT-10** is written into the
-    release record.
-11. **Post-tag, before publishing the draft:** SUP-19, SUP-20, SUP-21, SUP-22
+10. **The tutorial executes as written:** DOC-10 passes.
+
+**From Wave 2, track B**
+
+11. **The image is what it claims:** SUP-03, SUP-04, SUP-05, SUP-06 pass —
+    signed apk, correct stamping, nonroot 65532, contractual entrypoint.
+12. **The release rehearsal is green:** SUP-12 passes on the tested commit.
+
+**From Wave 2, track C**
+
+13. **BOOT-10** is written into the release record, whatever the verdict.
+
+**From Wave P**
+
+14. **Post-tag, before publishing the draft:** SUP-19, SUP-20, SUP-21, SUP-22
     all pass. If any fails, delete/unpublish and fix — the consumer verification
     commands in the release summary must actually work.
 
@@ -2759,9 +3012,11 @@ recorded in §8:
 ## 8. Results log
 
 Fill in one row per case. `Result` ∈ {pass, fail, skipped, N/A}. `Evidence` is a
-path, a run URL, a digest, or a transcript filename — not a description.
+path, a run URL, a digest, or a transcript filename — not a description. The two
+waves are logged separately so a Wave 1 sign-off stands on its own even if Wave 2
+runs days later.
 
-### Preflight
+### Shared preflight
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
@@ -2771,12 +3026,12 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | PRE-04 |  |  |  |
 | PRE-05 |  |  |  |
 | PRE-06 |  |  |  |
-| PRE-07 |  |  |  |
 
-### CLI contract
+### Wave 1 — fast lane
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
+| PRE-07-W1 |  |  |  |
 | CLI-01 |  |  |  |
 | CLI-02 |  |  |  |
 | CLI-03 |  |  |  |
@@ -2797,11 +3052,6 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | CLI-18 |  |  |  |
 | CLI-19 |  |  |  |
 | CLI-20 |  |  |  |
-
-### Seed config and SOPS
-
-| Case | Result | Evidence | Notes |
-|------|--------|----------|-------|
 | CFG-01 |  |  |  |
 | CFG-02 |  |  |  |
 | CFG-03 |  |  |  |
@@ -2821,15 +3071,47 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | CFG-17 |  |  |  |
 | CFG-18 |  |  |  |
 | CFG-19 |  |  |  |
-
-### Live server, cache, artifacts
-
-| Case | Result | Evidence | Notes |
-|------|--------|----------|-------|
 | ART-01 |  |  |  |
 | ART-02 |  |  |  |
 | ART-03 |  |  |  |
 | ART-04 |  |  |  |
+| ART-14 |  |  |  |
+| ART-15 |  |  |  |
+| ART-16 |  |  |  |
+| MED-01 |  |  |  |
+| MED-02 |  |  |  |
+| MED-03 |  |  |  |
+| MED-04 |  |  |  |
+| MED-05 |  |  |  |
+| MED-06 |  |  |  |
+| SUP-01 |  |  |  |
+| SUP-02 |  |  |  |
+| SUP-11 |  |  |  |
+| SUP-13 |  |  |  |
+| SUP-14 |  |  |  |
+| SUP-15 |  |  |  |
+| SUP-16 |  |  |  |
+| SUP-17 |  |  |  |
+| SUP-18 |  |  |  |
+| DOC-02 |  |  |  |
+| DOC-03 |  |  |  |
+| DOC-05 |  |  |  |
+| DOC-06 |  |  |  |
+| DOC-07 |  |  |  |
+| DOC-08 |  |  |  |
+| DOC-09 |  |  |  |
+| DOC-11 |  |  |  |
+| DOC-13 |  |  |  |
+| DOC-16 |  |  |  |
+| DOC-17 |  |  |  |
+| DOC-18 |  |  |  |
+| BOOT-01 |  |  |  |
+
+### Wave 2 — track A (live build chain, media, doc walkthroughs)
+
+| Case | Result | Evidence | Notes |
+|------|--------|----------|-------|
+| PRE-07-W2 |  |  |  |
 | ART-05 |  |  |  |
 | ART-06 |  |  |  |
 | ART-07 |  |  |  |
@@ -2839,25 +3121,11 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | ART-11 |  |  |  |
 | ART-12 |  |  |  |
 | ART-13 |  |  |  |
-| ART-14 |  |  |  |
-| ART-15 |  |  |  |
-| ART-16 |  |  |  |
 | ART-17 |  |  |  |
 | ART-18 |  |  |  |
 | ART-19 |  |  |  |
 | ART-20 |  |  |  |
 | ART-21 |  |  |  |
-
-### Rescue media
-
-| Case | Result | Evidence | Notes |
-|------|--------|----------|-------|
-| MED-01 |  |  |  |
-| MED-02 |  |  |  |
-| MED-03 |  |  |  |
-| MED-04 |  |  |  |
-| MED-05 |  |  |  |
-| MED-06 |  |  |  |
 | MED-07 |  |  |  |
 | MED-08 |  |  |  |
 | MED-09 |  |  |  |
@@ -2869,13 +3137,17 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | MED-15 |  |  |  |
 | MED-16 |  |  |  |
 | MED-17 |  |  |  |
+| DOC-01 |  |  |  |
+| DOC-04 |  |  |  |
+| DOC-10 |  |  |  |
+| DOC-12 |  |  |  |
+| DOC-14 |  |  |  |
+| DOC-15 |  |  |  |
 
-### Supply chain
+### Wave 2 — track B (container image, release rehearsal)
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| SUP-01 |  |  |  |
-| SUP-02 |  |  |  |
 | SUP-03 |  |  |  |
 | SUP-04 |  |  |  |
 | SUP-05 |  |  |  |
@@ -2884,48 +3156,12 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | SUP-08 |  |  |  |
 | SUP-09 |  |  |  |
 | SUP-10 |  |  |  |
-| SUP-11 |  |  |  |
 | SUP-12 |  |  |  |
-| SUP-13 |  |  |  |
-| SUP-14 |  |  |  |
-| SUP-15 |  |  |  |
-| SUP-16 |  |  |  |
-| SUP-17 |  |  |  |
-| SUP-18 |  |  |  |
-| SUP-19 |  |  |  |
-| SUP-20 |  |  |  |
-| SUP-21 |  |  |  |
-| SUP-22 |  |  |  |
-| SUP-23 |  |  |  |
 
-### Documentation
+### Wave 2 — track C (boot acceptance, Linux host)
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| DOC-01 |  |  |  |
-| DOC-02 |  |  |  |
-| DOC-03 |  |  |  |
-| DOC-04 |  |  |  |
-| DOC-05 |  |  |  |
-| DOC-06 |  |  |  |
-| DOC-07 |  |  |  |
-| DOC-08 |  |  |  |
-| DOC-09 |  |  |  |
-| DOC-10 |  |  |  |
-| DOC-11 |  |  |  |
-| DOC-12 |  |  |  |
-| DOC-13 |  |  |  |
-| DOC-14 |  |  |  |
-| DOC-15 |  |  |  |
-| DOC-16 |  |  |  |
-| DOC-17 |  |  |  |
-| DOC-18 |  |  |  |
-
-### Boot acceptance
-
-| Case | Result | Evidence | Notes |
-|------|--------|----------|-------|
-| BOOT-01 |  |  |  |
 | BOOT-02 |  |  |  |
 | BOOT-03 |  |  |  |
 | BOOT-04 |  |  |  |
@@ -2935,6 +3171,16 @@ path, a run URL, a digest, or a transcript filename — not a description.
 | BOOT-08 |  |  |  |
 | BOOT-09 |  |  |  |
 | BOOT-10 |  |  |  |
+
+### Wave P — post-tag
+
+| Case | Result | Evidence | Notes |
+|------|--------|----------|-------|
+| SUP-19 |  |  |  |
+| SUP-20 |  |  |  |
+| SUP-21 |  |  |  |
+| SUP-22 |  |  |  |
+| SUP-23 |  |  |  |
 
 ### Sign-off
 

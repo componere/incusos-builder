@@ -57,3 +57,27 @@ Findings the surveys produced while grounding the plan (all reproducible at
   0.1.2, not 1.0.0, and its changelog ends with a stray `## Changelog` heading.
 
 Next: present the plan to the developer for review.
+
+## 2026-08-16 13:10 — Split the plan into detached waves
+
+Developer asked for everything over five minutes to move into a secondary wave
+detached from the rest. Applied to `.journal/005/FUNCTIONAL_TEST_PLAN.md`:
+
+- Wave 1 (75 cases incl. the cheap half of DOC-14): every case ≤5 min. Runs from
+  a fresh checkout, <500 MB disk, no Docker, no image download.
+- Wave 2 (48 cases + the DOC-14 mirror half): every case >5 min plus every cheap
+  case that can only run against a Wave 2 artifact. Three tracks — A live build
+  chain/media/doc walkthroughs, B container image + release rehearsal, C boot
+  acceptance on a Linux host.
+- Wave P (5 cases): post-tag signature/attestation/SBOM/checksum verification.
+- Detachment: PRE-07 split into PRE-07-W1 (Wave 1 scaffold) and PRE-07-W2
+  (Wave 2 bootstrap: own `$WORK2`, own cache, `root:e2e`, and an early dispatch
+  of the GitHub rehearsal). `root:e2e` moved out of the shared preflight because
+  it downloads multi-GB assets. Neither wave reads the other's artifacts.
+- Every case now carries a `- Wave:` field; four split cases (CLI-20, DOC-11,
+  DOC-13, DOC-14) name which half belongs where.
+- §4.0 added: wave membership, per-track dependency ordering (`→` hard dep,
+  `‖` concurrent), and a table of the fifteen >5-minute cases with time/disk.
+- §7 exit criteria regrouped by originating wave so a wave can be signed off
+  independently; §8 results log regrouped into shared preflight / Wave 1 /
+  Wave 2 tracks A,B,C / Wave P.
