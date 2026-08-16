@@ -194,3 +194,36 @@ MED-07 5.3 s vs 10-20 min, DOC-04 ~4 min vs 20-45 min).
 
 Wave 2 is now complete except track C. Remaining: BOOT-02..BOOT-10, still
 blocked on an x86_64 Linux Incus host with /dev/kvm.
+
+## 2026-08-16 16:20 — Remediation plan produced
+
+Spawned a `planner` agent (the type's earlier rate limit had cleared) to
+disposition every campaign finding. Output at `.journal/005/REMEDIATION_PLAN.md`.
+
+Coverage verified mechanically: 93/93 finding IDs across the four campaign
+documents appear in its traceability table, no gaps, no invented IDs. It also
+reconciled five aliases (N-CLI-3 = D-4; N-MEDIA-1 canonical for N-MED-1 and
+N-ART-G; N-MEDIA-2 for N-MED-3; N-MEDIA-3 for N-MED-2), leaving 88 distinct
+findings.
+
+Dispositions: 61 fix-before-v1, 3 fix-after-v1, 11 document, 4 accept, 14
+not-a-defect. Nine blockers B1..B9, seven workstreams (product code, CLI/UX,
+docs, repository, CI, dev workflow, test plan), each item sized with files and
+verification case IDs.
+
+Its headline call: the single most important action is applying the already
+reviewed `.github/repository-settings.toml` — it closes the dead security
+reporting channel and installs the tag/branch rules the release design assumes.
+Most important code fix is N-AMIR-1.
+
+It disagreed with §7 usefully: adds F-CLI-4/5/6 as blockers (automation
+contract, not cosmetics), reopens the tutorial and rehearsal criteria, and
+re-classifies SUP-19..22 as a publication gate rather than a tag gate.
+
+I recorded three dissents in the file: 61 fix-before-v1 overstates the gate (the
+18 D-* items are test-plan maintenance, not product blockers); PC-4's
+project-owned accessible prompt reader is a permanent maintenance obligation and
+an upstream Huh fix should be checked first; and REPO-1 mutates live GitHub
+state so it needs human approval at execution time, not just a plan entry.
+
+Nothing was fixed or applied. Awaiting developer decisions.
