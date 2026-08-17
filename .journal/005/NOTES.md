@@ -487,3 +487,67 @@ free.
 
 Not yet done: the gate itself has not been run. Everything now needed is the
 artifact build plus one attended session.
+
+## 2026-08-16 21:35 — TRACK C RAN, AND SEED CONSUMPTION WAS OBSERVED
+
+PR #21 merged as 64cf0ee. Built the x86_64 offline pair locally in 35 s
+(installer 3,432,026,112 B sha 2f6b26c0..., rescue 329,374,720 B sha 6ed42a34...,
+seed_bytes 4096; seed tar at byte 2,148,532,224 contains applications.yaml,
+install.yaml, update.yaml).
+
+Then decided against the attended SSH route. `sem debug job` allocates an
+ephemeral agent that dies with the SSH session — a three-hour run with an
+unrecoverable failure mode. Wrote the gate as an unattended pipeline instead
+(`.semaphore/trackc-gate.yml`, 963 lines, 125 commands) that builds artifacts on
+the box, runs the corrected oracle, and archives console evidence. A captured
+console log is better evidence than a human watching, and the assertion strings
+are all traceable to pinned upstream source.
+
+First run failed in 30 s: the pipeline exported `MISE_PIN`, which collides with
+mise's own reserved boolean `Settings::pin`. Renamed to `GATE_MISE_VERSION`.
+
+Second run: pipeline 4c5cc805, job a8b16331 — **PASSED through stage 9/9** in
+about 15 minutes.
+
+### The result that matters
+
+**O2, seed consumption, is OBSERVED — the first time anywhere in this project.**
+
+    source seed  /dev/loop0p2  8537e356...  entries: applications.yaml install.yaml update.yaml
+    target seed  /dev/sdb2     84a75f5c...  entries: applications.yaml update.yaml
+    source after install:      8537e356...  (unchanged, exactly as predicted)
+
+install.yaml is present in the source and absent from the target; the digests
+differ; applications.yaml survives on the target as a positive control proving
+the partition is intact rather than blank. That is precisely the corrected
+oracle, and it also confirms the F-DOC-11 analysis: the source is untouched, so
+the old source-side assertion could never have passed.
+
+### The other three observations
+
+- O1 install completion: `IncusOS was successfully installed` followed by
+  `Please remove the install media to complete the installation`, observed on
+  serial 45 s after start (install.go:388-390).
+- O3 `Recovery partition detected` (recovery.go:50).
+- O4: `Update metadata detected, verifying signature` (recovery.go:180) then
+  `Processing validated update metadata` (recovery.go:212), which is only
+  reachable after util.VerifySMIME succeeds; then `Recovery actions completed`
+  (recovery.go:89) and `System is starting up` (main.go:657). `Recovery failed:`
+  ABSENT.
+
+The pipeline deliberately reports **INCOMPLETE-PENDING-ADJUDICATION**: it marks
+O4 as ACCEPTED-NOT-ADJUDICATED rather than silently claiming a gate pass,
+because the guide forbids inventing a success criterion. A human must read
+gate-result.txt and adjudicate O4 before this is recorded as a formal pass.
+That restraint is correct and I am not overriding it.
+
+Also of note: the Phase 5 probe's negative result is now fully explained. Its
+oracle (target growth) was right in principle; the installer simply never
+reached its write path there, and its console was blind because plain QEMU has
+no org.linuxcontainers.incus virtio port, so the TUI never mirrored to ttyS0.
+
+Cost: about $0.25 of the $15 recurring credit.
+
+Outstanding: adjudicate O4; pull the artifact bundle (the `sem` CLI has no
+`artifact` subcommand — fetch from the job page or use the API); then record
+BOOT-10 and update the release record. `N-MEDIA-3` (ISO label) still untested.
