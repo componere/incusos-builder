@@ -403,3 +403,46 @@ deploy key (repo reports 0 of each). Nothing to clean up.
 
 Pipeline YAML validated offline: parses, correct schema version, correct machine
 type and image, 56 commands, manual-only parameter gate that fails closed.
+
+## 2026-08-16 19:40 — Semaphore preflight PASSED; Track C has a free host
+
+Developer connected GitHub; Semaphore auto-created project
+`incusos-builder-eins` (id e3c87503) bound to the repo via github_app.
+
+First action was defensive: the project shipped with `run_on: [tags, branches,
+draft_pull_requests]` and an EMPTY whitelist, i.e. it would build every branch
+and every draft PR — including master and PR #21, none of which carry
+`.semaphore/semaphore.yml`, producing "pipeline file not found" noise on the
+product repo. Scoped it with `sem apply` to `run_on: [branches]` and
+`whitelist.branches: [chore/semaphore-preflight]` before triggering anything.
+
+Preflight pipeline 9c8bb158, job 6c20e0e3: **state done, result passed.**
+
+Observed on `f1-standard-4` / `ubuntu2404`:
+- arch x86_64; CPU 13th Gen Intel Core i5-13500 (newer than the i5-12500 the
+  machine-types doc advertises); 4 vCPU; 16 GB RAM
+- virt-flag `vmx`; `kvm_intel` and `kvm` modules loaded
+- `/dev/kvm` readable AND writable by the unprivileged `semaphore` user
+- 52 GB free on the working filesystem (need 25)
+- passwordless sudo resolves to root
+- QEMU 8.2.2, swtpm 0.7.3, OVMF at /usr/share/OVMF/OVMF_CODE_4M.fd
+- **real KVM guest booted**: under `-enable-kvm` the guest printed
+  `Hypervisor detected: KVM` and `smpboot: CPU0: 13th Gen Intel Core i5-13500`,
+  then the expected `Kernel panic ... unable to mount root fs` (no rootfs was
+  supplied — that panic is the success condition), qemu exit 0
+- Incus 7.3 client and server installed from Zabbly; daemon activating
+
+That is a genuine nested-KVM host with a software TPM available, for $0 under
+the recurring credit. Track C's blocking constraint is solved.
+
+Remaining gaps before an actual gate run, in order:
+1. `incus admin init` with a `default` pool and `incusbr0` — not yet exercised.
+2. The attended console: `sem debug job --duration 3h` plus port forwarding for
+   noVNC/SPICE. Untested; it is the piece that decides whether the four required
+   observations can actually be watched.
+3. Transfer the ~3.76 GB artifact pair built on the M4.
+4. Disk: 52 GB free is enough only with a sparse/thin target volume. A
+   thick-provisioned 50 GiB Incus volume will not fit alongside the installer.
+   Must use a thin/COW pool (dir or btrfs/zfs sparse) — verify before the run.
+
+Cleanup owed: delete or keep-scoped the Semaphore project when done.
