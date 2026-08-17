@@ -11,7 +11,6 @@ yaml.Dump(..., yaml.WithV2Defaults()) call.
 A pin bump of incus-osd or yaml/v4 that changes dump or tar layout
 explains golden churn.
 
-Residual gap (spike 1.A / ARCHITECTURE §9 T1): these bytes are not
-compared against an upstream-built customizer binary. The oracle is the
-vendored writeSeed source under the same yaml/v4 pin, not a binary
-built from upstream.
+Residual gap: these bytes are not compared against an upstream-built
+customizer binary. The oracle is the vendored writeSeed source under the
+same yaml/v4 pin, not a binary built from upstream.

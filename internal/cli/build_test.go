@@ -132,10 +132,8 @@ func TestSelectImageSourceByServerShape(t *testing.T) {
 }
 
 // TestBuildConfirmSeamHonorsNoInput refuses overwrite without --force.
-//
-// The injected Confirm is the command that actually runs. A positive
-// control with input allowed proves the seam is reached; --no-input
-// must not call it.
+// A positive control with input allowed proves the Confirm seam is
+// reached; --no-input must not call it.
 func TestBuildConfirmSeamHonorsNoInput(t *testing.T) {
 	t.Setenv(envCI, "")
 
@@ -272,7 +270,7 @@ func TestLoadBuildSpecOfflineFixture(t *testing.T) {
 	require.True(t, IsUsage(err))
 }
 
-// TestLoadBuildSpecDotSlashDashReadsStdin pins F-CLI-6: paths that clean to "-" read stdin.
+// TestLoadBuildSpecDotSlashDashReadsStdin treats paths that clean to "-" as stdin.
 func TestLoadBuildSpecDotSlashDashReadsStdin(t *testing.T) {
 	t.Parallel()
 
@@ -284,7 +282,8 @@ func TestLoadBuildSpecDotSlashDashReadsStdin(t *testing.T) {
 	}
 }
 
-// TestBuildHelpMetavarsAndResourcesDescription pins F-CLI-3 and N-CLI-2 help text.
+// TestBuildHelpMetavarsAndResourcesDescription locks help metavars and
+// the rescue-media --resources-output description.
 func TestBuildHelpMetavarsAndResourcesDescription(t *testing.T) {
 	t.Parallel()
 
@@ -316,6 +315,7 @@ func TestReportBuildErrorWritesOneEnvelope(t *testing.T) {
 	assertErrorEnvelope(t, stdout.Bytes(), exitUsage, err.Error())
 }
 
+// assertErrorEnvelope decodes one --json failure document.
 func assertErrorEnvelope(t *testing.T, raw []byte, code int, message string) {
 	t.Helper()
 	var got errorEnvelope
@@ -324,6 +324,7 @@ func assertErrorEnvelope(t *testing.T, raw []byte, code int, message string) {
 	require.Equal(t, message, got.Error.Message)
 }
 
+// gzipBytesFixed gzip-compresses p with a deterministic header.
 func gzipBytesFixed(t *testing.T, p []byte) []byte {
 	t.Helper()
 	var buf bytes.Buffer

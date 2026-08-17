@@ -26,7 +26,7 @@ const (
 	retryAttempts        = 3
 	retryBackoffShiftCap = 3
 	retryBase            = 100 * time.Millisecond
-	// indexCap is the ARCHITECTURE §6 LimitReader bound on index.json.
+	// indexCap bounds how many bytes of index.json are read.
 	indexCap int64 = 64 << 20
 )
 
@@ -108,9 +108,10 @@ func (s *HTTPSSource) Index(ctx context.Context) (apiimages.Index, error) {
 
 // Asset validates version/filename/sha256/size, then reuses or downloads
 // the file into the content-addressed cache and returns a VerifiedAsset.
-// Downloads retry the fetch+admit pair (3 attempts, short backoff,
-// ctx-cancellable) so a dropped body is retried; a checksum/size mismatch
-// gets exactly one clean re-download, then fails with the admission wording.
+// Downloads retry the fetch+admit pair (3 attempts, 100ms jittered
+// backoff, ctx-cancellable) so a dropped body is retried; a checksum/size
+// mismatch gets exactly one clean re-download, then fails with the
+// admission wording.
 func (s *HTTPSSource) Asset(
 	ctx context.Context,
 	version string,
@@ -290,13 +291,10 @@ func readCapped(r io.Reader, limit int64, name string) ([]byte, error) {
 
 // decodeJSON JSON-decodes data into v.
 //
-// Unknown fields are ignored on purpose: index.json, update.json, and the
-// update.sjson payload are server-controlled documents. Integrity comes from
-// size caps, content digests, and selected-file binding rather than locking
-// the decoder to the pinned incus-os struct shape — upstream does not
-// strict-decode these either, and DisallowUnknownFields would couple every
-// pin bump to a builder rebuild. Trailing data after the first JSON value
-// is still rejected.
+// Unknown fields are ignored: index.json, update.json, and the
+// update.sjson payload are server-controlled documents. Integrity comes
+// from size caps, content digests, and selected-file binding. Trailing
+// data after the first JSON value is rejected.
 func decodeJSON(data []byte, v any, name string) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	if err := dec.Decode(v); err != nil {

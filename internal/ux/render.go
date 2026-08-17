@@ -9,15 +9,11 @@ import (
 
 const (
 	// summaryHeading is the title line of a [Summary] block.
-	summaryHeading = "summary"
-	// versionsHeaderVersion is the versions-table version column title.
+	summaryHeading        = "summary"
 	versionsHeaderVersion = "Version"
-	// versionsHeaderChannel is the versions-table channel column title.
 	versionsHeaderChannel = "Channel"
-	// versionsHeaderArch is the versions-table architecture column title.
-	versionsHeaderArch = "Architecture"
-	// versionsHeaderType is the versions-table image-type column title.
-	versionsHeaderType = "Type"
+	versionsHeaderArch    = "Architecture"
+	versionsHeaderType    = "Type"
 	// fieldSep separates a summary label from its value, and version cells.
 	fieldSep = "  "
 )
@@ -34,18 +30,16 @@ type SummaryRow struct {
 type VersionRow struct {
 	// Version is the update version name.
 	Version string
-	// Channel is the release channel.
+	// Channel is the release channel, such as stable.
 	Channel string
-	// Architecture is the CPU architecture.
+	// Architecture is the image architecture, such as x86_64.
 	Architecture string
-	// Type is the image type (iso or raw).
+	// Type is the image type, iso or raw.
 	Type string
 }
 
-// Summary writes a label/value block to w. Color follows [ColorMode] through
-// [resolveColor]: never (and auto-off) emit plain text with no ANSI, even when
-// w is a TTY; always (and auto-on) style through [colorWriter] so a capture
-// buffer still receives CSI. Nil w is discarded.
+// Summary writes a label/value block to w. Color follows [ColorMode] as
+// documented on the package. Nil w is discarded.
 func Summary(color ColorMode, w io.Writer, rows []SummaryRow) {
 	if w == nil {
 		return
@@ -57,10 +51,8 @@ func Summary(color ColorMode, w io.Writer, rows []SummaryRow) {
 	writePlainSummary(w, rows)
 }
 
-// VersionsTable writes a versions listing to w for the Phase 4 versions
-// command. Color follows [ColorMode] the same way as [Summary]: never emits
-// plain fmt text with no ANSI; always writes Lip Gloss output through
-// [colorWriter]. Nil w is discarded.
+// VersionsTable writes a versions listing to w. Color follows [ColorMode]
+// as documented on the package. Nil w is discarded.
 func VersionsTable(color ColorMode, w io.Writer, rows []VersionRow) {
 	if w == nil {
 		return

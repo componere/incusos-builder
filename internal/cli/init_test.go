@@ -314,6 +314,7 @@ func TestInitJSONWithDotSlashDashIsUsage(t *testing.T) {
 	testInitJSONStdoutUsage(t, "./-")
 }
 
+// testInitJSONStdoutUsage rejects --json with a stdout -o path (exit 2).
 func testInitJSONStdoutUsage(t *testing.T, output string) {
 	t.Helper()
 	var stdout bytes.Buffer
@@ -373,8 +374,7 @@ func TestNewInitFormDoesNotPanic(t *testing.T) {
 }
 
 // TestRunInitFormHonorsAccessibleEnv drives runInitForm through the
-// project-owned line prompts, including descriptions and the offline
-// application question.
+// project-owned line prompts.
 func TestRunInitFormHonorsAccessibleEnv(t *testing.T) {
 	t.Setenv(envCI, "")
 	t.Setenv(envTerm, "xterm")
@@ -525,8 +525,8 @@ func TestInitAccessibleSIGINTExitsUsage(t *testing.T) {
 	require.ErrorIs(t, statErr, os.ErrNotExist)
 }
 
-// runInitAccessibleSIGINTHelper is the re-exec child: interactive init that
-// honours process SIGINT via [signal.NotifyContext], matching main.go.
+// runInitAccessibleSIGINTHelper is the re-exec child for interactive init.
+// It honours process SIGINT via [signal.NotifyContext], matching main.go.
 func runInitAccessibleSIGINTHelper() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	root := NewRootCommand(Options{
@@ -548,22 +548,27 @@ func runInitAccessibleSIGINTHelper() {
 
 // safeBuffer is an [io.Writer] that can be read while another goroutine writes.
 type safeBuffer struct {
+	// mu serializes reads and writes.
 	mu sync.Mutex
-	b  bytes.Buffer
+	// b holds the captured bytes.
+	b bytes.Buffer
 }
 
+// Write appends p under the mutex.
 func (s *safeBuffer) Write(p []byte) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.Write(p)
 }
 
+// String returns the buffer contents under the mutex.
 func (s *safeBuffer) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.String()
 }
 
+// waitForPrompt reports whether needle appears on stderr before the child exits.
 func waitForPrompt(t *testing.T, stderr *safeBuffer, waitErr <-chan error, needle string) bool {
 	t.Helper()
 	deadline := time.Now().Add(8 * time.Second)

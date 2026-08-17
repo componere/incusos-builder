@@ -17,9 +17,8 @@ import (
 // the same layout as the HTTPS server: <dir>/index.json and
 // <dir>/<version>/<filename>. Assets are verified (size+hash) on admission
 // into the same content-addressed cache used by [HTTPSSource], then served
-// from that immutable entry. Verifying in place would let a later write to
-// the mirror change bytes behind an already-issued handle; the cache keeps
-// the VerifiedAsset immutability contract honest.
+// from that immutable entry so a later write to the mirror cannot change
+// bytes behind an already-issued handle.
 type LocalSource struct {
 	// dir is the mirror root.
 	dir string

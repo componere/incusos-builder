@@ -12,8 +12,8 @@ import (
 )
 
 // writeISO creates a 2048-byte-block ISO at tmpPath, stages files, finalizes
-// Rock Ridge only (gotcha 3: go-diskfs Joliet presents unusable names), and
-// truncates the backing file to the PVD size (gotcha 2).
+// Rock Ridge only (go-diskfs Joliet presents unusable names), and
+// truncates the backing file to the PVD size.
 func writeISO(ctx context.Context, tmpPath string, files []treeFile, buf []byte) error {
 	size := isoBackingSize(files)
 	d, err := diskfs.Create(tmpPath, size, diskfs.SectorSize(isoBlock))
@@ -45,11 +45,8 @@ func writeISO(ctx context.Context, tmpPath string, files []treeFile, buf []byte)
 	if !ok {
 		return outputf("iso filesystem type %T", fs)
 	}
-	// Joliet is deliberately off: go-diskfs v1.9.4 writes a Joliet tree
-	// whose UCS-2 names decode as the ISO-9660 8.3 names. Linux recovery
-	// prefers Rock Ridge, which go-diskfs writes correctly (spike 1.B,
-	// independently confirmed by libarchive). Upstream mkisofs -joliet-long
-	// is Windows cosmetics only.
+	// Finalize writes Rock Ridge only. Joliet is not written: go-diskfs
+	// Joliet UCS-2 names decode as the ISO-9660 8.3 names.
 	if err := iso.Finalize(iso9660.FinalizeOptions{
 		RockRidge:        true,
 		VolumeIdentifier: volumeLabel,
@@ -67,7 +64,7 @@ func writeISO(ctx context.Context, tmpPath string, files []treeFile, buf []byte)
 }
 
 // isoBackingSize is content plus directory slack, aligned to 2048. A
-// non-multiple makes hdiutil report "image not recognized" (gotcha 2).
+// non-multiple makes hdiutil report "image not recognized".
 func isoBackingSize(files []treeFile) int64 {
 	return alignUp(contentBytes(files)+isoSlack, isoBlock)
 }

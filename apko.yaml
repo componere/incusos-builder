@@ -1,5 +1,5 @@
 # Minimal, multi-arch, nonroot runtime image assembled from the locally-built
-# incusos-builder apk (melange.yaml) plus the Wolfi base packages. Mirrors the former
+# incusos-builder apk (melange.yaml) plus the Wolfi base packages. Matches the
 # gcr.io/distroless/static-debian12:nonroot posture (uid 65532, ca-certs, tzdata,
 # no shell). The Wolfi base intentionally floats to the latest (fresh CA
 # bundle/timezones, low CVE surface); the exact resolved versions are recorded in

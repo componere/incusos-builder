@@ -14,6 +14,7 @@ import (
 	"github.com/componere/incusos-builder/internal/errdefs"
 )
 
+// TestExitCode maps sentinels and wraps onto process exit codes.
 func TestExitCode(t *testing.T) {
 	t.Parallel()
 
@@ -69,6 +70,7 @@ func TestExitCode(t *testing.T) {
 	}
 }
 
+// TestExitCodeUnknownFlagThroughRoot maps an unknown root flag to exit 2.
 func TestExitCodeUnknownFlagThroughRoot(t *testing.T) {
 	t.Parallel()
 
@@ -95,6 +97,7 @@ func TestExitCodeCobraUnknownCommand(t *testing.T) {
 	require.Equal(t, exitInternal, exitCode(errors.New("boom")))
 }
 
+// TestWriteErrorJSON writes one --json failure document.
 func TestWriteErrorJSON(t *testing.T) {
 	t.Parallel()
 
@@ -108,6 +111,7 @@ func TestWriteErrorJSON(t *testing.T) {
 	require.Equal(t, err.Error(), got.Error.Message)
 }
 
+// TestWriteErrorJSONGoldens locks the --json failure document for each exit class.
 func TestWriteErrorJSONGoldens(t *testing.T) {
 	t.Parallel()
 
@@ -192,6 +196,7 @@ func TestWriteErrorJSONGoldens(t *testing.T) {
 	}
 }
 
+// wrap2 wraps sentinel two levels deep for exitCode cases.
 func wrap2(sentinel error, inner, outer string) error {
 	return fmt.Errorf("%s: %w", outer, fmt.Errorf("%w: %s", sentinel, inner))
 }

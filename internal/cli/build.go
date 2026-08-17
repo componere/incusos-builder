@@ -34,7 +34,7 @@ const (
 	flagForce = "force"
 	// httpsPrefix is the scheme that selects the HTTPS image source.
 	httpsPrefix = "https://"
-	// httpPrefix is rejected by the HTTPS adapter (ARCHITECTURE §6).
+	// httpPrefix is the plain-http scheme refused as a usage error.
 	httpPrefix = "http://"
 	// gzipSuffix selects post-splice recompression of the stored image.
 	gzipSuffix = ".gz"
@@ -42,7 +42,7 @@ const (
 	confirmPrompt = "overwrite existing output? [y/N] "
 )
 
-// buildEnvelope is the --json success document from ARCHITECTURE §3.
+// buildEnvelope is the --json success document.
 type buildEnvelope struct {
 	// Result is the success body.
 	Result buildResult `json:"result"`
@@ -56,7 +56,7 @@ type buildResult struct {
 	ResourcesOutput string `json:"resources_output,omitempty"`
 	// Type is the image type (iso or raw).
 	Type string `json:"type"`
-	// Architecture is the CPU architecture.
+	// Architecture is x86_64 or aarch64.
 	Architecture string `json:"architecture"`
 	// Version is the resolved update version.
 	Version string `json:"version"`
@@ -273,10 +273,6 @@ func loadBuildSpec(deps buildDeps, path string, stdin io.Reader) (build.Spec, er
 }
 
 // openImageSource selects the HTTPS or local-directory adapter from --server.
-//
-// An https:// URL uses [update.NewHTTPSSource] (plain http is the adapter's
-// rule and surfaces as [errdefs.ErrFetch]). An existing directory uses
-// [update.NewLocalSource]. Anything else is a usage error.
 func openImageSource(
 	deps buildDeps,
 	server, cacheDir string,
@@ -288,11 +284,10 @@ func openImageSource(
 	return selectImageSource(server, cacheDir, reporter)
 }
 
-// selectImageSource is the production --server adapter rule: an https URL
-// selects the HTTPS source, an existing directory selects the local
-// source, and anything else — including plain http, which the adapter
-// would also refuse — is a usage error (exit 2): a bad flag value, not an
-// acquisition failure.
+// selectImageSource is the production --server adapter rule. An https URL
+// selects the HTTPS source and an existing directory selects the local
+// source. Anything else, including plain http, is a usage error (exit 2):
+// a bad flag value, not an acquisition failure.
 func selectImageSource(server, cacheDir string, reporter build.Reporter) (build.ImageSource, error) {
 	lower := strings.ToLower(server)
 	if strings.HasPrefix(lower, httpPrefix) && !strings.HasPrefix(lower, httpsPrefix) {
@@ -339,8 +334,7 @@ func reporterModes(pol policy, toStdout bool) (ux.ColorMode, ux.ProgressMode) {
 	return pol.Color, progress
 }
 
-// logBuildPlan writes resolved version, selected asset, and output paths
-// at debug so --verbose is observably meaningful.
+// logBuildPlan writes resolved version, selected asset, and output paths at debug.
 func logBuildPlan(pol policy, version, asset, image, resources string) {
 	if pol.Log == nil {
 		return
@@ -388,7 +382,7 @@ func promptConfirm(in io.Reader, errW io.Writer) ConfirmFunc {
 
 // wrapStoredWriter returns dest, or a pgzip writer in front of dest when
 // path ends in .gz. The closer must be called so the gzip footer is part of
-// the hashed stored bytes (ARCHITECTURE §3).
+// the hashed stored bytes.
 func wrapStoredWriter(path string, dest io.Writer) (io.Writer, func() error) {
 	if !strings.HasSuffix(path, gzipSuffix) {
 		return dest, func() error { return nil }

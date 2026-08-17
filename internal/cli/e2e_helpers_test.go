@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	// envLiveE2E gates the live T3 suite. Ordinary go test ./... must skip.
+	// envLiveE2E gates the live e2e suite. Ordinary go test ./... must skip.
 	envLiveE2E = "INCUSOS_BUILDER_E2E"
 	// liveDefaultServer is the production --server default.
 	liveDefaultServer = "https://images.linuxcontainers.org/os"
@@ -103,7 +103,7 @@ func requireLiveE2E(t *testing.T) {
 	t.Helper()
 
 	if os.Getenv(envLiveE2E) != "1" {
-		t.Skip("live T3 suite requires INCUSOS_BUILDER_E2E=1")
+		t.Skip("live e2e suite requires INCUSOS_BUILDER_E2E=1")
 	}
 	// Isolate from a developer-exported server. An empty value is explicit
 	// under AllowEmptyEnv and would fail as --server "".

@@ -24,9 +24,7 @@ const (
 	colorSubtle = "#6C7086"
 )
 
-// Palette is the shared Lip Gloss color and style set. Log level styles and
-// future Huh theming (Phase 4) draw from the same values so the CLI stays
-// visually consistent (charmbracelet skill integration map).
+// Palette is the shared Lip Gloss color and style set.
 type Palette struct {
 	// Accent is the primary brand color (steps, info).
 	Accent color.Color

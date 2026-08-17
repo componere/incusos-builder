@@ -7,14 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRawSizesFailureBands checks the two content sizes where the old
-// max(content+1 MiB, 256 MiB) partition left less usable FAT32 data area
-// than the payload: ~255 MiB (512-byte clusters on the 256 MiB floor) and
-// ~550 MiB (4 KiB clusters, FAT ~0.2% of the partition). The check is
-// against go-diskfs v1.9.4 fat32.go:112-150 math, not a multi-hundred-MiB
-// write: go-diskfs FAT writes are not sparse, so each payload byte would
-// be copied and the test would spend seconds allocating hundreds of
-// mebibytes for a formula already pinned to the library.
+// TestRawSizesFailureBands checks that the FAT32 data area still holds the
+// payload at ~255 MiB (512-byte clusters on the 256 MiB floor) and ~550 MiB
+// (4 KiB clusters). It evaluates the go-diskfs FAT32 sizing formula rather
+// than writing multi-hundred-MiB images.
 func TestRawSizesFailureBands(t *testing.T) {
 	t.Parallel()
 
@@ -41,8 +37,8 @@ func TestRawSizesFailureBands(t *testing.T) {
 	}
 }
 
-// fat32UsableBytes is the data-area size go-diskfs v1.9.4 FAT32 Create
-// leaves after reserved sectors and both FAT tables (fat32.go:112-150).
+// fat32UsableBytes is the data-area size go-diskfs FAT32 Create leaves
+// after reserved sectors and both FAT tables.
 func fat32UsableBytes(partSize int64) int64 {
 	const (
 		reservedSectors    = 32

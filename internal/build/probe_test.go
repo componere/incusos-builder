@@ -166,8 +166,8 @@ func TestParseGPTRejectsOverflowingPartitionRange(t *testing.T) {
 // bytes with "gzip: invalid header" rather than unexpected EOF.
 const invalidGzipHeader = "not-gzip!!"
 
-// staticAsset is a VerifiedAsset over fixed gzip bytes. Tests use it only as
-// a fixture handle; production mocks are mockery-generated.
+// staticAsset is a VerifiedAsset over fixed gzip bytes, used as a
+// fixture handle.
 type staticAsset struct {
 	gz []byte
 }

@@ -43,15 +43,15 @@ const (
 	defaultInitApplication = "incus"
 	// initCancelledMsg is the usage error for abort, EOF, and cancellation.
 	initCancelledMsg = "init cancelled"
-	// initTitleType is the Image type prompt title.
+	// initTitleType is shown in both TUI and accessible Image type prompts.
 	initTitleType = "Image type"
-	// initTitleArch is the Architecture prompt title.
+	// initTitleArch is shown in both TUI and accessible Architecture prompts.
 	initTitleArch = "Architecture"
-	// initTitleChannel is the Channel prompt title.
+	// initTitleChannel is shown in both TUI and accessible Channel prompts.
 	initTitleChannel = "Channel"
-	// initTitleOffline is the Offline install prompt title.
+	// initTitleOffline is shown in both TUI and accessible Offline prompts.
 	initTitleOffline = "Offline install?"
-	// initTitleApplication is the conditional Application name prompt title.
+	// initTitleApplication is shown in both TUI and accessible Application prompts.
 	initTitleApplication = "Application name"
 	// initDescChannel is shown in both TUI and accessible Channel prompts.
 	initDescChannel = "Update-server channel; default stable."
@@ -223,10 +223,9 @@ func finalizeInitAnswers(answers initAnswers, channel string) initAnswers {
 // runInitForm prompts for image type, architecture, channel, offline, and
 // (when offline) application name.
 //
-// ACCESSIBLE (any non-empty value) and TERM=dumb select the project-owned
-// line-oriented prompts. Huh v2.0.3's RunWithContext is used for the TUI, but
-// its accessible runner discards the context and treats EOF as a default, so
-// that path is not used.
+// A non-empty ACCESSIBLE or TERM=dumb selects the project-owned
+// line-oriented prompts. Huh's accessible runner is not used: it discards
+// the context and treats EOF as a default.
 func runInitForm(ctx context.Context, opts Options) (initAnswers, error) {
 	if accessibleInitEnabled() {
 		answers, err := runAccessibleInitForm(ctx, opts)
@@ -253,8 +252,8 @@ func accessibleInitEnabled() bool {
 	return os.Getenv(envAccessible) != "" || os.Getenv(envTerm) == termDumb
 }
 
-// wrapInitFormError maps abort, EOF, and context cancellation to the usage
-// error promised by cli.md. Other failures pass through.
+// wrapInitFormError maps abort, EOF, and context cancellation to a usage
+// error. Other failures pass through.
 func wrapInitFormError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
@@ -336,7 +335,7 @@ func initTheme(isDark bool) *huh.Styles {
 }
 
 // runAccessibleInitForm collects answers with line prompts that honour
-// context cancellation and EOF. Huh's accessible runner is not used.
+// context cancellation and EOF.
 func runAccessibleInitForm(ctx context.Context, opts Options) (initAnswers, error) {
 	answers := exampleInitAnswers()
 	prompt := newInitLinePrompt(ctx, opts.In, opts.Err)

@@ -17,19 +17,20 @@ const (
 	validateOK = "configuration valid"
 )
 
-// validateResult is the --json success body for validate.
+// validateResult is the --json success body for validate, written under
+// the "result" key.
 type validateResult struct {
 	// Valid is always true on the success path.
 	Valid bool `json:"valid"`
-	// Type is the image type from the config.
+	// Type is iso or raw.
 	Type build.ImageType `json:"type"`
-	// Architecture is the image architecture from the config.
+	// Architecture is x86_64 or aarch64.
 	Architecture build.Architecture `json:"architecture"`
-	// Offline is the offline flag from the config.
+	// Offline is true when the config also builds RESCUE_DATA resources media.
 	Offline bool `json:"offline"`
 }
 
-// validateCommandName is the validate subcommand's name.
+// validateCommandName is the cobra Use string for validate.
 const validateCommandName = "validate"
 
 // newValidateCommand returns the validate subcommand.

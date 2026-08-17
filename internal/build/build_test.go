@@ -136,8 +136,8 @@ func TestBuildOfflineRescueInput(t *testing.T) {
 	assert.Equal(t, app, got.Assets[0].Asset)
 }
 
-// TestBuildOversizedTar maps a seed tar larger than the partition to the
-// exit-3-family sentinel [errdefs.ErrConfig].
+// TestBuildOversizedTar maps a seed tar larger than the partition to
+// [errdefs.ErrConfig].
 func TestBuildOversizedTar(t *testing.T) {
 	t.Parallel()
 
@@ -318,7 +318,7 @@ func TestBuildRendererSizeMismatch(t *testing.T) {
 }
 
 // TestBuildCancelMidSplice maps a cancelled splice to [errdefs.ErrFetch]
-// so the CLI attributes Ctrl-C during copy as exit 5.
+// so Ctrl-C during copy is process exit code 5.
 func TestBuildCancelMidSplice(t *testing.T) {
 	t.Parallel()
 

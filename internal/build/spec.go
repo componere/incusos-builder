@@ -19,7 +19,7 @@ const (
 // Architecture is an update-server CPU architecture name.
 type Architecture string
 
-// Architectures upstream publishes (main.go:425 enum).
+// Architectures accepted by the update server.
 const (
 	// ArchX8664 is the x86_64 architecture.
 	ArchX8664 Architecture = "x86_64"

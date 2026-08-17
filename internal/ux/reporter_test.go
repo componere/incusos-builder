@@ -260,7 +260,7 @@ func TestNilWriterDoesNotPanic(t *testing.T) {
 	require.NotNil(t, New(ColorModeNever, ProgressModeNever, io.Discard))
 }
 
-// writeSummaryAndVersions exercises both Phase 4 surfaces against w.
+// writeSummaryAndVersions writes a [Summary] and a [VersionsTable] to w.
 func writeSummaryAndVersions(color ColorMode, w io.Writer) {
 	Summary(color, w, []SummaryRow{
 		{Label: "version", Value: "202608102114"},

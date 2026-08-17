@@ -4,14 +4,13 @@
 // [update.LocalSource] reads: index.json at the root, then
 // <version>/<filename> assets plus update.json and update.sjson. The OS
 // image is a streamed gzip of a sparse ~2.10 GiB GPT disk whose seed-data
-// partition starts at byte 2_148_532_224 — the production probe offset in
-// internal/build — and is 100 MiB long. Almost all of the decompressed
-// stream is zeros, so the gzip is a few MiB and generation stays well
-// under five seconds without holding the decompressed image in memory.
+// partition starts at byte 2_148_532_224 and is 100 MiB long. Almost all
+// of the decompressed stream is zeros. The decompressed image is never
+// held in memory.
 //
-// Application assets are tiny arch-prefixed <name>.raw.gz files. The
-// signed metadata is a structurally valid multipart/signed S/MIME
-// document (self-signed throwaway certificate; the update adapter checks
-// MIME structure and Filename+Sha256 binding, not recovery-grade
-// signatures). Generation is deterministic given the same Go version.
+// Application assets are arch-prefixed <name>.raw.gz files. The signed
+// metadata is a multipart/signed S/MIME document with a self-signed
+// throwaway certificate. The update adapter checks MIME structure and the
+// three-way Filename/Sha256/Size binding, not the PKCS#7 signature.
+// Generation is deterministic given the same Go version.
 package testfixture

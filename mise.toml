@@ -1,12 +1,11 @@
-# mise: tool + environment management for incusos-builder.
+# mise: tool and environment management for incusos-builder.
 #
-# mise REPLACES Proto (the former .prototools + .moon/proto/*). The committed
-# mise.lock records per-platform download URLs + checksums; for aqua-backed tools
-# it additionally carries cosign / SLSA / GitHub-attestation verification.
-# `settings.locked` makes `mise install` FAIL CLOSED when a tool lacks a
-# pre-resolved URL for the current platform.
+# The committed mise.lock records per-platform download URLs and checksums; for
+# aqua-backed tools it additionally carries cosign / SLSA / GitHub-attestation
+# verification. `settings.locked` makes `mise install` fail closed when a tool
+# lacks a pre-resolved URL for the current platform.
 #
-# moon stays the task runner / CI gate; it is configured (.moon/toolchains.yml +
+# moon is the task runner and CI gate; it is configured (.moon/toolchains.yml +
 # moon.yml `toolchains.default: system`) to run these tools as `system` binaries
 # that mise puts on PATH.
 #
@@ -19,18 +18,18 @@
 go = "1.26.4"
 python = "3.14.3"
 
-# Go dev-tool CLI. The explicit `aqua:` ref forces the VERIFYING backend (checksum +
+# Go dev-tool CLI. The explicit `aqua:` ref forces the verifying backend (checksum +
 # cosign/SLSA/GitHub-attestation recorded in mise.lock); it must never fall back to
 # a version-only backend (asdf/npm/cargo/pipx), which records no checksum.
 "aqua:golangci/golangci-lint" = "2.12.2"
 "aqua:vektra/mockery"         = "3.7.3"
 
-# Docs (MkDocs) toolchain — moved off moon's former unstable_python/unstable_uv.
+# Docs (MkDocs) toolchain.
 "aqua:astral-sh/uv" = "0.11.0"
 
-# Build / CI / release / supply-chain CLIs. moon itself is now mise-managed (CI
-# installs it via mise instead of moonrepo/setup-toolchain). melange/apko/cosign
-# are consumed by the container build + image signing in the release workflow.
+# Build, CI, release, and supply-chain CLIs. CI installs moon through mise.
+# melange/apko/cosign are used by the container build and image signing in the
+# release workflow.
 "aqua:moonrepo/moon"          = "2.3.5"
 "aqua:chainguard-dev/melange" = "0.54.0"
 "aqua:chainguard-dev/apko"    = "1.2.19"
@@ -43,8 +42,7 @@ GOTOOLCHAIN = "local"
 
 [settings]
 # Read/write mise.lock, and fail closed if a tool lacks a pre-resolved URL for the
-# current platform — replaces Proto's `checksum-url` and extends integrity
-# enforcement to every tool.
+# current platform.
 lockfile = true
 locked = true
 

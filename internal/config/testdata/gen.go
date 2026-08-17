@@ -4,7 +4,8 @@
 //
 //	cd internal/config/testdata && go run gen.go
 //
-// Requires the sops CLI. The throwaway age.key / age.pub pair must already exist.
+// Requires the sops CLI. The throwaway age.key / age.pub pair must already
+// exist.
 package main
 
 import (
@@ -15,6 +16,7 @@ import (
 	"strings"
 )
 
+// main regenerates the encrypted fixtures and exits non-zero on failure.
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "gen: %v\n", err)
@@ -22,6 +24,8 @@ func main() {
 	}
 }
 
+// run encrypts the valid and wrong-key fixtures, then writes the
+// MAC-mismatch copy.
 func run() error {
 	pub, err := os.ReadFile("age.pub")
 	if err != nil {
@@ -40,6 +44,7 @@ func run() error {
 	return tamperMAC("encrypted.yaml", "encrypted-mac-mismatch.yaml")
 }
 
+// encrypt writes a SOPS-encrypted copy of inPath to outPath for recipient.
 func encrypt(recipient, inPath, outPath string) error {
 	cmd := exec.Command("sops", "--age", recipient, "-e", inPath)
 	cmd.Env = isolatedEnv()
@@ -53,6 +58,7 @@ func encrypt(recipient, inPath, outPath string) error {
 	return os.WriteFile(outPath, out, 0o644)
 }
 
+// tamperMAC copies inPath to outPath with one ciphertext byte flipped.
 func tamperMAC(inPath, outPath string) error {
 	src, err := os.ReadFile(inPath)
 	if err != nil {
@@ -72,6 +78,8 @@ func tamperMAC(inPath, outPath string) error {
 	return os.WriteFile(outPath, dst, 0o644)
 }
 
+// isolatedEnv returns the process environment without SOPS key or home
+// overrides.
 func isolatedEnv() []string {
 	drop := map[string]struct{}{
 		"SOPS_AGE_KEY":      {},
@@ -92,6 +100,7 @@ func isolatedEnv() []string {
 	return append(env, "HOME="+home, "GNUPGHOME="+home)
 }
 
+// mustTemp creates a throwaway home directory for isolated SOPS runs.
 func mustTemp() string {
 	dir, err := os.MkdirTemp("", "incusos-builder-sops-gen-*")
 	if err != nil {

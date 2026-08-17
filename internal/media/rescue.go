@@ -20,16 +20,16 @@ import (
 const (
 	// volumeLabel is the ISO/FAT volume label and GPT partlabel recovery looks up.
 	volumeLabel = "RESCUE_DATA"
-	// treePrefix is the required RelPath prefix. Upstream buildImage joins
-	// each UpdateFile.Filename onto update/, including an <arch>/ segment.
+	// treePrefix is the required RelPath prefix, including nested
+	// update/<arch>/ segments.
 	treePrefix = "update/"
 	// updateJSONPath is the unsigned twin recovery does not consult.
 	updateJSONPath = "update/update.json"
 	// updateSJSONPath is the signed document recovery requires.
 	updateSJSONPath = "update/update.sjson"
-	// copyBufSize is the reused staging buffer (P2).
+	// copyBufSize is the reused staging buffer.
 	copyBufSize = 1 << 20
-	// isoBlock is the ISO9660 logical block size (gotcha 1).
+	// isoBlock is the ISO9660 logical block size.
 	isoBlock int64 = 2048
 	// isoSlack covers the 32 KiB system area, volume descriptors, path
 	// tables, directory records, and Rock Ridge entries. Computed from
@@ -51,8 +51,7 @@ const (
 	// fat32Floor is the partition size that yields ≥65525 clusters even
 	// at 4 KiB/cluster (65525×4096 plus FAT/reserved overhead ≈ 256 MiB).
 	// go-diskfs uses 512-byte clusters below 260 MiB, so this is
-	// conservative; the 1.B spike proved a 256 MiB partition. Upstream
-	// lets mkfs.vfat pick FAT16 for small media; we do not.
+	// conservative. Raw media is always FAT32.
 	fat32Floor int64 = 256 << 20
 	// isoPVDSector is the Primary Volume Descriptor's LBA.
 	isoPVDSector int64 = 16
@@ -64,8 +63,7 @@ const (
 	isoPartition = 0
 	// fatPartition is the GPT partition number passed to CreateFilesystem.
 	fatPartition = 1
-	// gptPartIndex is 1-based; 0 makes go-diskfs refuse to write the table
-	// (gotcha 7).
+	// gptPartIndex is 1-based; 0 makes go-diskfs refuse to write the table.
 	gptPartIndex = 1
 )
 
@@ -170,12 +168,11 @@ func validateRelPath(rel string) error {
 }
 
 // replaceFile unlinks tmpPath so diskfs.Create can O_EXCL-create a new inode
-// at the same path. The CLI's exclusive temp is an empty placeholder;
-// go-diskfs refuses an already-existing path (gotcha encoded from spike
-// 1.B's [os.Remove]). Callers must reopen tmpPath by path after WriteRescue
-// returns: a file descriptor opened before the call refers to the unlinked
-// empty placeholder (mode 0600 from [os.CreateTemp]). The replacement is
-// created 0666 masked by umask.
+// at the same path. go-diskfs refuses an already-existing path. Callers
+// must reopen tmpPath by path after WriteRescue returns: a file descriptor
+// opened before the call refers to the unlinked empty placeholder (mode
+// 0600 from [os.CreateTemp]). The replacement is created 0666 masked by
+// umask.
 func replaceFile(tmpPath string) error {
 	err := os.Remove(tmpPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -184,9 +181,8 @@ func replaceFile(tmpPath string) error {
 	return nil
 }
 
-// stage writes files into fs: parents shallow-to-deep (gotcha 8: FAT Mkdir
-// is single-level; ISO MkdirAll would tolerate a deep mkdir but we keep one
-// sequence), then each file. Asset handles are opened exactly once.
+// stage writes files into fs: parents shallow-to-deep because FAT Mkdir
+// is single-level, then each file. Asset handles are opened exactly once.
 func stage(ctx context.Context, fs filesystem.FileSystem, files []treeFile, buf []byte) error {
 	if err := mkdirParents(fs, files); err != nil {
 		return err
@@ -271,8 +267,7 @@ func writeFile(ctx context.Context, fs filesystem.FileSystem, rel string, src io
 }
 
 // streamCopy copies src to dst using buf until EOF. A final short read that
-// delivers the last byte together with [io.EOF] is success. There is no bare
-// [io.Copy] (P2).
+// delivers the last byte together with [io.EOF] is success.
 func streamCopy(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (int64, error) {
 	written := int64(0)
 	for {

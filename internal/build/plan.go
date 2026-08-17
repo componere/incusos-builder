@@ -28,9 +28,10 @@ type Result struct {
 	Version string
 	// Channel is the channel the version was selected from.
 	Channel Channel
-	// Type is the image type that was built.
+	// Type is the image type that was built (iso or raw).
 	Type ImageType
-	// Architecture is the architecture that was built.
+	// Architecture is the CPU architecture that was built (x86_64 or
+	// aarch64).
 	Architecture Architecture
 	// BytesWritten is the number of decompressed bytes written to out
 	// (the spliced OS image).

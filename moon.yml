@@ -42,9 +42,9 @@ workspace:
 tasks:
   # Both gate commands name the owned packages explicitly, so the commands agree
   # with the task inputs. A pathless `golangci-lint fmt` walks the whole working
-  # directory instead of the module — including the gitignored `reference/incus-os`
-  # clone from TECH_NOTES.md and any `.wt/` Worktrunk worktrees — which made the
-  # advertised local gate fail on an otherwise clean tree.
+  # directory instead of the module, including the gitignored `reference/incus-os`
+  # clone and any `.wt/` Worktrunk worktrees, and so fails on an otherwise clean
+  # tree.
   format:
     command: 'golangci-lint fmt --config .golangci.yml --diff ./cmd/... ./internal/...'
     inputs:
@@ -76,8 +76,8 @@ tasks:
       cache: false
 
   # Type-only upstream gate: incus-osd is imported for its API type declarations,
-  # so no package from its `internal/` or `cmd/` trees may reach our build closure
-  # (docs/notes/spike-1d-types.md). Scoped deny assertion, not a package count.
+  # so no package from its `internal/` or `cmd/` trees may reach our build
+  # closure. The assertion is a scoped deny, not a package count.
   check-upstream:
     script: 'python3 -m unittest discover -s .github/scripts -p test_check_upstream_closure.py && python3 .github/scripts/check_upstream_closure.py'
     inputs:
@@ -98,7 +98,7 @@ tasks:
       cache: false
       runInCI: false
 
-  # Live T3 suite against the default HTTPS update server. Opt-in only:
+  # Live end-to-end suite against the default HTTPS update server. Opt-in only:
   # ordinary `moon run root:check` / CI must not download multi-GB images.
   e2e:
     command: 'go test ./internal/cli -run TestLive -count 1'

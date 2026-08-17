@@ -23,10 +23,9 @@ const (
 	rescueTreePrefix = "update/"
 )
 
-// SeedRenderFunc renders a seed tar from Seeds. Production wiring in main
-// assigns seed.Render; tests inject a stub. Declared here so Build takes an
-// explicit collaborator instead of importing internal/seed (Seeds lives in
-// this package, so seed must import build — a cycle if Build imported seed).
+// SeedRenderFunc renders a seed tar from Seeds. Production wiring assigns
+// seed.Render; tests inject a stub. The type lives here so Build does not
+// import internal/seed (Seeds is defined in this package).
 type SeedRenderFunc func(Seeds) ([]byte, int64, error)
 
 // Build resolves a release, probes the image GPT, splices the seed tar, and
@@ -34,7 +33,7 @@ type SeedRenderFunc func(Seeds) ([]byte, int64, error)
 // render is wired to seed.Render in main; out is the caller-owned image
 // stream; resourcesTmp is the caller-owned rescue temp path. There is no
 // filesystem or network I/O in this function beyond the injected ports,
-// renderer, and streams (A1).
+// renderer, and streams.
 func Build(
 	ctx context.Context,
 	spec Spec,
@@ -49,7 +48,7 @@ func Build(
 }
 
 // runBuild is Build with an explicit seed-data start, so tests can inject a
-// compact fixture offset (ARCHITECTURE §9) without mutating package state.
+// compact fixture offset without mutating package state.
 func runBuild(
 	ctx context.Context,
 	spec Spec,
@@ -153,8 +152,9 @@ func runBuild(
 
 // splice opens handle (Open #2), gunzips, copies [0, offset), writes tar,
 // discards len(tar) from the source, then copies the remainder. Read-side
-// errors wrap [errdefs.ErrFetch]; write-side errors wrap [ErrOutput]. There
-// is no bare [io.Copy] across ports (ARCHITECTURE §6, P2).
+// errors wrap [errdefs.ErrFetch]; write-side errors wrap [ErrOutput].
+// Bytes are streamed through a bounded buffer so context cancellation
+// is observed; there is no bare [io.Copy].
 func splice(
 	ctx context.Context,
 	handle VerifiedAsset,

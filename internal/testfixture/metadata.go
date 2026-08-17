@@ -23,7 +23,8 @@ func publishedAt() time.Time {
 }
 
 // writeMetadata writes index.json, <version>/update.json, and
-// <version>/update.sjson. All three share files for three-way binding.
+// <version>/update.sjson. All three share one Files list for the
+// three-way Filename/Sha256/Size binding.
 func writeMetadata(dir string, files []apiimages.UpdateFile) error {
 	update := apiimages.Update{
 		Format:      Format,

@@ -20,7 +20,8 @@ const (
 	flagArchitecture = "architecture"
 )
 
-// versionsResult is the --json success body for versions.
+// versionsResult is the --json success body for versions, written under
+// the "result" key.
 type versionsResult struct {
 	// Versions is the filtered release list. Empty when nothing matches.
 	Versions []versionEntry `json:"versions"`
@@ -28,7 +29,7 @@ type versionsResult struct {
 
 // versionEntry is one release in the versions JSON envelope.
 type versionEntry struct {
-	// Version is the update version name.
+	// Version is the update-server release identifier.
 	Version string `json:"version"`
 	// Channels is the release's channel membership.
 	Channels []string `json:"channels"`
@@ -42,13 +43,13 @@ type versionEntry struct {
 
 // versionImage is one install-image file on a release.
 type versionImage struct {
-	// Architecture is the file's architecture.
+	// Architecture is x86_64 or aarch64.
 	Architecture string
 	// Type is iso or raw.
 	Type string
 }
 
-// versionsCommandName is the versions subcommand's name.
+// versionsCommandName is the cobra Use string for versions.
 const versionsCommandName = "versions"
 
 // newVersionsCommand returns the versions subcommand.
@@ -133,7 +134,8 @@ func filterVersions(index apiimages.Index, channel, arch string) []versionEntry 
 	return entries
 }
 
-// matchingImages returns iso/raw files, optionally restricted to want.
+// matchingImages returns iso/raw files, optionally restricted to
+// architecture want.
 func matchingImages(files []apiimages.UpdateFile, want string) []versionImage {
 	images := make([]versionImage, 0)
 	seen := make(map[versionImage]struct{})
@@ -209,6 +211,7 @@ func imageTypeName(t apiimages.UpdateFileType) (string, bool) {
 }
 
 // hostArchitecture maps [runtime.GOARCH] onto the update-server names.
+// amd64 becomes x86_64, arm64 becomes aarch64; any other value becomes x86_64.
 func hostArchitecture() string {
 	switch runtime.GOARCH {
 	case "amd64":

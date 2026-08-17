@@ -21,10 +21,7 @@ const (
 	updateSJSONName = "update.sjson"
 	stepMetadata    = "metadata"
 	signedType      = "multipart/signed"
-	// metadataCap is the per-document read cap for update.json and
-	// update.sjson. Spike 1.C measured the live largest document at 14_268
-	// bytes (update.sjson); 1 MiB leaves ~70× headroom (~4_800 file entries)
-	// vs the plan's 8 MiB unmeasured placeholder.
+	// metadataCap is the per-document read cap for update.json and update.sjson.
 	metadataCap int64 = 1 << 20
 )
 
@@ -141,7 +138,7 @@ func validateUpdateSJSON(data []byte, version string, selected []apiimages.Updat
 }
 
 // bindSelected requires every selected file to appear in files with an
-// equal Filename and Sha256 (ARCHITECTURE §6 three-way binding).
+// equal Filename and Sha256.
 func bindSelected(files, selected []apiimages.UpdateFile) error {
 	type key struct {
 		name   string

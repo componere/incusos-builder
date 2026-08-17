@@ -1,4 +1,4 @@
-# Provoke each process exit code from ARCHITECTURE §3.
+# Provoke each process exit code.
 # Exit 6: --force into a read-only destination directory so createTemp
 # fails after the overwrite pre-check. No 2.1 GiB splice.
 

@@ -28,8 +28,8 @@ const (
 
 // assetCache is a content-addressed store of verified blobs at
 // <dir>/sha256/<digest>. Handles always open these immutable entries, never
-// the download source, so VerifiedAsset remains honest if a mirror file
-// later changes.
+// the download source, so a later change to a mirror file cannot alter an
+// already-issued handle.
 type assetCache struct {
 	// dir is the cache root.
 	dir string
@@ -210,7 +210,7 @@ func copyHashed(
 	}
 }
 
-// hashFile SHA-256s path and returns the digest and byte count.
+// hashFile returns the SHA-256 digest and byte count of path.
 func hashFile(path string) ([]byte, int64, error) {
 	f, err := os.Open(path)
 	if err != nil {
