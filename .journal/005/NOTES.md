@@ -446,3 +446,44 @@ Remaining gaps before an actual gate run, in order:
    Must use a thin/COW pool (dir or btrfs/zfs sparse) — verify before the run.
 
 Cleanup owed: delete or keep-scoped the Semaphore project when done.
+
+## 2026-08-16 20:15 — Track C venue proven end to end; runbook written
+
+Second preflight block passed (pipeline 5e4dfbe6, job c82f95e5). Semaphore runs
+the exact Track C topology nested: incus admin init on a sparse `dir` pool,
+`incusbr0` at 10.193.173.1/24, a VM with UEFI and a vTPM added before first
+start, `/dev/tpm0` + `/dev/tpmrm0` inside the guest with tpm_version_major=2,
+`/sys/firmware/efi` present, 913 MB actual usage for an 8 GiB volume (sparse
+confirmed), 50 GB free afterwards.
+
+The important discovery is that **no graphical console is needed**. At the
+pinned commit, `internal/tui/tui.go:67-71` adds `/dev/ttyS0` to the TUI's output
+devices when `/dev/virtio-ports/org.linuxcontainers.incus` exists — i.e. when
+running as an Incus VM. So `incus start $VM --console` inside the SSH debug
+session shows the installer. No SPICE, no noVNC, no port forwarding, no X.
+
+Two consequences:
+- The old note "the shipped UKIs configure no console" is refuted for the Incus
+  venue. It was true of the plain QEMU/OVMF spike, which has no virtio port —
+  which very likely explains why the Phase 5.2 probe could not distinguish a
+  failed install from a silent one.
+- This argues for running the gate under Incus specifically rather than a plain
+  QEMU equivalent; the documented checklist and the observable console coincide
+  only in the Incus case.
+
+Caught a defect in the researcher's drafted runbook: its seed-consumption step
+reproduced the OLD source-side oracle (hash SOURCE before/after, assert
+changed), because it read `verify-boot-acceptance.md` from master rather than
+the corrected version in PR #21. Rewrote that step to the target-side oracle
+before committing anything.
+
+Runbook at `.journal/005/TRACK_C_RUNBOOK.md`, with preflight evidence, the
+corrected oracle, and residual risks (ephemeral agent dies with the SSH session;
+no published debug-duration maximum; serial mirroring is Incus-specific and
+should be re-checked on pin bumps).
+
+Cost: ~$2.70 of the $15 recurring credit for a three-hour session. Effectively
+free.
+
+Not yet done: the gate itself has not been run. Everything now needed is the
+artifact build plus one attended session.
