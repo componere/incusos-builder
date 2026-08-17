@@ -1,0 +1,2478 @@
+
+[33m✻ Exporting environment variables[0m
+Exporting AGENT_TIMEOUT_S
+
+Exporting BOOT_TIMEOUT_S
+
+Exporting CI
+
+Exporting CONSOLE_POLL_S
+
+Exporting DISPLAY
+
+Exporting GATE_MISE_VERSION
+
+Exporting GATE_RELEASE
+
+Exporting GATE_ROOT
+
+Exporting GOTOOLCHAIN
+
+Exporting INSPECT_IMAGE
+
+Exporting INSPECT_VM
+
+Exporting INSTALLED_VOL
+
+Exporting INSTALL_TIMEOUT_S
+
+Exporting MIN_FREE_GB
+
+Exporting NETWORK
+
+Exporting PAGER
+
+Exporting POOL
+
+Exporting PROFILE
+
+Exporting RECOVERY_TIMEOUT_S
+
+Exporting REF_INSTALLER_BYTES
+
+Exporting REF_RESCUE_BYTES
+
+Exporting SEMAPHORE
+
+Exporting SEMAPHORE_AGENT_MACHINE_ENVIRONMENT_TYPE
+
+Exporting SEMAPHORE_AGENT_MACHINE_OS_IMAGE
+
+Exporting SEMAPHORE_AGENT_MACHINE_TYPE
+
+Exporting SEMAPHORE_ARTIFACT_TOKEN
+
+Exporting SEMAPHORE_BLOCK_NAME
+
+Exporting SEMAPHORE_CACHE_ARCHIVE_METHOD
+
+Exporting SEMAPHORE_CACHE_BACKEND
+
+Exporting SEMAPHORE_CACHE_PRIVATE_KEY_PATH
+
+Exporting SEMAPHORE_CACHE_URL
+
+Exporting SEMAPHORE_CACHE_USERNAME
+
+Exporting SEMAPHORE_GIT_BRANCH
+
+Exporting SEMAPHORE_GIT_COMMITTER
+
+Exporting SEMAPHORE_GIT_COMMIT_AUTHOR
+
+Exporting SEMAPHORE_GIT_COMMIT_RANGE
+
+Exporting SEMAPHORE_GIT_DIR
+
+Exporting SEMAPHORE_GIT_PROVIDER
+
+Exporting SEMAPHORE_GIT_REF
+
+Exporting SEMAPHORE_GIT_REF_TYPE
+
+Exporting SEMAPHORE_GIT_REPO_NAME
+
+Exporting SEMAPHORE_GIT_REPO_SLUG
+
+Exporting SEMAPHORE_GIT_SHA
+
+Exporting SEMAPHORE_GIT_URL
+
+Exporting SEMAPHORE_GIT_WORKING_BRANCH
+
+Exporting SEMAPHORE_JOB_CREATION_TIME
+
+Exporting SEMAPHORE_JOB_ID
+
+Exporting SEMAPHORE_JOB_NAME
+
+Exporting SEMAPHORE_JOB_TYPE
+
+Exporting SEMAPHORE_OIDC_TOKEN
+
+Exporting SEMAPHORE_ORGANIZATION_ID
+
+Exporting SEMAPHORE_ORGANIZATION_URL
+
+Exporting SEMAPHORE_PIPELINE_0_ARTEFACT_ID
+
+Exporting SEMAPHORE_PIPELINE_ARTEFACT_ID
+
+Exporting SEMAPHORE_PIPELINE_ID
+
+Exporting SEMAPHORE_PIPELINE_NAME
+
+Exporting SEMAPHORE_PIPELINE_PROMOTED_BY
+
+Exporting SEMAPHORE_PIPELINE_PROMOTION
+
+Exporting SEMAPHORE_PIPELINE_RERUN
+
+Exporting SEMAPHORE_PROJECT_ID
+
+Exporting SEMAPHORE_PROJECT_NAME
+
+Exporting SEMAPHORE_TOOLBOX_METRICS_ENABLED
+
+Exporting SEMAPHORE_WORKFLOW_HOOK_SOURCE
+
+Exporting SEMAPHORE_WORKFLOW_ID
+
+Exporting SEMAPHORE_WORKFLOW_NUMBER
+
+Exporting SEMAPHORE_WORKFLOW_RERUN
+
+Exporting SEMAPHORE_WORKFLOW_TRIGGERED_BY
+
+Exporting SEMAPHORE_WORKFLOW_TRIGGERED_BY_API
+
+Exporting SEMAPHORE_WORKFLOW_TRIGGERED_BY_HOOK
+
+Exporting SEMAPHORE_WORKFLOW_TRIGGERED_BY_MANUAL_RUN
+
+Exporting SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE
+
+Exporting SSH_PRIVATE_KEY_PATH
+
+Exporting STARTUP_TIMEOUT_S
+
+Exporting TARGET_VOL
+
+Exporting TERM
+
+Exporting VM
+
+[33mexit status: 0[0m
+
+[33m✻ Injecting Files[0m
+Injecting /home/semaphore/.ssh/semaphore_cache_key with file mode 0600
+
+Injecting /home/semaphore/.ssh/id_rsa with file mode 0600
+
+[33mexit status: 0[0m
+
+[33m✻ Running the pre-job hook configured in the agent[0m
+Running: source /opt/semaphoreci/prejob/pre_job.sh
+
+Warning: The agent is configured to fail the job if the pre-job hook fails.
+
+Installing toolbox in pre-job-hook
+Toolbox download URL: http://packages.semaphoreci.com/toolbox/re
+leases/download/v1.44.0/linux.tar
+Tar file: linux.tar
+
+Attempt 5
+toolbox/
+toolbox/sem-dockerize
+toolbox/cache
+toolbox/when_otp_27
+toolbox/spc
+toolbox
+/sem-semantic-release
+toolbox/sem-service
+toolbox/retry
+toolbox/sem-install
+toolbox/install-pack
+age
+toolbox/when_otp_25
+toolbox/sem-service-check-params
+toolbox/sem-version
+toolbox/ssh-session
+-cli
+toolbox/when_otp_24
+toolbox/toolbox
+toolbox/sem-context
+toolbox/enetwork
+toolbox/system-me
+trics-collector
+toolbox/libcheckout
+toolbox/libchecksum
+toolbox/README.md
+toolbox/Dockerfile.dev
+
+toolbox/when_otp_26
+toolbox/artifact
+toolbox/install-toolbox
+toolbox/test-results
+retry instal
+led
+ssh-session-cli installed
+cache installed
+sem-context installed
+sem-service installed
+sem-d
+ockerize installed
+sem-service-check-params installed
+sem-semantic-release installed
+Installing t
+he artifacts CLI
+artifacts installed
+Installing the test results CLI
+test-results installed
+Inst
+alling the install-package for linux
+install-package installed
+Installing the SPC CLI
+spc install
+ed
+Installing the when CLI
+
+Erlang version: 27
+when installed
+Installing the enetwork CLI
+enetwork installed
+Starting to col
+lect System Metrics in /tmp/system-metrics
+Starting virtual X frame buffer: Xvfb.
+Toolbox installe
+d
+Starting ssh-agent
+Agent pid 3028
+ssh-agent started
+Connecting to cache
+# 167.235.37.191:2992
+0 SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6
+# 167.235.37.191:29920 SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubun
+tu0.6
+# 167.235.37.191:29920 SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6
+# 167.235.37.191:29920 SSH-2.
+0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6
+# 167.235.37.191:29920 SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6
+Identity added: /home/semaphore/.ssh/semaphore_cache_key (root@s2cache21)
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 0/9 workspace"[0m
+GATE stage: 0/9 workspace
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE started-at: $(date -u +%FT%TZ) host=$(hostname) job=${SEMAPHORE_JOB_ID:-unknown}"[0m
+GATE started-at: 2026-08-17T01:13:10Z host=semaphore-vm job=a8b16331-fdc2-43f2-ab16-4f7d555b40d0
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE pipeline-inputs: branch=${SEMAPHORE_GIT_BRANCH:-unknown} sha=${SEMAPHORE_GIT_SHA:-unknown} release-pin=${GATE_RELEASE:-<highest stable>}"[0m
+GATE pipeline-inputs: branch=chore/semaphore-preflight sha=c08cef3097c657044a92afda181e89dd6c5da2f7 release-pin=202608102114
+
+[33mexit status: 0[0m
+
+[33m✻ test "$HOME" = "/home/semaphore" || { echo "GATE FAIL stage0: HOME is ${HOME}, but GATE_ROOT is hardcoded under /home/semaphore so the epilogue can find the evidence. Change the GATE_ROOT env_var to ${HOME}/trackc-gate and re-run."; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ rm -rf "${GATE_ROOT}"; mkdir -p "${GATE_ROOT}/bin" "${GATE_ROOT}/evidence" "${GATE_ROOT}/obs"[0m
+[33mexit status: 0[0m
+
+[33m✻ export EVIDENCE="${GATE_ROOT}/evidence"[0m
+[33mexit status: 0[0m
+
+[33m✻ export SOURCE_RAW="${GATE_ROOT}/seeded-x86_64.raw" SOURCE_WORK="${GATE_ROOT}/seeded-x86_64.gate.raw" RESCUE_RAW="${GATE_ROOT}/rescue-data.raw"[0m
+[33mexit status: 0[0m
+
+[33m✻ for o in O1-install-completion O2-target-seed-cleaned O3-rescue-data-detected O4-recovery-payload; do echo "NOT-REACHED" > "${GATE_ROOT}/obs/${o}"; done[0m
+[33mexit status: 0[0m
+
+[33m✻ ls -1 "${GATE_ROOT}/obs" | sed "s/^/GATE ledger-initialised: /"[0m
+GATE ledger-initialised: O1-install-completion
+GATE ledger-initialised: O2-target-seed-cleaned
+GATE ledger-initialised: O3-rescue-data-detected
+GATE ledger-initialised: O4-recovery-payload
+
+[33mexit status: 0[0m
+
+[33m✻ cat >"${GATE_ROOT}/bin/normalize-console.sh" <<'EOS'
+#!/usr/bin/env bash
+set -u
+LC_ALL=C tr '\r' '\n' \
+  | LC_ALL=C sed -e 's/\x1b\[[0-9;?]*[\x20-\x2f]*[\x40-\x7e]//g' \
+                 -e 's/\x1b[()#*+][0-9A-Za-z]//g' \
+                 -e 's/\x1b[=>78cDEHMZ]//g' \
+                 -e 's/\x1b//g' \
+                 -e 's/[\x80-\xff]/ /g' \
+                 -e 's/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/ /g' \
+                 -e 's/  */ /g' \
+                 -e 's/^ //' \
+                 -e 's/ $//' \
+  | LC_ALL=C sed '/^$/d'
+EOS
+chmod +x "${GATE_ROOT}/bin/normalize-console.sh"
+[0m
+[33mexit status: 0[0m
+
+[33m✻ cat >"${GATE_ROOT}/bin/dump-log.sh" <<'EOS'
+#!/usr/bin/env bash
+# usage: dump-log.sh NORMLOG head|tail LABEL
+set -u
+NORM="$1"; MODE="$2"; LABEL="$3"
+if [ ! -s "$NORM" ]; then
+  echo "GATE ${LABEL}: normalized log is empty"
+  exit 0
+fi
+echo "GATE ---- ${LABEL} (${MODE}, escapes stripped, folded at 200 cols) ----"
+if [ "$MODE" = head ]; then
+  LC_ALL=C head -c 8000 "$NORM" | fold -w 200 | sed -n '1,120p' | sed 's/^/GATE log| /'
+else
+  LC_ALL=C tail -c 16000 "$NORM" | fold -w 200 | tail -n 160 | sed 's/^/GATE log| /'
+fi
+echo "GATE ---- end ${LABEL} ----"
+EOS
+chmod +x "${GATE_ROOT}/bin/dump-log.sh"
+[0m
+[33mexit status: 0[0m
+
+[33m✻ cat >"${GATE_ROOT}/bin/wait-console.sh" <<'EOS'
+#!/usr/bin/env bash
+# usage: wait-console.sh VM RAWLOG NORMLOG BUDGET_S POLL_S MARKER
+set -u
+VM="$1"; RAW="$2"; NORM="$3"; BUDGET="$4"; POLL="$5"; MARKER="$6"
+BIN="$(dirname "$0")"
+OFF="${RAW}.offset"
+: >>"$RAW"
+PREV=0
+if [ -s "$OFF" ]; then PREV="$(cat "$OFF")"; fi
+START="$(date +%s)"
+while :; do
+  SNAP="$(mktemp)"
+  sudo incus console "$VM" --show-log >"$SNAP" 2>/dev/null || true
+  NB="$(wc -c <"$SNAP" | tr -d ' ')"
+  if [ "$NB" -ge "$PREV" ]; then
+    tail -c "+$((PREV + 1))" "$SNAP" >>"$RAW"
+  else
+    echo "GATE OBSERVE console-buffer-wrapped: snapshot shrank ${PREV} -> ${NB} bytes, appending whole snapshot"
+    cat "$SNAP" >>"$RAW"
+  fi
+  PREV="$NB"
+  echo "$PREV" >"$OFF"
+  rm -f "$SNAP"
+  "$BIN/normalize-console.sh" <"$RAW" >"$NORM"
+  ELAPSED="$(( $(date +%s) - START ))"
+  if LC_ALL=C grep -F -q -- "$MARKER" "$NORM"; then
+    echo "GATE console-marker-observed: \"${MARKER}\" after ${ELAPSED}s"
+    exit 0
+  fi
+  if [ "$ELAPSED" -ge "$BUDGET" ]; then
+    echo "GATE console-marker-timeout: \"${MARKER}\" not observed within ${BUDGET}s"
+    exit 1
+  fi
+  if [ "$(( (ELAPSED / POLL) % 8 ))" -eq 0 ]; then
+    echo "GATE console-wait: ${ELAPSED}s/${BUDGET}s vm-state=$(sudo incus list "$VM" -f csv -c s 2>/dev/null | tr -d '\n') raw-bytes=$(wc -c <"$RAW" | tr -d ' ') waiting-for=\"${MARKER}\""
+  fi
+  sleep "$POLL"
+done
+EOS
+chmod +x "${GATE_ROOT}/bin/wait-console.sh"
+[0m
+[33mexit status: 0[0m
+
+[33m✻ cat >"${GATE_ROOT}/bin/snap-console.sh" <<'EOS'
+#!/usr/bin/env bash
+# usage: snap-console.sh VM RAWLOG NORMLOG   (best effort, never fails)
+set -u
+VM="$1"; RAW="$2"; NORM="$3"
+BIN="$(dirname "$0")"
+SNAP="$(mktemp)"
+sudo incus console "$VM" --show-log >"$SNAP" 2>/dev/null || true
+cat "$SNAP" >>"$RAW"
+rm -f "$SNAP"
+"$BIN/normalize-console.sh" <"$RAW" >"$NORM" || true
+echo "GATE console-snapshot: ${RAW} raw-bytes=$(wc -c <"$RAW" | tr -d ' ') normalized-bytes=$(wc -c <"$NORM" | tr -d ' ')"
+EOS
+chmod +x "${GATE_ROOT}/bin/snap-console.sh"
+[0m
+[33mexit status: 0[0m
+
+[33m✻ cat >"${GATE_ROOT}/bin/observe.sh" <<'EOS'
+#!/usr/bin/env bash
+# usage: observe.sh NORMLOG LABEL MARKER
+set -u
+NORM="$1"; LABEL="$2"; MARKER="$3"
+if [ -s "$NORM" ] && LC_ALL=C grep -F -q -- "$MARKER" "$NORM"; then
+  echo "GATE OBSERVE ${LABEL}: PRESENT -- \"${MARKER}\""
+  LC_ALL=C awk -v m="$MARKER" -v label="$LABEL" '
+    index($0, m) > 0 {
+      i = index($0, m)
+      s = i - 60
+      if (s < 1) { s = 1 }
+      printf "GATE OBSERVE %s window: %s\n", label, substr($0, s, length(m) + 120)
+      hits++
+      if (hits >= 3) { exit }
+    }' "$NORM"
+  exit 0
+fi
+echo "GATE OBSERVE ${LABEL}: ABSENT -- \"${MARKER}\""
+exit 1
+EOS
+chmod +x "${GATE_ROOT}/bin/observe.sh"
+[0m
+[33mexit status: 0[0m
+
+[33m✻ ls -l "${GATE_ROOT}/bin" | sed "s/^/GATE helper: /"[0m
+GATE helper: total 20
+GATE helper: -rwxrwxr-x 1 semaphore semaphore  514 Aug 17 01:13 dump-log.sh
+GATE helper: -rwxrwxr-x 1 semaphore semaphore  476 Aug 17 01:13 normalize-console.sh
+GATE helper: -rwxrwxr-x 1 semaphore semaphore  582 Aug 17 01:13 observe.sh
+GATE helper: -rwxrwxr-x 1 semaphore semaphore  443 Aug 17 01:13 snap-console.sh
+GATE helper: -rwxrwxr-x 1 semaphore semaphore 1337 Aug 17 01:13 wait-console.sh
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 1/9 environment"[0m
+GATE stage: 1/9 environment
+
+[33mexit status: 0[0m
+
+[33m✻ ARCH="$(uname -m)"; echo "GATE arch: ${ARCH}"; test "${ARCH}" = "x86_64" || { echo "GATE FAIL stage1: arch ${ARCH} is not x86_64; the Track C artifacts are x86_64 only"; exit 1; }[0m
+GATE arch: x86_64
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE kernel: $(uname -r)"; echo "GATE cpu-model: $(grep -m1 "^model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")"; echo "GATE cpu-count: $(nproc)"; echo "GATE mem-total: $(grep -m1 MemTotal /proc/meminfo | tr -s " ")"[0m
+GATE kernel: 6.8.0-110-generic
+GATE cpu-model: 13th Gen Intel(R) Core(TM) i5-13500
+GATE cpu-count: 4
+GATE mem-total: MemTotal: 16377044 kB
+
+[33mexit status: 0[0m
+
+[33m✻ ls -l /dev/kvm || { echo "GATE FAIL stage1: /dev/kvm does not exist; the machine regressed since preflight and cannot run nested VMs"; exit 1; }[0m
+crw-rw---- 1 root kvm 10, 232 Aug 17 00:06 /dev/kvm
+
+[33mexit status: 0[0m
+
+[33m✻ test -c /dev/kvm || { echo "GATE FAIL stage1: /dev/kvm is not a character device"; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ test -r /dev/kvm -a -w /dev/kvm && echo "GATE kvm-rw: /dev/kvm is read+write for $(id -un)" || { echo "GATE FAIL stage1: /dev/kvm is not read+write for $(id -un)"; exit 1; }[0m
+GATE kvm-rw: /dev/kvm is read+write for semaphore
+
+[33mexit status: 0[0m
+
+[33m✻ df -h / /home /tmp | sed "s/^/GATE df: /"[0m
+GATE df: Filesystem                        Size  Used Avail Use% Mounted on
+GATE df: /dev/mapper/vgsemaphore--vm-root   74G   19G   52G  27% /
+GATE df: /dev/mapper/vgsemaphore--vm-root   74G   19G   52G  27% /
+GATE df: /dev/mapper/vgsemaphore--vm-root   74G   19G   52G  27% /
+
+[33mexit status: 0[0m
+
+[33m✻ AVAIL_GB=$(( $(df -Pk "$HOME" | awk "NR==2 {print \$4}") / 1048576 )); echo "GATE disk-free-gb: ${AVAIL_GB} (required ${MIN_FREE_GB})"; test "${AVAIL_GB}" -ge "${MIN_FREE_GB}" || { echo "GATE FAIL stage1: only ${AVAIL_GB} GB free on ${HOME}; the run needs a 3.4 GB installer, a working copy, a sparse 50 GiB target and a copy of it"; exit 1; }[0m
+GATE disk-free-gb: 51 (required 40)
+
+[33mexit status: 0[0m
+
+[33m✻ sudo -n true 2>/dev/null && echo "GATE sudo: passwordless sudo works, resolves to $(sudo -n id -un)" || { echo "GATE FAIL stage1: passwordless sudo is unavailable; incus, losetup and device nodes need root"; exit 1; }[0m
+GATE sudo: passwordless sudo works, resolves to root
+
+[33mexit status: 0[0m
+
+[33m✻ sudo modprobe loop 2>/dev/null || true; echo "GATE loop-devices-available: $(ls -1 /dev/loop-control 2>/dev/null || echo NONE)"[0m
+GATE loop-devices-available: /dev/loop-control
+
+[33mexit status: 0[0m
+
+[33m✻ python3 -c "import json,shlex,sys; print(sys.version.split()[0])" | sed "s/^/GATE python3: /" || { echo "GATE FAIL stage1: python3 with json+shlex is unavailable; the envelope, pool-driver and VM-topology assertions all parse JSON with it"; exit 1; }[0m
+GATE python3: 3.12.3
+
+[33mexit status: 0[0m
+
+[33m✻ for t in losetup lsblk tar sha256sum fold timeout curl awk; do command -v "$t" >/dev/null || { echo "GATE FAIL stage1: required tool ${t} is not on PATH"; exit 1; }; done; echo "GATE host-tools: losetup lsblk tar sha256sum fold timeout curl awk all present"[0m
+GATE host-tools: losetup lsblk tar sha256sum fold timeout curl awk all present
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 2/9 toolchain and build"[0m
+GATE stage: 2/9 toolchain and build
+
+[33mexit status: 0[0m
+
+[33m✻ checkout[0m
+Performing shallow clone with depth: 50
+Cloning into 'incusos-builder'...
+
+Warning: Permanently added 'github.com' (ED25519) to the list of known hosts.
+
+remote: Enumerating objects: 450, done.[K
+remote: Counting objects:   0% (1/118)[Kremote: Counti
+ng objects:   1% (2/118)[Kremote: Counting objects:   2% (3/118)[Kremote: Counting objects:   3%
+ (4/118)[Kremote: Counting objects:   4% (5/118)[Kremote: Counting objects:   5% (6/118)[Kremo
+te: Counting objects:   6% (8/118)[Kremote: Counting objects:   7% (9/118)[Kremote: Counting obj
+ects:   8% (10/118)[Kremote: Counting objects:   9% (11/118)[Kremote: Counting objects:  10% (12
+/118)[Kremote: Counting objects:  11% (13/118)[Kremote: Counting objects:  12% (15/118)[Kremot
+e: Counting objects:  13% (16/118)[Kremote: Counting objects:  14% (17/118)[Kremote: Counting ob
+jects:  15% (18/118)[Kremote: Counting objects:  16% (19/118)[Kremote: Counting objects:  17% (2
+1/118)[Kremote: Counting objects:  18% (22/118)[Kremote: Counting objects:  19% (23/118)[Kremo
+te: Counting objects:  20% (24/118)[Kremote: Counting objects:  21% (25/118)[Kremote: Counting o
+bjects:  22% (26/118)[Kremote: Counting objects:  23% (28/118)[Kremote: Counting objects:  24% (
+29/118)[Kremote: Counting objects:  25% (30/118)[Kremote: Counting objects:  26% (31/118)[Krem
+ote: Counting objects:  27% (32/118)[Kremote: Counting objects:  28% (34/118)[Kremote: Counting 
+objects:  29% (35/118)[Kremote: Counting objects:  30% (36/118)[Kremote: Counting objects:  31% 
+(37/118)[Kremote: Counting objects:  32% (38/118)[Kremote: Counting objects:  33% (39/118)[Kre
+mote: Counting objects:  34% (41/118)[Kremote: Counting objects:  35% (42/118)[Kremote: Counting
+ objects:  36% (43/118)[Kremote: Counting objects:  37% (44/118)[Kremote: Counting objects:  38%
+ (45/118)[Kremote: Counting objects:  39% (47/118)[Kremote: Counting objects:  40% (48/118)[Kr
+emote: Counting objects:  41% (49/118)[Kremote: Counting objects:  42% (50/118)[Kremote: Countin
+g objects:  43% (51/118)[Kremote: Counting objects:  44% (52/118)[Kremote: Counting objects:  45
+% (54/118)[Kremote: Counting objects:  46% (55/118)[Kremote: Counting objects:  47% (56/118)[K
+remote: Counting objects:  48% (57/118)[Kremote: Counting objects:  49% (58/118)[Kremote: Counti
+ng objects:  50% (59/118)[Kremote: Counting objects:  51% (61/118)[Kremote: Counting objects:  5
+2% (62/118)[Kremote: Counting objects:  53% (63/118)[Kremote: Counting objects:  54% (64/118)[K
+remote: Counting objects:  55% (65/118)[Kremote: Counting objects:  56% (67/118)[Kremote: Count
+ing objects:  57% (68/118)[Kremote: Counting objects:  58% (69/118)[Kremote: Counting objects:  
+59% (70/118)[Kremote: Counting objects:  60% (71/118)[Kremote: Counting objects:  61% (72/118)[
+Kremote: Counting objects:  62% (74/118)[Kremote: Counting objects:  63% (75/118)[Kremote: Coun
+ting objects:  64% (76/118)[Kremote: Counting objects:  65% (77/118)[Kremote: Counting objects: 
+ 66% (78/118)[Kremote: Counting objects:  67% (80/118)[Kremote: Counting objects:  68% (81/118)
+[Kremote: Counting objects:  69% (82/118)[Kremote: Counting objects:  70% (83/118)[Kremote: Cou
+nting objects:  71% (84/118)[Kremote: Counting objects:  72% (85/118)[Kremote: Counting objects:
+  73% (87/118)[Kremote: Counting objects:  74% (88/118)[Kremote: Counting objects:  75% (89/118)
+[Kremote: Counting objects:  76% (90/118)[Kremote: Counting objects:  77% (91/118)[Kremote: Co
+unting objects:  78% (93/118)[Kremote: Counting objects:  79% (94/118)[Kremote: Counting objects
+:  80% (95/118)[Kremote: Counting objects:  81% (96/118)[Kremote: Counting objects:  82% (97/118
+)[Kremote: Counting objects:  83% (98/118)[Kremote: Counting objects:  84% (100/118)[Kremote: 
+Counting objects:  85% (101/118)[Kremote: Counting objects:  86% (102/118)[Kremote: Counting obj
+ects:  87% (103/118)[Kremote: Counting objects:  88% (104/118)[Kremote: Counting objects:  89% (
+106/118)[Kremote: Counting objects:  90% (107/118)[Kremote: Counting objects:  91% (108/118)[K
+remote: Counting objects:  92% (109/118)[Kremote: Counting objects:  93% (110/118)[Kremote: Coun
+ting objects:  94% (111/118)[Kremote: Counting objects:  95% (113/118)[Kremote: Counting objects
+:  96% (114/118)[Kremote: Counting objects:  97% (115/118)[Kremote: Counting objects:  98% (116/
+118)[Kremote: Counting objects:  99% (117/118)[Kremote: Counting objects: 100% (118/118)[Kremo
+te: Counting objects: 100% (118/118), done.[K
+remote: Compressing objects:   1% (1/94)[Kremote: 
+Compressing objects:   2% (2/94)[Kremote: Compressing objects:   3% (3/94)[Kremote: Compressing 
+objects:   4% (4/94)[Kremote: Compressing objects:   5% (5/94)[Kremote: Compressing objects:   6
+% (6/94)[Kremote: Compressing objects:   7% (7/94)[Kremote: Compressing objects:   8% (8/94)[K
+remote: Compressing objects:   9% (9/94)[Kremote: Compressing objects:  10% (10/94)[Kremote: Com
+pressing objects:  11% (11/94)[Kremote: Compressing objects:  12% (12/94)[Kremote: Compressing o
+bjects:  13% (13/94)[Kremote: Compressing objects:  14% (14/94)[Kremote: Compressing objects:  1
+5% (15/94)[Kremote: Compressing objects:  17% (16/94)[Kremote: Compressing objects:  18% (17/94)
+[Kremote: Compressing objects:  19% (18/94)[Kremote: Compressing objects:  20% (19/94)[Kremote
+: Compressing objects:  21% (20/94)[Kremote: Compressing objects:  22% (21/94)[Kremote: Compress
+ing objects:  23% (22/94)[Kremote: Compressing objects:  24% (23/94)[Kremote: Compressing object
+s:  25% (24/94)[Kremote: Compressing objects:  26% (25/94)[Kremote: Compressing objects:  27% (2
+6/94)[Kremote: Compressing objects:  28% (27/94)[Kremote: Compressing objects:  29% (28/94)[Kr
+emote: Compressing objects:  30% (29/94)[Kremote: Compressing objects:  31% (30/94)[Kremote: Com
+pressing objects:  32% (31/94)[Kremote: Compressing objects:  34% (32/94)[Kremote: Compressing o
+bjects:  35% (33/94)[Kremote: Compressing objects:  36% (34/94)[Kremote: Compressing objects:  3
+7% (35/94)[Kremote: Compressing objects:  38% (36/94)[Kremote: Compressing objects:  39% (37/94)
+[Kremote: Compressing objects:  40% (38/94)[Kremote: Compressing objects:  41% (39/94)[Kremote
+: Compressing objects:  42% (40/94)[Kremote: Compressing objects:  43% (41/94)[Kremote: Compress
+ing objects:  44% (42/94)[Kremote: Compressing objects:  45% (43/94)[Kremote: Compressing object
+s:  46% (44/94)[Kremote: Compressing objects:  47% (45/94)[Kremote: Compressing objects:  48% (4
+6/94)[Kremote: Compressing objects:  50% (47/94)[Kremote: Compressing objects:  51% (48/94)[Kr
+emote: Compressing objects:  52% (49/94)[Kremote: Compressing objects:  53% (50/94)[Kremote: Com
+pressing objects:  54% (51/94)[Kremote: Compressing objects:  55% (52/94)[Kremote: Compressing o
+bjects:  56% (53/94)[Kremote: Compressing objects:  57% (54/94)[Kremote: Compressing objects:  5
+8% (55/94)[Kremote: Compressing objects:  59% (56/94)[Kremote: Compressing objects:  60% (57/94)
+[Kremote: Compressing objects:  61% (58/94)[Kremote: Compressing objects:  62% (59/94)[Kremote
+: Compressing objects:  63% (60/94)[Kremote: Compressing objects:  64% (61/94)[Kremote: Compress
+ing objects:  65% (62/94)[Kremote: Compressing objects:  67% (63/94)[Kremote: Compressing object
+s:  68% (64/94)[Kremote: Compressing objects:  69% (65/94)[Kremote: Compressing objects:  70% (6
+6/94)[Kremote: Compressing objects:  71% (67/94)[Kremote: Compressing objects:  72% (68/94)[Kr
+emote: Compressing objects:  73% (69/94)[Kremote: Compressing objects:  74% (70/94)[Kremote: Com
+pressing objects:  75% (71/94)[Kremote: Compressing objects:  76% (72/94)[Kremote: Compressing o
+bjects:  77% (73/94)[Kremote: Compressing objects:  78% (74/94)[Kremote: Compressing objects:  7
+9% (75/94)[Kremote: Compressing objects:  80% (76/94)[Kremote: Compressing objects:  81% (77/94)
+[Kremote: Compressing objects:  82% (78/94)[Kremote: Compressing objects:  84% (79/94)[Kremote
+: Compressing objects:  85% (80/94)[Kremote: Compressing objects:  86% (81/94)[Kremote: Compress
+ing objects:  87% (82/94)[Kremote: Compressing objects:  88% (83/94)[Kremote: Compressing object
+s:  89% (84/94)[Kremote: Compressing objects:  90% (85/94)[Kremote: Compressing objects:  91% (8
+6/94)[Kremote: Compressing objects:  92% (87/94)[Kremote: Compressing objects:  93% (88/94)[Kr
+emote: Compressing objects:  94% (89/94)[Kremote: Compressing objects:  95% (90/94)[Kremote: Com
+pressing objects:  96% (91/94)[Kremote: Compressing objects:  97% (92/94)[Kremote: Compressing o
+bjects:  98% (93/94)[Kremote: Compressing objects: 100% (94/94)[Kremote: Compressing objects: 10
+0% (94/94), done.[K
+Receiving objects:   0% (1/450)Receiving objects:   1% (5/450)Receiving obje
+cts:   2% (9/450)Receiving objects:   3% (14/450)Receiving objects:   4% (18/450)Receiving object
+s:   5% (23/450)Receiving objects:   6% (27/450)Receiving objects:   7% (32/450)Receiving objects
+:   8% (36/450)Receiving objects:   9% (41/450)Receiving objects:  10% (45/450)Receiving objects:
+  11% (50/450)Receiving objects:  12% (54/450)Receiving objects:  13% (59/450)Receiving objects: 
+ 14% (63/450)Receiving objects:  15% (68/450)Receiving objects:  16% (72/450)Receiving objects:  
+17% (77/450)Receiving objects:  18% (81/450)Receiving objects:  19% (86/450)Receiving objects:  2
+0% (90/450)Receiving objects:  21% (95/450)Receiving objects:  22% (99/450)Receiving objects:  23
+% (104/450)Receiving objects:  24% (108/450)Receiving objects:  25% (113/450)Receiving objects:  
+26% (117/450)Receiving objects:  27% (122/450)Receiving objects:  28% (126/450)Receiving objects:
+  29% (131/450)Receiving objects:  30% (135/450)Receiving objects:  31% (140/450)Receiving object
+s:  32% (144/450)Receiving objects:  33% (149/450)Receiving objects:  34% (153/450)Receiving obje
+cts:  35% (158/450)Receiving objects:  36% (162/450)Receiving objects:  37% (167/450)Receiving ob
+jects:  38% (171/450)Receiving objects:  39% (176/450)Receiving objects:  40% (180/450)Receiving 
+objects:  41% (185/450)Receiving objects:  42% (189/450)
+Receiving objects:  43% (194/450), 1.46 MiB | 2.76 MiB/sReceiving objects:  44% (198/450), 1.46 MiB
+ | 2.76 MiB/s
+Receiving objects:  45% (203/450), 1.46 MiB | 2.76 MiB/sReceiving objects:  46% (207/450), 1.46 MiB
+ | 2.76 MiB/s
+Receiving objects:  46% (208/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  47% (212/450), 11.07 
+MiB | 10.28 MiB/sReceiving objects:  48% (216/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  49%
+ (221/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  50% (225/450), 11.07 MiB | 10.28 MiB/sRecei
+ving objects:  51% (230/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  52% (234/450), 11.07 MiB |
+ 10.28 MiB/sReceiving objects:  53% (239/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  54% (243
+/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  55% (248/450), 11.07 MiB | 10.28 MiB/sReceiving 
+objects:  56% (252/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  57% (257/450), 11.07 MiB | 10.2
+8 MiB/sReceiving objects:  58% (261/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  59% (266/450)
+, 11.07 MiB | 10.28 MiB/sReceiving objects:  60% (270/450), 11.07 MiB | 10.28 MiB/sReceiving objec
+ts:  61% (275/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  62% (279/450), 11.07 MiB | 10.28 MiB
+/sReceiving objects:  63% (284/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  64% (288/450), 11.
+07 MiB | 10.28 MiB/sReceiving objects:  65% (293/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  
+66% (297/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  67% (302/450), 11.07 MiB | 10.28 MiB/sRe
+ceiving objects:  68% (306/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  69% (311/450), 11.07 Mi
+B | 10.28 MiB/sReceiving objects:  70% (315/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  71% (
+320/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  72% (324/450), 11.07 MiB | 10.28 MiB/sReceivi
+ng objects:  73% (329/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  74% (333/450), 11.07 MiB | 1
+0.28 MiB/sReceiving objects:  75% (338/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  76% (342/4
+50), 11.07 MiB | 10.28 MiB/sReceiving objects:  77% (347/450), 11.07 MiB | 10.28 MiB/sReceiving ob
+jects:  78% (351/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  79% (356/450), 11.07 MiB | 10.28 
+MiB/sReceiving objects:  80% (360/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  81% (365/450), 
+11.07 MiB | 10.28 MiB/sReceiving objects:  82% (369/450), 11.07 MiB | 10.28 MiB/sReceiving objects
+:  83% (374/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  84% (378/450), 11.07 MiB | 10.28 MiB/s
+Receiving objects:  85% (383/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  86% (387/450), 11.07
+ MiB | 10.28 MiB/sReceiving objects:  87% (392/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  88
+% (396/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  89% (401/450), 11.07 MiB | 10.28 MiB/sRece
+iving objects:  90% (405/450), 11.07 MiB | 10.28 MiB/sremote: Total 450 (delta 31), reused 34 (delt
+a 21), pack-reused 332 (from 1)[K
+Receiving objects:  91% (410/450), 11.07 MiB | 10.28 MiB/sRecei
+ving objects:  92% (414/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  93% (419/450), 11.07 MiB |
+ 10.28 MiB/sReceiving objects:  94% (423/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  95% (428
+/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  96% (432/450), 11.07 MiB | 10.28 MiB/sReceiving 
+objects:  97% (437/450), 11.07 MiB | 10.28 MiB/sReceiving objects:  98% (441/450), 11.07 MiB | 10.2
+8 MiB/sReceiving objects:  99% (446/450), 11.07 MiB | 10.28 MiB/sReceiving objects: 100% (450/450)
+, 11.07 MiB | 10.28 MiB/sReceiving objects: 100% (450/450), 11.47 MiB | 10.54 MiB/s, done.
+Resolvi
+ng deltas:   0% (0/99)Resolving deltas:   1% (1/99)Resolving deltas:   2% (2/99)Resolving deltas:
+   3% (3/99)Resolving deltas:   4% (4/99)Resolving deltas:   5% (5/99)Resolving deltas:   6% (6/9
+9)Resolving deltas:   7% (7/99)Resolving deltas:   8% (8/99)Resolving deltas:   9% (9/99)Resolvi
+ng deltas:  10% (10/99)Resolving deltas:  11% (11/99)Resolving deltas:  12% (12/99)Resolving delt
+as:  14% (14/99)Resolving deltas:  15% (15/99)Resolving deltas:  16% (16/99)Resolving deltas:  17
+% (17/99)Resolving deltas:  18% (18/99)Resolving deltas:  19% (19/99)Resolving deltas:  21% (21/9
+9)Resolving deltas:  22% (22/99)Resolving deltas:  23% (23/99)Resolving deltas:  24% (24/99)Reso
+lving deltas:  25% (25/99)Resolving deltas:  26% (26/99)Resolving deltas:  27% (27/99)Resolving d
+eltas:  29% (29/99)Resolving deltas:  30% (30/99)Resolving deltas:  31% (31/99)Resolving deltas: 
+ 32% (32/99)Resolving deltas:  33% (33/99)Resolving deltas:  34% (34/99)Resolving deltas:  35% (3
+5/99)Resolving deltas:  36% (36/99)Resolving deltas:  37% (37/99)Resolving deltas:  38% (38/99)R
+esolving deltas:  39% (39/99)Resolving deltas:  40% (40/99)Resolving deltas:  41% (41/99)Resolvin
+g deltas:  42% (42/99)Resolving deltas:  43% (43/99)Resolving deltas:  44% (44/99)Resolving delta
+s:  45% (45/99)Resolving deltas:  47% (47/99)Resolving deltas:  49% (49/99)Resolving deltas:  50%
+ (50/99)Resolving deltas:  51% (51/99)Resolving deltas:  52% (52/99)Resolving deltas:  54% (54/99
+)Resolving deltas:  55% (55/99)Resolving deltas:  56% (56/99)Resolving deltas:  57% (57/99)Resol
+ving deltas:  58% (58/99)Resolving deltas:  59% (59/99)Resolving deltas:  60% (60/99)Resolving de
+ltas:  61% (61/99)Resolving deltas:  62% (62/99)Resolving deltas:  63% (63/99)Resolving deltas:  
+64% (64/99)Resolving deltas:  67% (67/99)Resolving deltas:  68% (68/99)Resolving deltas:  69% (69
+/99)Resolving deltas:  70% (70/99)Resolving deltas:  71% (71/99)Resolving deltas:  72% (72/99)Re
+solving deltas:  73% (73/99)Resolving deltas:  75% (75/99)Resolving deltas:  76% (76/99)Resolving
+ deltas:  78% (78/99)Resolving deltas:  79% (79/99)Resolving deltas:  80% (80/99)Resolving deltas
+:  82% (82/99)Resolving deltas:  83% (83/99)Resolving deltas:  84% (84/99)Resolving deltas:  85% 
+(85/99)Resolving deltas:  86% (86/99)Resolving deltas:  87% (87/99)Resolving deltas:  88% (88/99)
+Resolving deltas:  89% (89/99)Resolving deltas:  90% (90/99)Resolving deltas:  91% (91/99)Resolv
+ing deltas:  92% (92/99)Resolving deltas:  93% (93/99)Resolving deltas:  94% (94/99)Resolving del
+tas:  95% (95/99)Resolving deltas:  97% (97/99)Resolving deltas:  98% (98/99)Resolving deltas: 10
+0% (99/99)Resolving deltas: 100% (99/99), done.
+
+HEAD is now at c08cef3 fix(ci): rename MISE_PIN, which collides with mise's own setting
+
+[33mexit status: 0[0m
+
+[33m✻ export REPO="$PWD"; echo "GATE repo: ${REPO} head=$(git rev-parse --short HEAD)"[0m
+GATE repo: /home/semaphore/incusos-builder head=c08cef3
+
+[33mexit status: 0[0m
+
+[33m✻ timeout 300 bash -c 'curl -fsSL https://mise.run | MISE_VERSION="v${GATE_MISE_VERSION}" MISE_INSTALL_PATH="${HOME}/.local/bin/mise" sh' || { echo "GATE FAIL stage2: could not install mise v${GATE_MISE_VERSION}"; exit 1; }[0m
+mise: installing mise...
+
+#=#=#                                                                          
+                                                                           1.1%###################
+#####                                                  34.4%#######################################
+###################                80.8%###########################################################
+############# 100.0%
+
+mise: installed successfully to /home/semaphore/.local/bin/mise
+mise: run the following to activate mise in your shell:
+echo "eval \"\$(/home/semaphore/.local/bin/mise activate bash)\"" >> ~/.bashrc
+
+mise: run `mise doctor` to verify this is set up correctly
+
+[33mexit status: 0[0m
+
+[33m✻ export PATH="${HOME}/.local/bin:${PATH}"; echo "GATE mise-version: $(mise --version)"[0m
+GATE mise-version: 2026.6.14 linux-x64 (2026-06-25)
+
+[33mexit status: 0[0m
+
+[33m✻ mise trust --all >/dev/null 2>&1 || true; mise trust "${REPO}/mise.toml" >/dev/null 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ timeout 900 mise install go || { echo "GATE FAIL stage2: mise install go failed (locked=true fails closed when mise.lock has no linux-x64 entry for the pinned version)"; exit 1; }[0m
+[2mmise[0m [34mgo[0m@1.26.4       [1/3] install
+[2mmise[0m [34mgo[0m@1.26.4       [1/3] dow
+nload go1.26.4.linux-amd64.tar.gz
+
+[2mmise[0m [34mgo[0m@1.26.4       [2/3] checksum go1.26.4.linux-amd64.tar.gz
+[2mmise[0m [34m
+go[0m@1.26.4       [3/3] extract go1.26.4.linux-amd64.tar.gz
+
+[2mmise[0m [34mgo[0m@1.26.4       [3/3] go version
+[2mmise[0m [34mgo[0m@1.26.4       [3/3] go version go1.26.4 linux/amd64
+[2mmise[0m [34mgo[0m@1.26.4     [38;5;10m✓[0m installed
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE go-version: $(mise exec -- go version)"; echo "GATE gotoolchain: ${GOTOOLCHAIN}"[0m
+[2mmise[0m [34mpython[0m@3.14.3               [1/3] install
+[2mmise[0m [34maqua:astral-sh/uv
+[0m@0.11.0    [1/3] install
+[2mmise[0m [34mpython[0m@3.14.3               [1/3] download cpyth
+on-3.14.3+20260324-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz
+[2mmise[0m [34maqua:cha
+inguard-dev/melange[0m@0.54.0 [1/3] install
+[2mmise[0m [34maqua:astral-sh/uv[0m@0.11.0    [1/3
+] download uv-x86_64-unknown-linux-musl.tar.gz
+[2mmise[0m [34maqua:moonrepo/moon[0m@2.3.5    [1
+/3] install
+[2mmise[0m [34maqua:vektra/mockery[0m@3.7.3   [1/3] install
+[2mmise[0m [34maqua
+:sigstore/cosign[0m@3.1.1  [1/2] install
+[2mmise[0m [34maqua:chainguard-dev/melange[0m@0.54.0 
+[1/3] download melange_0.54.0_linux_amd64.tar.gz
+[2mmise[0m [34maqua:moonrepo/moon[0m@2.3.5    
+[1/3] download moon_cli-x86_64-unknown-linux-musl.tar.xz
+[2mmise[0m [34maqua:vektra/mockery[0m@
+3.7.3   [1/3] download mockery_3.7.3_Linux_x86_64.tar.gz
+[2mmise[0m [34maqua:golangci/golangci-l
+int[0m@2.12.2 [1/3] install
+[2mmise[0m [34maqua:chainguard-dev/apko[0m@1.2.19 [1/3] install
+
+[2mmise[0m [34maqua:sigstore/cosign[0m@3.1.1  [1/2] download cosign-linux-amd64
+[2mmise[0m [3
+4maqua:golangci/golangci-lint[0m@2.12.2 [1/3] download golangci-lint-2.12.2-linux-amd64.tar.gz
+[2
+mmise[0m [34maqua:chainguard-dev/apko[0m@1.2.19 [1/3] download apko_1.2.19_linux_amd64.tar.gz
+
+[2mmise[0m [34maqua:golangci/golangci-lint[0m@2.12.2 [2/3] checksum golangci-lint-2.12.2-linux-a
+md64.tar.gz
+[2mmise[0m [34maqua:golangci/golangci-lint[0m@2.12.2 [3/3] extract golangci-lint-2.
+12.2-linux-amd64.tar.gz
+[2mmise[0m [34maqua:golangci/golangci-lint[0m@2.12.2 [38;5;10m✓[0m 
+installed
+
+[2mmise[0m [34maqua:vektra/mockery[0m@3.7.3   [2/3] checksum mockery_3.7.3_Linux_x86_64.tar.gz
+
+[2mmise[0m [34maqua:vektra/mockery[0m@3.7.3   [3/3] extract mockery_3.7.3_Linux_x86_64.tar.gz
+
+[2mmise[0m [34maqua:vektra/mockery[0m@3.7.3 [38;5;10m✓[0m installed
+
+[2mmise[0m [34maqua:moonrepo/moon[0m@2.3.5    [2/3] checksum moon_cli-x86_64-unknown-linux-musl.
+tar.xz
+[2mmise[0m [34maqua:moonrepo/moon[0m@2.3.5    [3/3] extract moon_cli-x86_64-unknown-linu
+x-musl.tar.xz
+
+[2mmise[0m [34maqua:moonrepo/moon[0m@2.3.5  [38;5;10m✓[0m installed
+
+[2mmise[0m [34maqua:chainguard-dev/melange[0m@0.54.0 [2/3] checksum melange_0.54.0_linux_amd64.t
+ar.gz
+[2mmise[0m [34maqua:chainguard-dev/melange[0m@0.54.0 [3/3] extract melange_0.54.0_linux_a
+md64.tar.gz
+[2mmise[0m [34maqua:chainguard-dev/melange[0m@0.54.0 [38;5;10m✓[0m installed
+
+[2mmise[0m [34maqua:chainguard-dev/apko[0m@1.2.19 [2/3] checksum apko_1.2.19_linux_amd64.tar.gz
+
+[2mmise[0m [34maqua:chainguard-dev/apko[0m@1.2.19 [3/3] extract apko_1.2.19_linux_amd64.tar.gz
+
+[2mmise[0m [34maqua:chainguard-dev/apko[0m@1.2.19 [38;5;10m✓[0m installed
+[2mmise[0m [34
+mpython[0m@3.14.3               [1/3] checksum cpython-3.14.3+20260324-x86_64-unknown-linux-gnu-ins
+tall_only_stripped.tar.gz
+[2mmise[0m [34mpython[0m@3.14.3               [1/3] extract cpython-3
+.14.3+20260324-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz
+
+[2mmise[0m [34maqua:astral-sh/uv[0m@0.11.0    [2/3] checksum uv-x86_64-unknown-linux-musl.tar.gz
+
+[2mmise[0m [34maqua:astral-sh/uv[0m@0.11.0    [3/3] extract uv-x86_64-unknown-linux-musl.tar.g
+z
+[2mmise[0m [34mpython[0m@3.14.3               [1/3] python --version
+[2mmise[0m [34mpytho
+n[0m@3.14.3               [1/3] Python 3.14.3
+[2mmise[0m [34mpython[0m@3.14.3             [38
+;5;10m✓[0m installed
+
+[2mmise[0m [34maqua:astral-sh/uv[0m@0.11.0  [38;5;10m✓[0m installed
+
+[2mmise[0m [34maqua:sigstore/cosign[0m@3.1.1  [2/2] checksum cosign-linux-amd64
+[2mmise[0m [34maqua:sigstore/cosign[0m@3.1.1  [2/2] extract cosign-linux-amd64
+[2mmise[0m [34maqua:sigstore/cosign[0m@3.1.1 [38;5;10m✓[0m installed
+GATE go-version: go version go1.26.4 linux/amd64
+GATE gotoolchain: local
+
+[33mexit status: 0[0m
+
+[33m✻ timeout 900 mise exec -- go build -o bin/incusos-builder ./cmd/incusos-builder || { echo "GATE FAIL stage2: go build failed"; exit 1; }[0m
+go: downloading charm.land/lipgloss/v2 v2.0.2
+go: downloading charm.land/huh/v2 v2.0.3
+go: downloa
+ding charm.land/log/v2 v2.0.0
+go: downloading github.com/charmbracelet/x/term v0.2.2
+go: downloadi
+ng github.com/klauspost/pgzip v1.2.6
+go: downloading github.com/lxc/incus-os/incus-osd v0.0.0-20260
+815030500-0f5b8057f2fc
+go: downloading github.com/spf13/cobra v1.10.2
+go: downloading github.com/s
+pf13/pflag v1.0.10
+go: downloading github.com/spf13/viper v1.21.0
+go: downloading golang.org/x/sys
+ v0.47.0
+go: downloading github.com/getsops/sops/v3 v3.11.0
+go: downloading go.yaml.in/yaml/v4 v4.
+0.0-rc.6
+go: downloading github.com/diskfs/go-diskfs v1.9.4
+
+go: downloading github.com/charmbracelet/colorprofile v0.4.3
+go: downloading github.com/klauspost/c
+ompress v1.19.2
+go: downloading charm.land/bubbles/v2 v2.0.0
+go: downloading charm.land/bubbletea/
+v2 v2.0.2
+go: downloading github.com/catppuccin/go v0.2.0
+go: downloading github.com/charmbracelet
+/x/exp/ordered v0.1.0
+go: downloading github.com/charmbracelet/x/exp/strings v0.0.0-20240722160745-
+212f7b056ed0
+go: downloading github.com/mitchellh/hashstructure/v2 v2.0.2
+go: downloading github.c
+om/go-logfmt/logfmt v0.6.0
+go: downloading github.com/fsnotify/fsnotify v1.10.1
+go: downloading gi
+thub.com/go-viper/mapstructure/v2 v2.5.0
+go: downloading github.com/sagikazarmark/locafero v0.12.0
+
+go: downloading github.com/spf13/afero v1.15.0
+go: downloading github.com/spf13/cast v1.10.0
+go: 
+downloading github.com/charmbracelet/ultraviolet v0.0.0-20260811164956-006e29f97886
+go: downloading
+ github.com/charmbracelet/x/ansi v0.11.8
+go: downloading github.com/clipperhouse/displaywidth v0.11
+.0
+go: downloading github.com/lucasb-eyer/go-colorful v1.4.1
+go: downloading github.com/rivo/unise
+g v0.4.7
+go: downloading github.com/FuturFusion/migration-manager v0.6.15
+go: downloading github.c
+om/FuturFusion/operations-center v0.8.1
+go: downloading github.com/lxc/incus/v7 v7.3.0
+
+go: downloading github.com/sirupsen/logrus v1.9.4
+go: downloading github.com/google/uuid v1.6.0
+go
+: downloading github.com/djherbis/times v1.6.0
+go: downloading github.com/xo/terminfo v0.0.0-202209
+10002029-abceb7e1c41e
+go: downloading github.com/dustin/go-humanize v1.0.1
+go: downloading github.
+com/atotto/clipboard v0.1.4
+go: downloading github.com/mattn/go-runewidth v0.0.27
+go: downloading 
+github.com/muesli/cancelreader v0.2.2
+go: downloading github.com/subosito/gotenv v1.6.0
+go: downlo
+ading github.com/pelletier/go-toml/v2 v2.4.3
+go: downloading go.yaml.in/yaml/v3 v3.0.5
+go: downloa
+ding golang.org/x/text v0.40.0
+
+go: downloading github.com/clipperhouse/uax29/v2 v2.7.0
+go: downloading github.com/charmbracelet/x/
+termios v0.1.1
+go: downloading github.com/charmbracelet/x/windows v0.2.2
+go: downloading golang.or
+g/x/sync v0.22.0
+go: downloading github.com/FuturFusion/openfga-sync v0.0.0-20260802043841-c17052a2
+4795
+go: downloading github.com/fatih/color v1.19.0
+go: downloading github.com/mitchellh/go-wordwr
+ap v1.0.1
+go: downloading github.com/urfave/cli v1.22.17
+go: downloading golang.org/x/term v0.45.0
+
+go: downloading github.com/elliotwutingfeng/asciiset v0.0.0-20260129054604-cfde2086bc57
+go: downl
+oading github.com/anchore/go-lzo v0.1.0
+go: downloading github.com/pierrec/lz4/v4 v4.1.27
+
+go: downloading github.com/pkg/xattr v0.4.12
+go: downloading github.com/ulikunitz/xz v0.5.15
+
+go: downloading github.com/goware/prefixer v0.0.0-20160118172347-395022866408
+go: downloading golan
+g.org/x/net v0.57.0
+
+go: downloading github.com/mattn/go-colorable v0.1.15
+go: downloading github.com/mattn/go-isatty v0
+.0.24
+go: downloading google.golang.org/grpc v1.83.0
+
+go: downloading google.golang.org/protobuf v1.36.12
+go: downloading github.com/aws/aws-sdk-go-v2 v1
+.43.2
+go: downloading github.com/aws/aws-sdk-go-v2/config v1.31.11
+go: downloading github.com/aws/
+aws-sdk-go-v2/credentials v1.19.32
+go: downloading github.com/aws/aws-sdk-go-v2/service/kms v1.45.6
+
+go: downloading github.com/aws/aws-sdk-go-v2/service/sts v1.45.2
+go: downloading gopkg.in/ini.v1 
+v1.67.3
+go: downloading github.com/blang/semver v3.5.1+incompatible
+go: downloading github.com/has
+hicorp/go-cleanhttp v0.5.2
+go: downloading github.com/cpuguy83/go-md2man/v2 v2.0.7
+go: downloading
+ filippo.io/age v1.2.1
+go: downloading github.com/getsops/gopgagent v0.0.0-20241224165529-7044f28e4
+91e
+go: downloading github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+go: downloading gol
+ang.org/x/crypto v0.54.0
+go: downloading github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
+go: 
+downloading github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
+go: downloading github.com/Azu
+re/azure-sdk-for-go/sdk/security/keyvault/azkeys v1.4.0
+go: downloading cloud.google.com/go/kms v1.
+25.0
+go: downloading cloud.google.com/go v0.123.0
+go: downloading golang.org/x/oauth2 v0.36.0
+go:
+ downloading google.golang.org/api v0.264.0
+go: downloading github.com/hashicorp/vault/api v1.21.0
+
+go: downloading github.com/mitchellh/go-homedir v1.1.0
+go: downloading github.com/ProtonMail/go-cr
+ypto v1.3.0
+go: downloading cloud.google.com/go/storage v1.57.0
+go: downloading github.com/aws/aws
+-sdk-go-v2/feature/s3/manager v1.19.9
+go: downloading github.com/aws/aws-sdk-go-v2/service/s3 v1.10
+6.2
+go: downloading github.com/google/go-cmp v0.7.0
+go: downloading github.com/zitadel/oidc/v3 v3.
+49.2
+go: downloading github.com/lib/pq v1.10.9
+go: downloading github.com/pkg/errors v0.9.1
+go: d
+ownloading google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d
+go: downloa
+ding google.golang.org/genproto v0.0.0-20260128011058-8636f8732409
+go: downloading github.com/aws/s
+mithy-go v1.27.5
+go: downloading github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.33
+go: downlo
+ading github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3
+go: downloading github.com/aws/aws-sdk-go-v2
+/service/sso v1.33.2
+go: downloading github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.2
+go: down
+loading github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.33
+go: downloading github.com/aws/
+aws-sdk-go-v2/internal/v4a v1.4.34
+go: downloading github.com/aws/aws-sdk-go-v2/service/internal/ac
+cept-encoding v1.13.14
+go: downloading github.com/aws/aws-sdk-go-v2/service/internal/presigned-url 
+v1.13.33
+go: downloading github.com/russross/blackfriday/v2 v2.1.0
+go: downloading filippo.io/edwa
+rds25519 v1.2.0
+go: downloading github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1
+.2.0
+go: downloading github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2
+go: downloading github
+.com/AzureAD/microsoft-authentication-library-for-go v1.5.0
+go: downloading cloud.google.com/go/iam
+ v1.5.3
+go: downloading cloud.google.com/go/longrunning v0.8.0
+go: downloading github.com/googleap
+is/gax-go/v2 v2.17.0
+
+go: downloading google.golang.org/genproto/googleapis/api v0.0.0-20260729162451-8efbd57d26e0
+go: do
+wnloading github.com/cenkalti/backoff/v4 v4.3.0
+go: downloading github.com/go-jose/go-jose/v4 v4.1.
+4
+go: downloading github.com/hashicorp/errwrap v1.1.0
+go: downloading github.com/hashicorp/go-mult
+ierror v1.1.1
+go: downloading github.com/hashicorp/go-retryablehttp v0.7.8
+go: downloading github.
+com/hashicorp/go-rootcerts v1.0.2
+go: downloading github.com/hashicorp/go-secure-stdlib/parseutil v
+0.2.0
+go: downloading github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
+go: downloading github.
+com/hashicorp/hcl v1.0.1-vault-7
+go: downloading github.com/mitchellh/mapstructure v1.5.0
+go: down
+loading golang.org/x/time v0.15.0
+go: downloading cloud.google.com/go/auth v0.18.2
+go: downloading
+ cloud.google.com/go/compute/metadata v0.9.0
+go: downloading github.com/GoogleCloudPlatform/opentel
+emetry-operations-go/exporter/metric v0.53.0
+go: downloading go.opentelemetry.io/contrib/detectors/
+gcp v1.44.0
+go: downloading go.opentelemetry.io/otel v1.45.0
+go: downloading go.opentelemetry.io/o
+tel/sdk/metric v1.44.0
+go: downloading go.opentelemetry.io/otel/sdk v1.44.0
+go: downloading go.ope
+ntelemetry.io/otel/trace v1.45.0
+go: downloading github.com/aws/aws-sdk-go-v2/aws/protocol/eventstr
+eam v1.7.15
+go: downloading github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.26
+go: dow
+nloading github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.34
+go: downloading github.com
+/muhlemmer/gu v0.3.1
+go: downloading github.com/zitadel/schema v1.3.2
+go: downloading github.com/a
+ws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.33
+go: downloading github.com/kylelemons/godebug v1.1.0
+
+go: downloading github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+go: downloading cloud.g
+oogle.com/go/auth/oauth2adapt v0.2.8
+go: downloading go.opentelemetry.io/contrib/instrumentation/go
+ogle.golang.org/grpc/otelgrpc v0.61.0
+go: downloading go.opentelemetry.io/contrib/instrumentation/n
+et/http/otelhttp v0.69.0
+go: downloading github.com/cloudflare/circl v1.6.1
+
+go: downloading github.com/hashicorp/go-sockaddr v1.0.7
+go: downloading cloud.google.com/go/monitor
+ing v1.24.3
+go: downloading github.com/ryanuber/go-glob v1.0.0
+go: downloading github.com/GoogleCl
+oudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0
+go: downloading github.com
+/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.33.0
+go: downloading github.com/g
+o-logr/logr v1.4.4
+go: downloading go.opentelemetry.io/otel/metric v1.45.0
+go: downloading github.
+com/golang-jwt/jwt/v5 v5.3.1
+go: downloading github.com/google/s2a-go v0.1.9
+go: downloading githu
+b.com/googleapis/enterprise-certificate-proxy v0.3.11
+go: downloading github.com/felixge/httpsnoop 
+v1.1.0
+go: downloading github.com/go-logr/stdr v1.2.2
+go: downloading go.opentelemetry.io/auto/sdk
+ v1.2.1
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/envoyproxy/
+go-control-plane/envoy v1.37.0
+go: downloading github.com/spiffe/go-spiffe/v2 v2.7.0
+
+go: downloading github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
+go: downloading github.co
+m/envoyproxy/protoc-gen-validate v1.3.3
+go: downloading cel.dev/expr v0.25.2
+
+[33mexit status: 0[0m
+
+[33m✻ export BUILDER="${REPO}/bin/incusos-builder"; ls -l "${BUILDER}"[0m
+-rwxrwxr-x 1 semaphore semaphore 67118569 Aug 17 01:13 /home/semaphore/incusos-builder/bin/incusos-builder
+
+[33mexit status: 0[0m
+
+[33m✻ "${BUILDER}" --version | tee "${EVIDENCE}/builder-version.txt" | sed "s/^/GATE builder: /"[0m
+GATE builder: incusos-builder dev (none) built unknown
+GATE builder: incus-os API: v0.0.0-202608150
+30500-0f5b8057f2fc
+
+[33mexit status: 0[0m
+
+[33m✻ GOMOD_PIN="$(awk "/lxc\/incus-os\/incus-osd/ {print \$2}" "${REPO}/go.mod")"; BIN_PIN="$(awk "/incus-os API:/ {print \$3}" "${EVIDENCE}/builder-version.txt")"; echo "GATE upstream-pin: go.mod=${GOMOD_PIN} binary=${BIN_PIN}"; test -n "${BIN_PIN}" -a "${BIN_PIN}" = "${GOMOD_PIN}" || { echo "GATE FAIL stage2: the built binary reports upstream pin \"${BIN_PIN}\" but go.mod pins \"${GOMOD_PIN}\"; the log strings this gate asserts on were read at the go.mod pin and cannot be trusted against another"; exit 1; }[0m
+GATE upstream-pin: go.mod=v0.0.0-20260815030500-0f5b8057f2fc binary=v0.0.0-20260815030500-0f5b8057f2fc
+
+[33mexit status: 0[0m
+
+[33m✻ {
+  printf 'version: 1\n'
+  printf 'image:\n'
+  printf '  type: raw\n'
+  printf '  architecture: x86_64\n'
+  printf '  offline: true\n'
+  if [ -n "${GATE_RELEASE}" ]; then printf '  release: "%s"\n' "${GATE_RELEASE}"; fi
+  printf 'seeds:\n'
+  printf '  applications:\n'
+  printf '    applications:\n'
+  printf '      - name: incus\n'
+  printf '  install:\n'
+  printf '    target:\n'
+  printf '      min_size: 50GiB\n'
+} > "${EVIDENCE}/release-gate.yaml"
+sed 's/^/GATE config: /' "${EVIDENCE}/release-gate.yaml"
+[0m
+GATE config: version: 1
+GATE config: image:
+GATE config:   type: raw
+GATE config:   architecture: x86_64
+GATE config:   offline: true
+GATE config:   release: "202608102114"
+GATE config: seeds:
+GATE config:   applications:
+GATE config:     applications:
+GATE config:       - name: incus
+GATE config:   install:
+GATE config:     target:
+GATE config:       min_size: 50GiB
+
+[33mexit status: 0[0m
+
+[33m✻ "${BUILDER}" validate -f "${EVIDENCE}/release-gate.yaml" --json | tee "${EVIDENCE}/validate.json" | sed "s/^/GATE validate: /" || { echo "GATE FAIL stage2: the gate config did not validate"; exit 1; }[0m
+GATE validate: {"result":{"valid":true,"type":"raw","architecture":"x86_64","offline":true}}
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE build-starting: $(date -u +%FT%TZ) (cold cache downloads roughly 928 MB)"[0m
+GATE build-starting: 2026-08-17T01:14:00Z (cold cache downloads roughly 928 MB)
+
+[33mexit status: 0[0m
+
+[33m✻ timeout 3600 "${BUILDER}" build --json --no-input --progress never -f "${EVIDENCE}/release-gate.yaml" -o "${SOURCE_RAW}" --resources-output "${RESCUE_RAW}" > "${EVIDENCE}/build-envelope.json" || { echo "GATE FAIL stage2: build failed; envelope follows"; cat "${EVIDENCE}/build-envelope.json" || true; exit 1; }[0m
+[1;94m▸ resolve[m
+[1;94m▸ index[m
+
+[1;32m✓ index[m
+[1;32m✓ resolve[m
+[1;94m▸ acquire[m
+[1;94m▸ download[m
+
+[1;32m✓ download[m
+[1;32m✓ acquire[m
+[1;94m▸ probe[m
+[1;32m✓ probe[m
+[1;94m▸ 
+seed[m
+[1;32m✓ seed[m
+[1;94m▸ splice[m
+
+[1;32m✓ splice[m
+[1;94m▸ rescue[m
+[1;94m▸ download[m
+
+[1;32m✓ download[m
+[1;94m▸ metadata[m
+[1;32m✓ metadata[m
+[1;32m✓ rescue[m
+
+[33mexit status: 0[0m
+
+[33m✻ sed "s/^/GATE envelope: /" "${EVIDENCE}/build-envelope.json"[0m
+GATE envelope: {"result":{"output":"/home/semaphore/trackc-gate/seeded-x86_64.raw","resources_output":"/home/semaphore/trackc-gate/rescue-data.raw","type":"raw","architecture":"x86_64","version":"202608102114","channel":"stable","seed_bytes":4096,"sha256":"2f6b26c03f6fc385da00b0b44dacac1c0417e7d5223a8610544baa6d0f2e9430","resources_sha256":"8f374ef6ee86a24f61367da14a706410fcb19eb172c19665e31592345353892a"}}
+
+[33mexit status: 0[0m
+
+[33m✻ python3 - "${EVIDENCE}/build-envelope.json" > "${GATE_ROOT}/build.env" <<'PY'
+import json, shlex, sys
+
+result = json.load(open(sys.argv[1]))["result"]
+keys = ("output", "resources_output", "type", "architecture",
+        "version", "channel", "seed_bytes", "sha256",
+        "resources_sha256")
+for key in keys:
+    print("BUILD_%s=%s" % (key.upper(), shlex.quote(str(result.get(key, "")))))
+PY
+PARSE_RC=$?
+if [ "${PARSE_RC}" -ne 0 ] || [ ! -s "${GATE_ROOT}/build.env" ]; then
+  echo "GATE FAIL stage2: could not read the build envelope (python3 exit ${PARSE_RC}); the envelope follows"
+  cat "${EVIDENCE}/build-envelope.json" || true
+  exit 1
+fi
+. "${GATE_ROOT}/build.env"
+sed 's/^/GATE build-field: /' "${GATE_ROOT}/build.env"
+[0m
+GATE build-field: BUILD_OUTPUT=/home/semaphore/trackc-gate/seeded-x86_64.raw
+GATE build-field: BUILD_RESOURCES_OUTPUT=/home/semaphore/trackc-gate/rescue-data.raw
+GATE build-field: BUILD_TYPE=raw
+GATE build-field: BUILD_ARCHITECTURE=x86_64
+GATE build-field: BUILD_VERSION=202608102114
+GATE build-field: BUILD_CHANNEL=stable
+GATE build-field: BUILD_SEED_BYTES=4096
+GATE build-field: BUILD_SHA256=2f6b26c03f6fc385da00b0b44dacac1c0417e7d5223a8610544baa6d0f2e9430
+GATE build-field: BUILD_RESOURCES_SHA256=8f374ef6ee86a24f61367da14a706410fcb19eb172c19665e31592345353892a
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/build.env"; echo "GATE resolved-version: ${BUILD_VERSION} channel=${BUILD_CHANNEL} type=${BUILD_TYPE} arch=${BUILD_ARCHITECTURE} seed-bytes=${BUILD_SEED_BYTES}"[0m
+GATE resolved-version: 202608102114 channel=stable type=raw arch=x86_64 seed-bytes=4096
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/build.env"; test -n "${BUILD_SHA256}" -a -n "${BUILD_RESOURCES_SHA256}" || { echo "GATE FAIL stage2: the envelope published no sha256/resources_sha256; an offline build must publish both"; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/build.env"
+sha256sum -- "${SOURCE_RAW}" "${RESCUE_RAW}" | tee "${EVIDENCE}/artifact-sha256.txt" | sed 's/^/GATE artifact-sha256: /'
+ON_DISK_IMG="$(sha256sum -- "${SOURCE_RAW}" | cut -d' ' -f1)"
+ON_DISK_RES="$(sha256sum -- "${RESCUE_RAW}" | cut -d' ' -f1)"
+echo "GATE installer-digest: published=${BUILD_SHA256} on-disk=${ON_DISK_IMG}"
+echo "GATE rescue-digest: published=${BUILD_RESOURCES_SHA256} on-disk=${ON_DISK_RES}"
+test "${ON_DISK_IMG}" = "${BUILD_SHA256}" || { echo "GATE FAIL stage2: installer digest on disk does not match the digest the build envelope published"; exit 1; }
+test "${ON_DISK_RES}" = "${BUILD_RESOURCES_SHA256}" || { echo "GATE FAIL stage2: rescue-media digest on disk does not match the digest the build envelope published"; exit 1; }
+echo "GATE digests-match: both published digests equal sha256sum of the files on disk"
+[0m
+GATE artifact-sha256: 2f6b26c03f6fc385da00b0b44dacac1c0417e7d5223a8610544baa6d0f2e9430  /home/semaph
+ore/trackc-gate/seeded-x86_64.raw
+GATE artifact-sha256: 8f374ef6ee86a24f61367da14a706410fcb19eb172c
+19665e31592345353892a  /home/semaphore/trackc-gate/rescue-data.raw
+
+GATE installer-digest: published=2f6b26c03f6fc385da00b0b44dacac1c0417e7d5223a8610544baa6d0f2e9430 on-disk=2f6b26c03f6fc385da00b0b44dacac1c0417e7d5223a8610544baa6d0f2e9430
+GATE rescue-digest: published=8f374ef6ee86a24f61367da14a706410fcb19eb172c19665e31592345353892a on-disk=8f374ef6ee86a24f61367da14a706410fcb19eb172c19665e31592345353892a
+GATE digests-match: both published digests equal sha256sum of the files on disk
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE installer-bytes: $(stat -c %s "${SOURCE_RAW}") (reference build at pin ${GATE_RELEASE:-none}: ${REF_INSTALLER_BYTES})"; echo "GATE rescue-bytes: $(stat -c %s "${RESCUE_RAW}") (reference: ${REF_RESCUE_BYTES}); rescue digest is NOT reproducible (random GPT GUID + FAT serial), so only this run's own envelope is compared"[0m
+GATE installer-bytes: 3432026112 (reference build at pin 202608102114: 3432026112)
+GATE rescue-byte
+s: 329374720 (reference: 329374720); rescue digest is NOT reproducible (random GPT GUID + FAT serial
+), so only this run's own envelope is compared
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 3/9 incus"[0m
+GATE stage: 3/9 incus
+
+[33mexit status: 0[0m
+
+[33m✻ sudo mkdir -p /etc/apt/keyrings[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo curl -fsSL https://pkgs.zabbly.com/key.asc -o /etc/apt/keyrings/zabbly.asc && echo "GATE zabbly-key-sha256: $(sha256sum /etc/apt/keyrings/zabbly.asc | cut -d" " -f1)"[0m
+GATE zabbly-key-sha256: f1adb44fdf82083f983a392b5b406d34e473dce3d66a51de3118cdc1f51d3f87
+
+[33mexit status: 0[0m
+
+[33m✻ printf "Enabled: yes\nTypes: deb\nURIs: https://pkgs.zabbly.com/incus/stable\nSuites: %s\nComponents: main\nArchitectures: %s\nSigned-By: /etc/apt/keyrings/zabbly.asc\n" "$(. /etc/os-release; echo "${VERSION_CODENAME}")" "$(dpkg --print-architecture)" | sudo tee /etc/apt/sources.list.d/zabbly-incus-stable.sources >/dev/null[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo DEBIAN_FRONTEND=noninteractive timeout 600 apt-get update -qq[0m
+[33mexit status: 0[0m
+
+[33m✻ apt-cache policy incus | sed "s/^/GATE incus-candidate: /"[0m
+GATE incus-candidate: incus:
+GATE incus-candidate:   Installed: (none)
+GATE incus-candidate:   Candidate: 1:7.3-ubuntu24.04-202608160203
+GATE incus-candidate:   Version table:
+GATE incus-candidate:      1:7.3-ubuntu24.04-202608160203 500
+GATE incus-candidate:         500 https://pkgs.zabbly.com/incus/stable noble/main amd64 Packages
+GATE incus-candidate:      1:7.3-ubuntu24.04-202608072121 500
+GATE incus-candidate:         500 https://pkgs.zabbly.com/incus/stable noble/main amd64 Packages
+GATE incus-candidate:      1:7.3-ubuntu24.04-202608031810 500
+GATE incus-candidate:         500 https://pkgs.zabbly.com/incus/stable noble/main amd64 Packages
+GATE incus-candidate:      6.0.0-1ubuntu0.3 500
+GATE incus-candidate:         500 https://mirror.hetzner.com/ubuntu/packages noble-updates/universe amd64 Packages
+GATE incus-candidate:         500 https://mirror.hetzner.com/ubuntu/security noble-security/universe amd64 Packages
+GATE incus-candidate:      6.0.0-1 500
+GATE incus-cand
+idate:         500 https://mirror.hetzner.com/ubuntu/packages noble/universe amd64 Packages
+
+[33mexit status: 0[0m
+
+[33m✻ sudo DEBIAN_FRONTEND=noninteractive timeout 900 apt-get install -y -qq incus incus-client qemu-system-x86 qemu-utils ovmf swtpm swtpm-tools || { echo "GATE FAIL stage3: could not install incus + qemu + swtpm + OVMF"; exit 1; }[0m
+Extracting templates from packages: 90%Extracting templates from packages: 100%
+(Reading database
+ ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database
+ ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading data
+base ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading 
+database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Read
+ing database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(
+Reading database ... 100%(Reading database ... 297321 files and directories currently installed.)
+
+Preparing to unpack .../libgnutls30t64_3.8.3-1.1ubuntu3.6_amd64.deb ...
+Unpacking libgnutls30t64:am
+d64 (3.8.3-1.1ubuntu3.6) over (3.8.3-1.1ubuntu3.5) ...
+Setting up libgnutls30t64:amd64 (3.8.3-1.1ub
+untu3.6) ...
+Selecting previously unselected package attr.
+(Reading database ... (Reading databas
+e ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading data
+base ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading 
+database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Read
+ing database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(
+Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 1
+00%(Reading database ... 297321 files and directories currently installed.)
+Preparing to unpack ..
+./00-attr_1%3a2.5.2-1build1.1_amd64.deb ...
+Unpacking attr (1:2.5.2-1build1.1) ...
+Selecting previ
+ously unselected package genisoimage.
+Preparing to unpack .../01-genisoimage_9%3a1.1.11-3.5_amd64.d
+eb ...
+Unpacking genisoimage (9:1.1.11-3.5) ...
+Selecting previously unselected package libevent-2
+.1-7t64:amd64.
+Preparing to unpack .../02-libevent-2.1-7t64_2.1.12-stable-9ubuntu2_amd64.deb ...
+U
+npacking libevent-2.1-7t64:amd64 (2.1.12-stable-9ubuntu2) ...
+Selecting previously unselected packa
+ge libunbound8:amd64.
+Preparing to unpack .../03-libunbound8_1.19.2-1ubuntu3.8_amd64.deb ...
+Unpac
+king libunbound8:amd64 (1.19.2-1ubuntu3.8) ...
+Selecting previously unselected package libgnutls-da
+ne0t64:amd64.
+Preparing to unpack .../04-libgnutls-dane0t64_3.8.3-1.1ubuntu3.6_amd64.deb ...
+Unpac
+king libgnutls-dane0t64:amd64 (3.8.3-1.1ubuntu3.6) ...
+Selecting previously unselected package gnut
+ls-bin.
+Preparing to unpack .../05-gnutls-bin_3.8.3-1.1ubuntu3.6_amd64.deb ...
+Unpacking gnutls-bi
+n (3.8.3-1.1ubuntu3.6) ...
+Selecting previously unselected package incus-client.
+Preparing to unpa
+ck .../06-incus-client_1%3a7.3-ubuntu24.04-202608160203_amd64.deb ...
+Unpacking incus-client (1:7.3
+-ubuntu24.04-202608160203) ...
+Selecting previously unselected package iw.
+Preparing to unpack ...
+/07-iw_6.7-1build1_amd64.deb ...
+Unpacking iw (6.7-1build1) ...
+Selecting previously unselected pa
+ckage libbtrfs0t64:amd64.
+Preparing to unpack .../08-libbtrfs0t64_6.6.3-1.1build2_amd64.deb ...
+Un
+packing libbtrfs0t64:amd64 (6.6.3-1.1build2) ...
+Selecting previously unselected package libnet1:am
+d64.
+Preparing to unpack .../09-libnet1_1.1.6+dfsg-3.2build1_amd64.deb ...
+Unpacking libnet1:amd64
+ (1.1.6+dfsg-3.2build1) ...
+Selecting previously unselected package xdelta3.
+Preparing to unpack .
+../10-xdelta3_3.0.11-dfsg-1.2_amd64.deb ...
+Unpacking xdelta3 (3.0.11-dfsg-1.2) ...
+Selecting prev
+iously unselected package incus-base.
+Preparing to unpack .../11-incus-base_1%3a7.3-ubuntu24.04-202
+608160203_amd64.deb ...
+Unpacking incus-base (1:7.3-ubuntu24.04-202608160203) ...
+
+Selecting previously unselected package incus.
+Preparing to unpack .../12-incus_1%3a7.3-ubuntu24.04
+-202608160203_amd64.deb ...
+Unpacking incus (1:7.3-ubuntu24.04-202608160203) ...
+
+Preparing to unpack .../13-qemu-system-data_1%3a8.2.2+ds-0ubuntu1.18_all.deb ...
+Unpacking qemu-sys
+tem-data (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack .../14-qemu
+-system-arm_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-system-arm (1:8.2.2+ds-0ubuntu1.1
+8) over (1:8.2.2+ds-0ubuntu1.16) ...
+
+Preparing to unpack .../15-qemu-block-extra_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-b
+lock-extra (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack .../16-qe
+mu-utils_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-utils (1:8.2.2+ds-0ubuntu1.18) over 
+(1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack .../17-qemu-system-sparc_1%3a8.2.2+ds-0ubuntu1.18_
+amd64.deb ...
+Unpacking qemu-system-sparc (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ..
+.
+Preparing to unpack .../18-qemu-system-s390x_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qe
+mu-system-s390x (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack .../
+19-qemu-system-ppc_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-system-ppc (1:8.2.2+ds-0ub
+untu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+
+Preparing to unpack .../20-qemu-system-misc_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-s
+ystem-misc (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+
+Preparing to unpack .../21-qemu-system-mips_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-s
+ystem-mips (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+
+Preparing to unpack .../22-qemu-system-modules-spice_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacki
+ng qemu-system-modules-spice (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing t
+o unpack .../23-qemu-system-modules-opengl_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-sy
+stem-modules-opengl (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack 
+.../24-qemu-system-gui_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-system-gui (1:8.2.2+ds
+-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack .../25-qemu-system-x86_1%3a8.2.
+2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-system-x86 (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-
+0ubuntu1.16) ...
+
+Preparing to unpack .../26-qemu-system-common_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu
+-system-common (1:8.2.2+ds-0ubuntu1.18) over (1:8.2.2+ds-0ubuntu1.16) ...
+Preparing to unpack .../2
+7-qemu-system_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-system (1:8.2.2+ds-0ubuntu1.18)
+ over (1:8.2.2+ds-0ubuntu1.16) ...
+Selecting previously unselected package sshfs.
+Preparing to unp
+ack .../28-sshfs_3.7.3-1.1build3_amd64.deb ...
+Unpacking sshfs (3.7.3-1.1build3) ...
+Preparing to 
+unpack .../29-ovmf_2024.02-2ubuntu0.9_all.deb ...
+Unpacking ovmf (2024.02-2ubuntu0.9) over (2024.02
+-2ubuntu0.8) ...
+Preparing to unpack .../30-qemu-efi-aarch64_2024.02-2ubuntu0.9_all.deb ...
+Unpack
+ing qemu-efi-aarch64 (2024.02-2ubuntu0.9) over (2024.02-2ubuntu0.8) ...
+
+Preparing to unpack .../31-qemu-efi-arm_2024.02-2ubuntu0.9_all.deb ...
+Unpacking qemu-efi-arm (2024
+.02-2ubuntu0.9) over (2024.02-2ubuntu0.8) ...
+
+Setting up genisoimage (9:1.1.11-3.5) ...
+Setting up qemu-system-common (1:8.2.2+ds-0ubuntu1.18) ..
+.
+
+Setting up attr (1:2.5.2-1build1.1) ...
+Setting up sshfs (3.7.3-1.1build3) ...
+Setting up libevent
+-2.1-7t64:amd64 (2.1.12-stable-9ubuntu2) ...
+Setting up libnet1:amd64 (1.1.6+dfsg-3.2build1) ...
+S
+etting up qemu-efi-aarch64 (2024.02-2ubuntu0.9) ...
+Setting up ovmf (2024.02-2ubuntu0.9) ...
+Setti
+ng up libunbound8:amd64 (1.19.2-1ubuntu3.8) ...
+Setting up libgnutls-dane0t64:amd64 (3.8.3-1.1ubunt
+u3.6) ...
+Setting up libbtrfs0t64:amd64 (6.6.3-1.1build2) ...
+Setting up qemu-system-data (1:8.2.2
++ds-0ubuntu1.18) ...
+Setting up xdelta3 (3.0.11-dfsg-1.2) ...
+Setting up incus-client (1:7.3-ubunt
+u24.04-202608160203) ...
+Setting up qemu-system-arm (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up qemu-e
+fi-arm (2024.02-2ubuntu0.9) ...
+Setting up qemu-utils (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up qemu
+-system-s390x (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up iw (6.7-1build1) ...
+Setting up qemu-block-e
+xtra (1:8.2.2+ds-0ubuntu1.18) ...
+
+Setting up gnutls-bin (3.8.3-1.1ubuntu3.6) ...
+Setting up qemu-system-modules-opengl (1:8.2.2+ds-0u
+buntu1.18) ...
+Setting up qemu-system-gui (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up qemu-system-mips
+ (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up qemu-system-sparc (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up
+ qemu-system-x86 (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up incus-base (1:7.3-ubuntu24.04-202608160203
+) ...
+Creating group 'incus' with GID 987.
+Creating group 'incus-admin' with GID 986.
+Creating 
+user 'incus' (Incus user) with UID 987 and GID 987.
+Created symlink /etc/systemd/system/multi-user
+.target.wants/incus-lxcfs.service → /usr/lib/systemd/system/incus-lxcfs.service.
+
+Created symlink /etc/systemd/system/sockets.target.wants/incus.socket → /usr/lib/systemd/system/in
+cus.socket.
+
+Created symlink /etc/systemd/system/sockets.target.wants/incus-user.socket → /usr/lib/systemd/syst
+em/incus-user.socket.
+
+Created symlink /etc/systemd/system/multi-user.target.wants/incus-startup.service → /usr/lib/syste
+md/system/incus-startup.service.
+
+Setting up qemu-system-ppc (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up qemu-system-misc (1:8.2.2+ds-0ub
+untu1.18) ...
+Setting up qemu-system (1:8.2.2+ds-0ubuntu1.18) ...
+Setting up incus (1:7.3-ubuntu24
+.04-202608160203) ...
+Setting up qemu-system-modules-spice (1:8.2.2+ds-0ubuntu1.18) ...
+Processing
+ triggers for libc-bin (2.39-0ubuntu8.7) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ..
+.
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE incus-client-version: $(incus --version)"[0m
+GATE incus-client-version: 7.3
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus version | tee "${EVIDENCE}/incus-version.txt" | sed "s/^/GATE incus-version: /"[0m
+If this is your first time running Incus on this machine, you should also run: incus admin init
+To start your first container, try: incus launch images:debian/12
+Or for a virtual machine: incus launch images:debian/12 --vm
+
+GATE incus-version: Client version: 7.3
+GATE incus-version: Server version: 7.3
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE incus-daemon: active=$(systemctl is-active incus 2>&1) enabled=$(systemctl is-enabled incus 2>&1)"[0m
+GATE incus-daemon: active=activating enabled=indirect
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus admin init --preseed <<'EOF'
+storage_pools:
+  - name: default
+    driver: dir
+networks:
+  - name: incusbr0
+    type: bridge
+    config:
+      ipv4.address: auto
+      ipv6.address: none
+profiles:
+  - name: default
+    devices:
+      root:
+        path: /
+        pool: default
+        type: disk
+      eth0:
+        name: eth0
+        network: incusbr0
+        type: nic
+EOF
+[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus storage show "${POOL}" | tee "${EVIDENCE}/incus-pool.yaml" | sed "s/^/GATE pool: /"[0m
+GATE pool: config:
+GATE pool:   source: /var/lib/incus/storage-pools/default
+GATE pool: description: ""
+GATE pool: name: default
+GATE pool: driver: dir
+GATE pool: used_by:
+GATE pool:   - /1.0/profiles/default
+GATE pool: status: Created
+GATE pool: locations:
+GATE pool:   - none
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus network show "${NETWORK}" | tee "${EVIDENCE}/incus-network.yaml" | sed "s/^/GATE network: /"[0m
+GATE network: config:
+GATE network:   ipv4.address: 10.114.208.1/24
+GATE network:   ipv4.nat: "true"
+GATE network:   ipv6.address: none
+GATE network: description: ""
+GATE network: name: incusbr0
+GATE network: type: bridge
+GATE network: used_by:
+GATE network:   - /1.0/profiles/default
+GATE network: managed: true
+GATE network: status: Created
+GATE network: locations:
+GATE network:   - none
+GATE network: project: default
+
+[33mexit status: 0[0m
+
+[33m✻ DRIVER="$(sudo incus query "/1.0/storage-pools/${POOL}" | python3 -c "import json,sys; print(json.load(sys.stdin)[\"driver\"])")"; echo "GATE pool-driver: ${DRIVER}"; test "${DRIVER}" = "dir" || { echo "GATE FAIL stage3: pool ${POOL} uses driver ${DRIVER}, not the sparse dir driver this run's disk budget assumes"; exit 1; }[0m
+GATE pool-driver: dir
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 4/9 vm topology"[0m
+GATE stage: 4/9 vm topology
+
+[33mexit status: 0[0m
+
+[33m✻ for i in "${VM}" "${INSPECT_VM}"; do sudo incus delete -f "$i" >/dev/null 2>&1 && echo "GATE preclean: deleted leftover instance $i" || true; done[0m
+[33mexit status: 0[0m
+
+[33m✻ for v in "${TARGET_VOL}" "${INSTALLED_VOL}"; do sudo incus storage volume delete "${POOL}" "$v" >/dev/null 2>&1 && echo "GATE preclean: deleted leftover volume $v" || true; done[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus profile delete "${PROFILE}" >/dev/null 2>&1 && echo "GATE preclean: deleted leftover profile ${PROFILE}" || true[0m
+[33mexit status: 0[0m
+
+[33m✻ cp --reflink=auto --sparse=always -- "${SOURCE_RAW}" "${SOURCE_WORK}" && echo "GATE working-copy: ${SOURCE_WORK} bytes=$(stat -c %s "${SOURCE_WORK}") apparent-blocks=$(du -m --apparent-size "${SOURCE_WORK}" | cut -f1)MiB actual=$(du -m "${SOURCE_WORK}" | cut -f1)MiB"[0m
+GATE working-copy: /home/semaphore/trackc-gate/seeded-x86_64.gate.raw bytes=3432026112 apparent-blocks=3274MiB actual=719MiB
+
+[33mexit status: 0[0m
+
+[33m✻ SOURCE_BLOCK="$(sudo losetup --find --show --partscan "${SOURCE_WORK}")" || { echo "GATE FAIL stage4: could not loop-map the installer working copy"; exit 1; }
+RESCUE_BLOCK="$(sudo losetup --find --show --read-only --partscan "${RESCUE_RAW}")" || { echo "GATE FAIL stage4: could not loop-map the rescue media"; exit 1; }
+printf 'SOURCE_BLOCK=%s\nRESCUE_BLOCK=%s\n' "${SOURCE_BLOCK}" "${RESCUE_BLOCK}" | tee "${EVIDENCE}/loop-devices.txt"
+printf 'SOURCE_BLOCK=%s\nRESCUE_BLOCK=%s\n' "${SOURCE_BLOCK}" "${RESCUE_BLOCK}" > "${GATE_ROOT}/loop.env"
+sudo losetup --list | sed 's/^/GATE losetup: /'
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,PARTLABEL "${SOURCE_BLOCK}" | tee "${EVIDENCE}/source-block-layout.txt" | sed 's/^/GATE source-block: /'
+[0m
+SOURCE_BLOCK=/dev/loop0
+RESCUE_BLOCK=/dev/loop1
+GATE losetup: NAME       SIZELIMIT OFFSET AUTOCLEA
+R RO BACK-FILE                                          DIO LOG-SEC
+GATE losetup: /dev/loop1       
+  0      0         0  1 /home/semaphore/trackc-gate/rescue-data.raw          0     512
+GATE losetup
+: /dev/loop0         0      0         0  0 /home/semaphore/trackc-gate/seeded-x86_64.gate.raw   0   
+  512
+GATE source-block: NAME       SIZE TYPE FSTYPE LABEL PARTLABEL
+GATE source-block: loop0      3.2G loop              
+GATE source-block: ├─loop0p1    2G part              
+GATE source-block: ├─loop0p2  100M part              
+GATE source-block: ├─loop0p3   16K part              
+GATE source-block: ├─loop0p4  100M part              
+GATE source-block: └─loop0p5    1G part              
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus profile create "${PROFILE}"[0m
+Profile trackc-gate created
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus profile device add "${PROFILE}" root disk pool="${POOL}" path=/[0m
+Device root added to trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus profile device add "${PROFILE}" eth0 nic network="${NETWORK}"[0m
+Device eth0 added to trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus storage volume create "${POOL}" "${TARGET_VOL}" --type=block size=50GiB || { echo "GATE FAIL stage4: could not create a 50 GiB custom block volume on pool ${POOL}; without it there is no install target. Remedy: use a driver that supports custom block volumes (btrfs/lvm/zfs) and re-run."; exit 1; }[0m
+Storage volume trackc-install-target created
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus storage volume show "${POOL}" "${TARGET_VOL}" | sed "s/^/GATE target-volume: /"[0m
+GATE target-volume: config:
+GATE target-volume:   size: 50GiB
+GATE target-volume: description: ""
+GATE target-volume: name: trackc-install-target
+GATE target-volume: type: custom
+GATE target-volume: used_by: []
+GATE target-volume: location: none
+GATE target-volume: content_type: block
+GATE target-volume: project: default
+GATE target-volume: created_at: 2026-08-17T01:15:15.225618849Z
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus init --empty --vm "${VM}" \
+  --profile "${PROFILE}" \
+  --config security.secureboot=false \
+  --config limits.cpu=2 \
+  --config limits.memory=4GiB \
+  --device root,size=4GiB \
+  --device root,boot.priority=10 \
+  --device root,io.bus=virtio-scsi
+[0m
+Creating trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config device add "${VM}" vtpm tpm[0m
+Device vtpm added to trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/loop.env"
+sudo incus config device add "${VM}" install-media disk \
+  source="${SOURCE_BLOCK}" io.bus=virtio-scsi readonly=false boot.priority=30
+sudo incus config device add "${VM}" install-target disk \
+  pool="${POOL}" source="${TARGET_VOL}" io.bus=virtio-scsi boot.priority=20
+[0m
+Device install-media added to trackc-gate
+Device install-target added to trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config show "${VM}" --expanded | tee "${EVIDENCE}/install-config.yaml" | sed "s/^/GATE vmcfg: /"[0m
+GATE vmcfg: architecture: x86_64
+GATE vmcfg: config:
+GATE vmcfg:   limits.cpu: "2"
+GATE vmcfg:   limits.memory: 4GiB
+GATE vmcfg:   security.secureboot: "false"
+GATE vmcfg:   volatile.apply_template: create
+GATE vmcfg:   volatile.cloud-init.instance-id: b994e2e7-4c65-4693-bc98-96b336e0be7f
+GATE vmcfg:   volatile.eth0.hwaddr: 10:66:6a:34:f5:7f
+GATE vmcfg:   volatile.uuid: 607ce2a3-b9ad-402a-ae8a-3d4a4b52a1fb
+GATE vmcfg:   volatile.uuid.generation: 607ce2a3-b9ad-402a-ae8a-3d4a4b52a1fb
+GATE vmcfg: devices:
+GATE vmcfg:   eth0:
+GATE vmcfg:     network: incusbr0
+GATE vmcfg:     type: nic
+GATE vmcfg:   install-media:
+GATE vmcfg:     boot.priority: "30"
+GATE vmcfg:     io.bus: virtio-scsi
+GATE vmcfg:     readonly: "false"
+GATE vmcfg:     source: /dev/loop0
+GATE vmcfg:     type: disk
+GATE vmcfg:   install-target:
+GATE vmcfg:     boot.priority: "20"
+GATE vmcfg:     io.bus: virtio-scsi
+GATE vmcfg:     pool: default
+GATE vmcfg:     source: trackc-install-target
+GATE vmcfg: 
+    type: disk
+GATE vmcfg:   root:
+GATE vmcfg:     boot.priority: "10"
+GATE vmcfg:     io.bus: virtio-scsi
+GATE vmcfg:     path: /
+GATE vmcfg:     pool: default
+GATE vmcfg:     size: 4GiB
+GATE vmcfg:     type: disk
+GATE vmcfg:   vtpm:
+GATE vmcfg:     type: tpm
+GATE vmcfg: ephemeral: false
+GATE vmcfg: profiles:
+GATE vmcfg:   - trackc-gate
+GATE vmcfg: stateful: false
+GATE vmcfg: description: ""
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus query "/1.0/instances/${VM}?recursion=1" > "${EVIDENCE}/install-instance.json"[0m
+[33mexit status: 0[0m
+
+[33m✻ python3 - "${EVIDENCE}/install-instance.json" <<'PY'
+import json, sys
+
+inst = json.load(open(sys.argv[1]))
+devices = inst.get("expanded_devices") or inst.get("devices") or {}
+config = inst.get("expanded_config") or inst.get("config") or {}
+failures = []
+
+expected_priority = {"install-media": "30", "install-target": "20", "root": "10"}
+for name, dev in sorted(devices.items()):
+    print("GATE device %s: %s" % (name, json.dumps(dev, sort_keys=True)))
+
+for name, want in expected_priority.items():
+    dev = devices.get(name)
+    if dev is None:
+        failures.append("device %s is missing" % name)
+        continue
+    if dev.get("type") != "disk":
+        failures.append("device %s is type %r, want disk" % (name, dev.get("type")))
+    got_bus = dev.get("io.bus")
+    if got_bus != "virtio-scsi":
+        failures.append("device %s has io.bus=%r, want virtio-scsi "
+                        "(VirtIO-BLK does not expose the drives IncusOS needs)"
+                        % (name, got_bus))
+    got_priority = str(dev.get("boot.priority", ""))
+    if got_priority != want:
+        failures.append("device %s has boot.priority=%r, want %s"
+                        % (name, got_priority, want))
+    print("GATE topology %s: type=%s io.bus=%s boot.priority=%s"
+          % (name, dev.get("type"), got_bus, got_priority))
+
+vtpm = devices.get("vtpm")
+if not vtpm or vtpm.get("type") != "tpm":
+    failures.append("vtpm device missing or not type tpm; it must be added before first start")
+else:
+    print("GATE topology vtpm: type=%s" % vtpm.get("type"))
+
+for key, want in (("security.secureboot", "false"), ("limits.cpu", "2"), ("limits.memory", "4GiB")):
+    got = config.get(key)
+    print("GATE topology config %s: %s" % (key, got))
+    if str(got) != want:
+        failures.append("config %s is %r, want %s" % (key, got, want))
+
+status = inst.get("status")
+print("GATE topology status: %s" % status)
+if status != "Stopped":
+    failures.append("instance status is %r; the vTPM and disks must be in place before the first start" % status)
+
+for line in failures:
+    print("GATE FAIL stage4: %s" % line)
+sys.exit(1 if failures else 0)
+PY
+[0m
+GATE device eth0: {"network": "incusbr0", "type": "nic"}
+GATE device install-media: {"boot.priority": "30", "io.bus": "virtio-scsi", "readonly": "false", "source": "/dev/loop0", "type": "disk"}
+GATE device install-target: {"boot.priority": "20", "io.bus": "virtio-scsi", "pool": "default", "source": "trackc-install-target", "type": "disk"}
+GATE device root: {"boot.priority": "10", "io.bus": "virtio-scsi", "path": "/", "pool": "default", "size": "4GiB", "type": "disk"}
+GATE device vtpm: {"type": "tpm"}
+GATE topology install-media: type=disk io.bus=virtio-scsi boot.priority=30
+GATE topology install-target: type=disk io.bus=virtio-scsi boot.priority=20
+GATE topology root: type=disk io.bus=virtio-scsi boot.priority=10
+GATE topology vtpm: type=tpm
+GATE topology config security.secureboot: false
+GATE topology config limits.cpu: 2
+GATE topology config limits.memory: 4GiB
+GATE topology status: Stopped
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 5/9 source seed baseline"[0m
+GATE stage: 5/9 source seed baseline
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/loop.env"
+SEED_PART="$(lsblk -nrpo NAME,PARTLABEL "${SOURCE_BLOCK}" | awk '$2 == "seed-data" {print $1; exit}')"
+echo "GATE source-seed-partition: ${SEED_PART:-NONE}"
+test -n "${SEED_PART}" || { echo "GATE FAIL stage5: no partition labelled seed-data on ${SOURCE_BLOCK}; the built install media is not what this gate expects"; exit 1; }
+echo "SEED_PART=${SEED_PART}" >> "${GATE_ROOT}/loop.env"
+sudo dd if="${SEED_PART}" bs=4M status=none | sha256sum | tee "${EVIDENCE}/source-seed.before.sha256" | sed 's/^/GATE source-seed-before: /'
+sudo dd if="${SEED_PART}" bs=4M status=none | tar -tf - > "${EVIDENCE}/source-seed.before.list" 2>"${EVIDENCE}/source-seed.before.tar-stderr" || true
+sed 's/^/GATE source-seed-entry: /' "${EVIDENCE}/source-seed.before.list"
+test -s "${EVIDENCE}/source-seed.before.list" || { echo "GATE FAIL stage5: the source seed partition produced an empty tar listing; tar stderr follows"; cat "${EVIDENCE}/source-seed.before.tar-stderr" || true; exit 1; }
+grep -Eq '(^|/)install\.(json|ya?ml)$' "${EVIDENCE}/source-seed.before.list" || { echo "GATE FAIL stage5: the source seed tar contains no install.* entry, so the install media is wrong and the seed-consumption oracle cannot mean anything. Stopping before the install."; exit 1; }
+grep -Eq '(^|/)applications\.ya?ml$' "${EVIDENCE}/source-seed.before.list" || { echo "GATE FAIL stage5: the source seed tar contains no applications.yaml entry, but the gate config seeds one incus application (builder internal/seed/seed.go:45)"; exit 1; }
+echo "GATE source-baseline: contains install.* and applications.yaml"
+[0m
+GATE source-seed-partition: /dev/loop0p2
+
+GATE source-seed-before: 8537e35609af63d8ecb6a65ff01d39b987ae3497055732705499be12c1397b3c  -
+GATE source-seed-entry: applications.yaml
+GATE source-seed-entry: install.yaml
+GATE source-seed-entry: update.yaml
+GATE source-baseline: contains install.* and applications.yaml
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 6/9 install"[0m
+GATE stage: 6/9 install
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE install-starting: $(date -u +%FT%TZ) budget=${INSTALL_TIMEOUT_S}s (guide budgets 20-60 min)"[0m
+GATE install-starting: 2026-08-17T01:15:16Z budget=5400s (guide budgets 20-60 min)
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus start "${VM}" || { echo "GATE FAIL stage6: incus start failed for ${VM}"; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ DEADLINE="$(( $(date +%s) + BOOT_TIMEOUT_S ))"
+while :; do
+  STATE="$(sudo incus list "${VM}" -f csv -c s | tr -d '\n')"
+  echo "GATE vm-state: ${STATE}"
+  test "${STATE}" = "RUNNING" && break
+  test "$(date +%s)" -ge "${DEADLINE}" && { echo "GATE FAIL stage6: ${VM} never reached RUNNING within ${BOOT_TIMEOUT_S}s (last state ${STATE})"; sudo incus info --show-log "${VM}" 2>&1 | tail -60 || true; exit 1; }
+  sleep 5
+done
+[0m
+GATE vm-state: RUNNING
+
+[33mexit status: 0[0m
+
+[33m✻ WAIT_RC=0
+"${GATE_ROOT}/bin/wait-console.sh" "${VM}" \
+  "${EVIDENCE}/install-serial.log" "${EVIDENCE}/install-serial.norm.log" \
+  "${INSTALL_TIMEOUT_S}" "${CONSOLE_POLL_S}" "was successfully installed" \
+  || WAIT_RC=$?
+echo "GATE install-wait-rc: ${WAIT_RC}"
+NORM="${EVIDENCE}/install-serial.norm.log"
+RAW="${EVIDENCE}/install-serial.log"
+if [ "${WAIT_RC}" -ne 0 ]; then
+  "${GATE_ROOT}/bin/dump-log.sh" "${NORM}" head "install serial log"
+  "${GATE_ROOT}/bin/dump-log.sh" "${NORM}" tail "install serial log"
+  sudo incus info "${VM}" 2>&1 | sed 's/^/GATE vm-info: /' || true
+  RAW_BYTES="$(wc -c <"${RAW}" | tr -d ' ')"
+  if [ "${RAW_BYTES}" -eq 0 ]; then
+    echo "GATE FAIL stage6: no serial output at all after ${INSTALL_TIMEOUT_S}s (${RAW_BYTES} bytes captured). The guest never wrote to ttyS0: firmware, boot-order or vTPM problem, NOT an installer problem."
+  elif ! LC_ALL=C grep -F -q -- "Starting install of" "${NORM}"; then
+    echo "GATE FAIL stage6: INSTALLER NEVER STARTED. ${RAW_BYTES} bytes of console output captured, but \"Starting install of\" (install.go:335-336) never appeared. The guest booted and produced console output; the installer did not begin."
+  else
+    echo "GATE FAIL stage6: INSTALLER RAN BUT DID NOT FINISH. \"Starting install of\" (install.go:335-336) was observed but \"was successfully installed\" (install.go:388,390) never appeared within ${INSTALL_TIMEOUT_S}s."
+  fi
+  exit 1
+fi
+[0m
+GATE console-wait: 0s/5400s vm-state=RUNNING raw-bytes=1 waiting-for="was successfully installed"
+
+GATE console-marker-observed: "was successfully installed" after 45s
+GATE install-wait-rc: 0
+
+[33mexit status: 0[0m
+
+[33m✻ NORM="${EVIDENCE}/install-serial.norm.log"
+"${GATE_ROOT}/bin/observe.sh" "${NORM}" install-started "Starting install of" || true
+"${GATE_ROOT}/bin/observe.sh" "${NORM}" install-complete "was successfully installed" || { echo "GATE FAIL stage6: completion string vanished from the normalized log"; exit 1; }
+"${GATE_ROOT}/bin/observe.sh" "${NORM}" install-remove-media "Please remove the install media to complete the installation" || echo "GATE OBSERVE install-remove-media: corroborating sentence (install.go:389-390) not matched intact; the completion assertion above stands on its own"
+echo "MET" > "${GATE_ROOT}/obs/O1-install-completion"
+echo "GATE O1 install-completion: MET (observed \"was successfully installed\", install.go:388,390)"
+[0m
+GATE OBSERVE install-started: PRESENT -- "Starting install of"
+GATE OBSERVE install-started window: usOS2026081021142026-08-1701:15UTC 2026-08-17 01:15:42 INFO Starting install of IncusOS to local disk IncusOS Install Starting install of I
+GATE OBSERVE install-complete: PRESENT -- "was successfully installed"
+GATE OBSERVE install-complete window: DISK_incus_install--target 2026-08-17 01:15:57 INFO IncusOS was successfully installed 2026-08-17 01:15:57 INFO Please remove the install media to
+GATE OBSERVE install-remove-media: PRESENT -- "Please remove the install media to complete the installation"
+GATE OBSERVE install-remove-media window: IncusOS was successfully installed 2026-08-17 01:15:57 INFO Please remove the install media to complete the installation IncusOS Install IncusOSwas successfullyinstalled. Please re
+GATE O1 install-completion: MET (observed "was successfully installed", install.go:388,390)
+
+[33mexit status: 0[0m
+
+[33m✻ "${GATE_ROOT}/bin/snap-console.sh" "${VM}" "${EVIDENCE}/install-serial.log" "${EVIDENCE}/install-serial.norm.log"[0m
+GATE console-snapshot: /home/semaphore/trackc-gate/evidence/install-serial.log raw-bytes=609373 normalized-bytes=39512
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 7/9 target seed oracle"[0m
+GATE stage: 7/9 target seed oracle
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus stop "${VM}" || { echo "GATE FAIL stage7: could not stop ${VM}"; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config device remove "${VM}" install-media[0m
+Device install-media removed from trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config device remove "${VM}" install-target[0m
+Device install-target removed from trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus init "${INSPECT_IMAGE}" "${INSPECT_VM}" --vm --profile "${PROFILE}" --device root,boot.priority=10 || { echo "GATE FAIL stage7: could not create the inspection VM from ${INSPECT_IMAGE}"; exit 1; }[0m
+Creating trackc-target-inspector
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config device add "${INSPECT_VM}" inspect-target disk pool="${POOL}" source="${TARGET_VOL}" io.bus=virtio-scsi boot.priority=0[0m
+Device inspect-target added to trackc-target-inspector
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus start "${INSPECT_VM}"[0m
+[33mexit status: 0[0m
+
+[33m✻ DEADLINE="$(( $(date +%s) + AGENT_TIMEOUT_S ))"
+until sudo incus exec "${INSPECT_VM}" -- true 2>/dev/null; do
+  if [ "$(date +%s)" -ge "${DEADLINE}" ]; then
+    echo "GATE FAIL stage7: the incus agent in ${INSPECT_VM} (${INSPECT_IMAGE}) never became ready within ${AGENT_TIMEOUT_S}s, so the detached target cannot be inspected. Remedy: set the INSPECT_IMAGE env_var to an image whose agent works here (the preflight proved images:ubuntu/24.04) and re-run."
+    sudo incus console "${INSPECT_VM}" --show-log 2>&1 | tail -40 || true
+    exit 1
+  fi
+  sleep 5
+done
+echo "GATE inspect-agent: ready"
+[0m
+GATE inspect-agent: ready
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus exec "${INSPECT_VM}" -- udevadm settle[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus exec "${INSPECT_VM}" -- lsblk -o NAME,SIZE,TYPE,PTTYPE,FSTYPE,LABEL,PARTLABEL | tee "${EVIDENCE}/target-block-layout.txt" | sed "s/^/GATE target-block: /"[0m
+[33mWARNING[0m[2026-08-17T01:16:32Z] Failed to write close message                 [33merr[0m="write unix @->/var/lib/incus/unix.socket: write: broken pipe"
+GATE target-block: NAME    SIZE TYPE PTTYPE FSTYPE         LABEL  PARTLABEL
+GATE target-block: sda      10G disk gpt                          
+GATE target-block: ├─sda1  100M part gpt    vfat           UEFI   
+GATE target-block: └─sda2  3.9G part gpt    ext4           rootfs 
+GATE target-block: sdb      50G disk gpt                          
+GATE target-block: ├─sdb1    2G part gpt    vfat           ESP    esp
+GATE target-block: ├─sdb2  100M part gpt                          seed-data
+GATE target-block: ├─sdb3   16K part gpt                          IncusOS_202608102114_verity_sig
+GATE target-block: ├─sdb4  100M part gpt    DM_verity_hash        IncusOS_202608102114_verity
+GATE target-block: ├─sdb5    1G part gpt    erofs                 IncusOS_202608102114
+GATE target-block: ├─sdb6 
+  16K part gpt                          _empty
+GATE target-block: ├─sdb7  100M part gpt                          _empty
+GATE target-block: └─sdb8    1G part gpt                          _empty
+
+[33mexit status: 0[0m
+
+[33m✻ TARGET_SEED="$(sudo incus exec "${INSPECT_VM}" -- lsblk -nrpo NAME,PARTLABEL | awk '$2 == "seed-data" {print $1; exit}')"
+echo "GATE target-seed-partition: ${TARGET_SEED:-NONE}"
+if [ -z "${TARGET_SEED}" ]; then
+  if ! grep -qE 'gpt' "${EVIDENCE}/target-block-layout.txt"; then
+    echo "GATE FAIL stage7: the target volume has NO GPT, so the installer never reached its target write path. Zero target growth is a never-wrote symptom, not evidence that the seed was ignored."
+  else
+    echo "GATE FAIL stage7: the target volume has a GPT but no partition labelled seed-data. The write path ran partially; target-block-layout.txt is the diagnostic."
+  fi
+  exit 1
+fi
+echo "TARGET_SEED=${TARGET_SEED}" > "${GATE_ROOT}/target.env"
+[0m
+GATE target-seed-partition: /dev/sdb2
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/target.env"
+sudo incus exec "${INSPECT_VM}" -- sh -c "dd if=${TARGET_SEED} bs=4M status=none | sha256sum" \
+  | tee "${EVIDENCE}/target-seed.after.sha256" | sed 's/^/GATE target-seed-after: /'
+sudo incus exec "${INSPECT_VM}" -- sh -c "dd if=${TARGET_SEED} bs=4M status=none | tar -tf -" \
+  > "${EVIDENCE}/target-seed.after.list" 2>"${EVIDENCE}/target-seed.after.tar-stderr" || true
+sed 's/^/GATE target-seed-entry: /' "${EVIDENCE}/target-seed.after.list"
+[0m
+GATE target-seed-after: 84a75f5c85bdfccc7107758cc16f9204a0220ce03e7fa5c29f2560cf26569e92  -
+[33mWARNING[0m[2026-08-17T01:16:33Z] Failed to write close message                 [33merr[0m="write unix @->/var/lib/incus/unix.socket: write: broken pipe"
+GATE target-seed-entry: applications.yaml
+GATE target-seed-entry: update.yaml
+
+[33mexit status: 0[0m
+
+[33m✻ BEFORE_LIST="${EVIDENCE}/source-seed.before.list"
+AFTER_LIST="${EVIDENCE}/target-seed.after.list"
+SOURCE_BEFORE="$(cut -d' ' -f1 "${EVIDENCE}/source-seed.before.sha256")"
+TARGET_AFTER="$(cut -d' ' -f1 "${EVIDENCE}/target-seed.after.sha256")"
+echo "GATE seed-digests: source-before=${SOURCE_BEFORE} target-after=${TARGET_AFTER}"
+test -s "${AFTER_LIST}" || { echo "GATE FAIL stage7: the target seed partition produced an EMPTY tar listing, so 'no install.* entry' would be vacuous. tar stderr follows"; cat "${EVIDENCE}/target-seed.after.tar-stderr" || true; exit 1; }
+grep -Eq '(^|/)applications\.ya?ml$' "${AFTER_LIST}" || { echo "GATE FAIL stage7: positive control failed -- the target seed tar has no applications.yaml (builder internal/seed/seed.go:45), so this listing is not a readable copy of the seed archive and cannot support the oracle"; exit 1; }
+grep -Eq '(^|/)install\.(json|ya?ml)$' "${BEFORE_LIST}" || { echo "GATE FAIL stage7: the source baseline lost its install.* entry"; exit 1; }
+echo "GATE oracle-1 source-contains-install: PASS"
+if grep -Eq '(^|/)install\.(json|ya?ml)$' "${AFTER_LIST}"; then
+  echo "GATE FAIL stage7: the TARGET seed partition still contains install.*, so the installer ran but did NOT consume the install seed (CleanupPostInstall, upstream internal/seed/seed.go:33-40, did not take effect)."
+  exit 1
+fi
+echo "GATE oracle-2 target-lacks-install: PASS"
+test "${SOURCE_BEFORE}" != "${TARGET_AFTER}" || { echo "GATE FAIL stage7: source and target seed digests are identical, so nothing was deleted from the target"; exit 1; }
+echo "GATE oracle-3 digests-differ: PASS"
+echo "MET" > "${GATE_ROOT}/obs/O2-target-seed-cleaned"
+echo "GATE O2 target-seed-cleaned: MET (source contains install.*, target lacks it, digests differ)"
+[0m
+GATE seed-digests: source-before=8537e35609af63d8ecb6a65ff01d39b987ae3497055732705499be12c1397b3c target-after=84a75f5c85bdfccc7107758cc16f9204a0220ce03e7fa5c29f2560cf26569e92
+GATE oracle-1 source-contains-install: PASS
+GATE oracle-2 target-lacks-install: PASS
+GATE oracle-3 digests-differ: PASS
+GATE O2 target-seed-cleaned: MET (source contains install.*, target lacks it, digests differ)
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/loop.env"
+sudo blockdev --flushbufs "${SOURCE_BLOCK}" || true
+sudo dd if="${SEED_PART}" bs=4M status=none | sha256sum | tee "${EVIDENCE}/source-seed.after.sha256" | sed 's/^/GATE source-seed-after: /'
+SOURCE_BEFORE="$(cut -d' ' -f1 "${EVIDENCE}/source-seed.before.sha256")"
+SOURCE_AFTER="$(cut -d' ' -f1 "${EVIDENCE}/source-seed.after.sha256")"
+if [ "${SOURCE_BEFORE}" = "${SOURCE_AFTER}" ]; then
+  echo "GATE OBSERVE source-immutable: PRESENT -- the source seed partition is byte-identical after the install, as expected at this pin"
+else
+  echo "GATE OBSERVE source-immutable: ABSENT -- the source seed partition CHANGED (${SOURCE_BEFORE} -> ${SOURCE_AFTER}). Not a gate criterion, but record it: upstream opens the source O_RDONLY."
+fi
+[0m
+GATE source-seed-after: 8537e35609af63d8ecb6a65ff01d39b987ae3497055732705499be12c1397b3c  -
+GATE OBSERVE source-immutable: PRESENT -- the source seed partition is byte-identical after the install, as expected at this pin
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus stop "${INSPECT_VM}" || true[0m
+[31;1mError:[0;22m Failed shutting down instance, status is "Running": context deadline exceeded
+Try `incus info --show-log trackc-target-inspector` for more info
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config device remove "${INSPECT_VM}" inspect-target || true[0m
+[31;1mError:[0;22m Failed to create instance update operation: Instance is busy running a "stop" operation
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus delete "${INSPECT_VM}" || true[0m
+[31;1mError:[0;22m The instance trackc-target-inspector is currently running, stop it first or pass --force
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 8/9 recovery"[0m
+GATE stage: 8/9 recovery
+
+[33mexit status: 0[0m
+
+[33m✻ timeout 1800 sudo incus storage volume copy "${POOL}/${TARGET_VOL}" "${POOL}/${INSTALLED_VOL}" --volume-only || { echo "GATE FAIL stage8: could not copy the installed target volume"; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config device add "${VM}" installed-target disk pool="${POOL}" source="${INSTALLED_VOL}" io.bus=virtio-scsi boot.priority=20[0m
+Device installed-target added to trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/loop.env"
+sudo incus config device add "${VM}" rescue-data disk \
+  source="${RESCUE_BLOCK}" io.bus=virtio-scsi readonly=true boot.priority=0
+[0m
+Device rescue-data added to trackc-gate
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus config show "${VM}" --expanded | tee "${EVIDENCE}/recovery-config.yaml" | sed "s/^/GATE recovery-cfg: /"[0m
+GATE recovery-cfg: architecture: x86_64
+GATE recovery-cfg: config:
+GATE recovery-cfg:   limits.cpu: "2"
+GATE recovery-cfg:   limits.memory: 4GiB
+GATE recovery-cfg:   security.secureboot: "false"
+GATE recovery-cfg:   volatile.cloud-init.instance-id: b994e2e7-4c65-4693-bc98-96b336e0be7f
+GATE recovery-cfg:   volatile.eth0.hwaddr: 10:66:6a:34:f5:7f
+GATE recovery-cfg:   volatile.last_state.agent: STOPPED
+GATE recovery-cfg:   volatile.last_state.power: STOPPED
+GATE recovery-cfg:   volatile.last_state.ready: "false"
+GATE recovery-cfg:   volatile.root.io.bus: virtio-scsi
+GATE recovery-cfg:   volatile.uuid: 607ce2a3-b9ad-402a-ae8a-3d4a4b52a1fb
+GATE recovery-cfg:   volatile.uuid.generation: 607ce2a3-b9ad-402a-ae8a-3d4a4b52a1fb
+GATE recovery-cfg:   volatile.vm.rtc_adjustment: "0"
+GATE recovery-cfg:   volatile.vm.rtc_offset: "0"
+GATE recovery-cfg:   volatile.vsock_id: "1262888945"
+GATE recovery-cfg: devices:
+GATE recovery-cfg:   eth0:
+GATE recovery-cfg:     network: incusbr0
+GAT
+E recovery-cfg:     type: nic
+GATE recovery-cfg:   installed-target:
+GATE recovery-cfg:     boot.priority: "20"
+GATE recovery-cfg:     io.bus: virtio-scsi
+GATE recovery-cfg:     pool: default
+GATE recovery-cfg:     source: trackc-installed-copy
+GATE recovery-cfg:     type: disk
+GATE recovery-cfg:   rescue-data:
+GATE recovery-cfg:     boot.priority: "0"
+GATE recovery-cfg:     io.bus: virtio-scsi
+GATE recovery-cfg:     readonly: "true"
+GATE recovery-cfg:     source: /dev/loop1
+GATE recovery-cfg:     type: disk
+GATE recovery-cfg:   root:
+GATE recovery-cfg:     boot.priority: "10"
+GATE recovery-cfg:     io.bus: virtio-scsi
+GATE recovery-cfg:     path: /
+GATE recovery-cfg:     pool: default
+GATE recovery-cfg:     size: 4GiB
+GATE recovery-cfg:     type: disk
+GATE recovery-cfg:   vtpm:
+GATE recovery-cfg:     type: tpm
+GATE recovery-cfg: ephemeral: false
+GATE recovery-cfg: profiles:
+GATE recovery-cfg:   - trackc-gate
+GATE recovery-cfg: stateful: false
+GATE recovery-cf
+g: description: ""
+
+[33mexit status: 0[0m
+
+[33m✻ . "${GATE_ROOT}/loop.env"
+lsblk -o NAME,FSTYPE,LABEL,PARTLABEL "${RESCUE_BLOCK}" | tee "${EVIDENCE}/rescue-block-layout.txt" | sed 's/^/GATE rescue-block: /'
+grep -q 'RESCUE_DATA' "${EVIDENCE}/rescue-block-layout.txt" || { echo "GATE FAIL stage8: RESCUE_DATA appears as neither a PARTLABEL nor a filesystem LABEL on ${RESCUE_BLOCK}; IncusOS looks for exactly those two (recovery.go:37-47) and would silently skip recovery"; exit 1; }
+echo "GATE rescue-label: RESCUE_DATA present on the rescue media (guide section 7; builder internal/media/rescue.go:22)"
+[0m
+GATE rescue-block: NAME      FSTYPE LABEL       PARTLABEL
+GATE rescue-block: loop1                        
+GATE rescue-block: └─loop1p1 vfat   RESCUE_DATA RESCUE_DATA
+GATE rescue-label: RESCUE_DATA present on the rescue media (guide section 7; builder internal/media/rescue.go:22)
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE recovery-starting: $(date -u +%FT%TZ) budget=${RECOVERY_TIMEOUT_S}s (guide budgets 15-40 min)"[0m
+GATE recovery-starting: 2026-08-17T01:26:39Z budget=3600s (guide budgets 15-40 min)
+
+[33mexit status: 0[0m
+
+[33m✻ sudo incus start "${VM}" || { echo "GATE FAIL stage8: could not start ${VM} for the recovery boot"; exit 1; }[0m
+[33mexit status: 0[0m
+
+[33m✻ WAIT_RC=0
+"${GATE_ROOT}/bin/wait-console.sh" "${VM}" \
+  "${EVIDENCE}/recovery-serial.log" "${EVIDENCE}/recovery-serial.norm.log" \
+  "${RECOVERY_TIMEOUT_S}" "${CONSOLE_POLL_S}" "Recovery partition detected" \
+  || WAIT_RC=$?
+NORM="${EVIDENCE}/recovery-serial.norm.log"
+RAW="${EVIDENCE}/recovery-serial.log"
+echo "GATE recovery-wait-rc: ${WAIT_RC}"
+if [ "${WAIT_RC}" -ne 0 ]; then
+  "${GATE_ROOT}/bin/dump-log.sh" "${NORM}" tail "recovery serial log"
+  RAW_BYTES="$(wc -c <"${RAW}" | tr -d ' ')"
+  if [ "${RAW_BYTES}" -eq 0 ]; then
+    echo "GATE FAIL stage8: no serial output at all from the recovery boot (${RAW_BYTES} bytes). The installed target did not boot far enough to write to ttyS0."
+  elif LC_ALL=C grep -F -q -- "Recovery failed:" "${NORM}"; then
+    echo "GATE FAIL stage8: IncusOS logged \"Recovery failed:\" (main.go:418) instead of completing recovery; the line follows"
+    LC_ALL=C grep -F -m 5 -- "Recovery failed:" "${NORM}" | sed 's/^/GATE recovery-error: /'
+  else
+    echo "GATE FAIL stage8: the installed target produced console output but never logged \"Recovery partition detected\" (recovery.go:50) within ${RECOVERY_TIMEOUT_S}s; RESCUE_DATA was not detected by the running system."
+  fi
+  exit 1
+fi
+echo "MET" > "${GATE_ROOT}/obs/O3-rescue-data-detected"
+echo "GATE O3 rescue-data-detected: MET (observed \"Recovery partition detected\", recovery.go:50)"
+[0m
+GATE console-wait: 0s/3600s vm-state=RUNNING raw-bytes=1 waiting-for="Recovery partition detected"
+
+GATE console-marker-observed: "Recovery partition detected" after 30s
+GATE recovery-wait-rc: 0
+GATE O3 rescue-data-detected: MET (observed "Recovery partition detected", recovery.go:50)
+
+[33mexit status: 0[0m
+
+[33m✻ STARTUP_RC=0
+"${GATE_ROOT}/bin/wait-console.sh" "${VM}" \
+  "${EVIDENCE}/recovery-serial.log" "${EVIDENCE}/recovery-serial.norm.log" \
+  "${STARTUP_TIMEOUT_S}" "${CONSOLE_POLL_S}" "System is starting up" \
+  || STARTUP_RC=$?
+echo "GATE startup-wait-rc: ${STARTUP_RC}"
+NORM="${EVIDENCE}/recovery-serial.norm.log"
+if [ "${STARTUP_RC}" -ne 0 ]; then
+  "${GATE_ROOT}/bin/dump-log.sh" "${NORM}" tail "recovery serial log"
+  echo "GATE FAIL stage8: the installed target logged \"Recovery partition detected\" but never reached \"System is starting up\" (main.go:657) within ${STARTUP_TIMEOUT_S}s, so there is no evidence that the installed target completed its boot."
+  exit 1
+fi
+echo "GATE booted-installed-target: observed \"System is starting up\" (main.go:657) after the recovery media was attached"
+[0m
+GATE console-wait: 0s/1200s vm-state=RUNNING raw-bytes=189136 waiting-for="System is starting up"
+
+GATE console-marker-observed: "System is starting up" after 30s
+GATE startup-wait-rc: 0
+GATE booted-installed-target: observed "System is starting up" (main.go:657) after the recovery media was attached
+
+[33mexit status: 0[0m
+
+[33m✻ NORM="${EVIDENCE}/recovery-serial.norm.log"
+OBS="${GATE_ROOT}/bin/observe.sh"
+"${OBS}" "${NORM}" recovery-failed "Recovery failed:" && { echo "GATE FAIL stage8: \"Recovery failed:\" (main.go:418) is present in the recovery log"; exit 1; } || true
+"${OBS}" "${NORM}" update-metadata-detected "Update metadata detected, verifying signature" || { echo "GATE FAIL stage8: the rescue media carries update/update.sjson (builder internal/media/rescue.go:29) but IncusOS never logged \"Update metadata detected, verifying signature\" (recovery.go:180); the payload was never considered."; exit 1; }
+"${OBS}" "${NORM}" update-signature-accepted "Processing validated update metadata" || { echo "GATE FAIL stage8: IncusOS never logged \"Processing validated update metadata\" (recovery.go:212), which is only reachable after the S/MIME signature verifies against the Update CA (recovery.go:194); the signed payload was NOT accepted."; exit 1; }
+"${OBS}" "${NORM}" update-files-verified "Decompressing and verifying each update file" || echo "GATE OBSERVE update-files-verified: ABSENT (recovery.go:229)"
+"${OBS}" "${NORM}" recovery-actions-completed "Recovery actions completed" || echo "GATE OBSERVE recovery-actions-completed: ABSENT (recovery.go:89)"
+"${OBS}" "${NORM}" system-ready "System is ready" || echo "GATE OBSERVE system-ready: ABSENT (main.go:322); the installed target started up but did not report full readiness"
+# The two O4 adjudication extracts are written through observe.sh so
+# they carry bounded windows, not a whole folded screen render.
+"${OBS}" "${NORM}" installed-applications "Installed application(s)" > "${EVIDENCE}/recovery-installed-applications.txt" 2>&1 || true
+cat "${EVIDENCE}/recovery-installed-applications.txt"
+"${OBS}" "${NORM}" startup-lines "System is starting up" > "${EVIDENCE}/recovery-startup-lines.txt" 2>&1 || true
+cat "${EVIDENCE}/recovery-startup-lines.txt"
+echo "ACCEPTED-NOT-ADJUDICATED" > "${GATE_ROOT}/obs/O4-recovery-payload"
+echo "GATE O4 recovery-payload: signature ACCEPTED (asserted, recovery.go:180+212)."
+echo "GATE ADJUDICATE O4: \"the signed recovery payload taking effect\" is NOT auto-asserted. The rescue media carries the same release that is installed, so there is no version delta to observe, and the guide is explicit that official docs publish no stable success string and that an invented log line must not be matched. A human must read recovery-serial.log, recovery-installed-applications.txt and recovery-startup-lines.txt and decide whether the payload took effect."
+[0m
+GATE OBSERVE recovery-failed: ABSENT -- "Recovery failed:"
+GATE OBSERVE update-metadata-detected: P
+RESENT -- "Update metadata detected, verifying signature"
+GATE OBSERVE update-metadata-detected win
+dow: 1 INFO Recovery partition detected 2026-08-17 01:27:01 INFO Update metadata detected, verifying
+ signature WARNING:Someencryptionrecoverykeyshavenotbeenretrievedyet!I
+GATE OBSERVE update-signatur
+e-accepted: PRESENT -- "Processing validated update metadata"
+GATE OBSERVE update-signature-accepte
+d window: etadatadetected,verifyingsignature 2026-08-17 01:27:01 INFO Processing validated update me
+tadata version=202608102114 2026-08-17 01:27:01 INFO Decompressing
+GATE OBSERVE update-files-verifi
+ed: PRESENT -- "Decompressing and verifying each update file"
+GATE OBSERVE update-files-verified wi
+ndow: date metadata version=202608102114 2026-08-17 01:27:01 INFO Decompressing and verifying each u
+pdate file 2026-08-17 01:27:01 WARN Skipping missing file: 'x86_64/Inc
+GATE OBSERVE recovery-action
+s-completed: PRESENT -- "Recovery actions completed"
+GATE OBSERVE recovery-actions-completed window
+: hannel=stable version=202608102114 2026-08-17 01:27:17 INFO Recovery actions completed WARNING:Som
+eencryptionrecoverykeyshavenotbeenretrievedyet!I
+GATE OBSERVE system-ready: ABSENT -- "System is re
+ady"
+GATE OBSERVE system-ready: ABSENT (main.go:322); the installed target started up but did not r
+eport full readiness
+GATE OBSERVE installed-applications: PRESENT -- "Installed application(s)"
+GATE OBSERVE installed-applications window:  Some encryption recovery keys have not been retrieved yet! Installed application(s): Machine: 13th Gen Intel(R) Core(TM) i5-13500 (numa=1, sock
+GATE OBSERVE startup-lines: PRESENT -- "System is starting up"
+GATE OBSERVE startup-lines window: PCRbindings,thismaytakeafewseconds 2026-08-17 01:27:36 INFO System is starting up machine-id=607ce2a3b9ad402aae8a3d4a4b52a1fb mode=production
+GATE O4 recovery-payload: signature ACCEPTED (asserted, recovery.go:180+212).
+GATE ADJUDICATE O4: "the signed recovery payload taking effect" is NOT auto-asserted. The rescue media carries the same release that is installed, so there is no version delta to observe, and the guide is explicit that official docs publish no stable success string and that an invented log line must not be matched. A human must read recovery-serial.log, recovery-installed-applications.txt
+ and recovery-startup-lines.txt and decide whether the payload took effect.
+
+[33mexit status: 0[0m
+
+[33m✻ "${GATE_ROOT}/bin/snap-console.sh" "${VM}" "${EVIDENCE}/recovery-serial.log" "${EVIDENCE}/recovery-serial.norm.log"[0m
+GATE console-snapshot: /home/semaphore/trackc-gate/evidence/recovery-serial.log raw-bytes=1337342 normalized-bytes=313837
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE stage: 9/9 evidence"[0m
+GATE stage: 9/9 evidence
+
+[33mexit status: 0[0m
+
+[33m✻ cp "${GATE_ROOT}/build.env" "${EVIDENCE}/build-fields.env" 2>/dev/null || true
+cp "${GATE_ROOT}/loop.env" "${EVIDENCE}/gate-loop.env" 2>/dev/null || true
+cp -r "${GATE_ROOT}/obs" "${EVIDENCE}/observations" 2>/dev/null || true
+sudo incus list -f csv > "${EVIDENCE}/incus-instances.csv" 2>&1 || true
+df -h / /home > "${EVIDENCE}/disk-free-final.txt" 2>&1 || true
+for f in incus-version.txt loop-devices.txt install-config.yaml recovery-config.yaml \
+         artifact-sha256.txt build-envelope.json source-seed.before.sha256 \
+         source-seed.before.list target-seed.after.sha256 target-seed.after.list \
+         source-seed.after.sha256 target-block-layout.txt install-serial.log \
+         recovery-serial.log rescue-block-layout.txt; do
+  if [ -s "${EVIDENCE}/${f}" ]; then
+    echo "GATE evidence-present: ${f} ($(wc -c <"${EVIDENCE}/${f}" | tr -d ' ') bytes)"
+  else
+    echo "GATE evidence-MISSING: ${f}"
+  fi
+done
+[0m
+GATE evidence-present: incus-version.txt (40 bytes)
+GATE evidence-present: loop-devices.txt (48 bytes)
+GATE evidence-present: install-config.yaml (891 bytes)
+GATE evidence-present: recovery-config.yaml (1100 bytes)
+GATE evidence-present: artifact-sha256.txt (222 bytes)
+GATE evidence-present: build-envelope.json (396 bytes)
+GATE evidence-present: source-seed.before.sha256 (68 bytes)
+GATE evidence-present: source-seed.before.list (43 bytes)
+GATE evidence-present: target-seed.after.sha256 (68 bytes)
+GATE evidence-present: target-seed.after.list (30 bytes)
+GATE evidence-present: source-seed.after.sha256 (68 bytes)
+GATE evidence-present: target-block-layout.txt (781 bytes)
+GATE evidence-present: install-serial.log (609373 bytes)
+GATE evidence-present: recovery-serial.log (1337342 bytes)
+GATE evidence-present: rescue-block-layout.txt (114 bytes)
+
+[33mexit status: 0[0m
+
+[33m✻ {
+  echo "Track C boot-acceptance gate"
+  echo "job: ${SEMAPHORE_JOB_ID:-unknown}  pipeline: ${SEMAPHORE_PIPELINE_ID:-unknown}"
+  echo "branch: ${SEMAPHORE_GIT_BRANCH:-unknown}  sha: ${SEMAPHORE_GIT_SHA:-unknown}"
+  echo "finished-at: $(date -u +%FT%TZ)"
+  echo "builder: $(sed -n 1p "${EVIDENCE}/builder-version.txt" 2>/dev/null)"
+  echo "upstream-pin: $(awk '/incus-os API:/ {print $3}' "${EVIDENCE}/builder-version.txt" 2>/dev/null)"
+  echo "O1 install-completion:      $(cat "${GATE_ROOT}/obs/O1-install-completion")"
+  echo "O2 target-seed-cleaned:     $(cat "${GATE_ROOT}/obs/O2-target-seed-cleaned")"
+  echo "O3 rescue-data-detected:    $(cat "${GATE_ROOT}/obs/O3-rescue-data-detected")"
+  echo "O4 recovery-payload:        $(cat "${GATE_ROOT}/obs/O4-recovery-payload")"
+  echo "verdict: O1-O3 asserted from pinned upstream strings; O4 signature acceptance asserted, 'took effect' REQUIRES HUMAN ADJUDICATION. This run is not a pass until O4 is adjudicated."
+} | tee "${EVIDENCE}/gate-result.txt" | sed 's/^/GATE result-file: /'
+[0m
+GATE result-file: Track C boot-acceptance gate
+GATE result-file: job: a8b16331-fdc2-43f2-ab16-4f7d555b40d0  pipeline: 4c5cc805-c758-4292-bb50-da877dc5fb18
+GATE result-file: branch: chore/semaphore-preflight  sha: c08cef3097c657044a92afda181e89dd6c5da2f7
+GATE result-file: finished-at: 2026-08-17T01:27:41Z
+GATE result-file: builder: incusos-builder dev (none) built unknown
+GATE result-file: upstream-pin: v0.0.0-20260815030500-0f5b8057f2fc
+GATE result-file: O1 install-completion:      MET
+GATE result-file: O2 target-seed-cleaned:     MET
+GATE result-file: O3 rescue-data-detected:    MET
+GATE result-file: O4 recovery-payload:        ACCEPTED-NOT-ADJUDICATED
+GATE result-file: verdict: O1-O3 asserted from pinned upstream strings; O4 signature acceptance asserted, 'took effect' REQUIRES HUMAN ADJUDICATION. This run is not a pass until O4 is adjudicated.
+
+[33mexit status: 0[0m
+
+[33m✻ tar -czf "${GATE_ROOT}/trackc-evidence.tar.gz" -C "${GATE_ROOT}" evidence && echo "GATE evidence-tarball: $(wc -c <"${GATE_ROOT}/trackc-evidence.tar.gz" | tr -d " ") bytes"[0m
+GATE evidence-tarball: 45442 bytes
+
+[33mexit status: 0[0m
+
+[33m✻ artifact push job "${GATE_ROOT}/trackc-evidence.tar.gz" --force && echo "GATE artifact-pushed: trackc-evidence.tar.gz"[0m
+[Aug 17 01:27:42.094] Successfully pushed artifact for current job.
+[Aug 17 01:27:42.094] * Local source: /home/semaphore/trackc-gate/trackc-evidence.tar.gz.
+[Aug 17 01:27:42.094] * Remote destination: artifacts/jobs/a8b16331-fdc2-43f2-ab16-4f7d555b40d0/trackc-evidence.tar.gz.
+[Aug 17 01:27:42.094] Pushed 1 file. Total of 44.4 KB
+GATE artifact-pushed: trackc-evidence.tar.gz
+
+[33mexit status: 0[0m
+
+[33m✻ artifact push job "${EVIDENCE}" --force && echo "GATE artifact-pushed: evidence/ (browsable copy)" || echo "GATE OBSERVE artifact-dir-push: failed; the tarball above is the authoritative upload"[0m
+[Aug 17 01:27:44.644] Successfully pushed artifact for current job.
+[Aug 17 01:27:44.644] * Local source: /home/semaphore/trackc-gate/evidence.
+[Aug 17 01:27:44.644] * Remote destination: artifacts/jobs/a8b16331-fdc2-43f2-ab16-4f7d555b40d0/evidence.
+[Aug 17 01:27:44.644] Pushed 39 files. Total of 2.2 MB
+GATE artifact-pushed: evidence/ (browsable copy)
+
+[33mexit status: 0[0m
+
+[33m✻ O1="$(cat "${GATE_ROOT}/obs/O1-install-completion")"
+O2="$(cat "${GATE_ROOT}/obs/O2-target-seed-cleaned")"
+O3="$(cat "${GATE_ROOT}/obs/O3-rescue-data-detected")"
+O4="$(cat "${GATE_ROOT}/obs/O4-recovery-payload")"
+echo "GATE RESULT: O1 install-completion=${O1} O2 target-seed-cleaned=${O2} O3 rescue-data-detected=${O3} O4 recovery-payload=${O4}"
+echo "GATE RESULT: INCOMPLETE-PENDING-ADJUDICATION -- observations 1-3 were observed on the console and asserted against pinned upstream strings; observation 4 is accepted-but-not-adjudicated by design. Read gate-result.txt in the job artifacts, adjudicate O4, and only then record this as a gate pass."
+[0m
+GATE RESULT: O1 install-completion=MET O2 target-seed-cleaned=MET O3 rescue-data-detected=MET O4 recovery-payload=ACCEPTED-NOT-ADJUDICATED
+GATE RESULT: INCOMPLETE-PENDING-ADJUDICATION -- observations 1-3 were observed on the console and asserted against pinned upstream strings; observation 4 is accepted-but-not-adjudicated by design. Read gate-result.txt in the job artifacts, adjudicate O4, and only then record this as a gate pass.
+
+[33mexit status: 0[0m
+
+[33m✻ Exporting environment variables[0m
+Exporting SEMAPHORE_JOB_RESULT
+
+[33mexit status: 0[0m
+
+[33m✻ echo "GATE epilogue: collecting diagnostics at $(date -u +%FT%TZ)"[0m
+GATE epilogue: collecting diagnostics at 2026-08-17T01:27:44Z
+
+[33mexit status: 0[0m
+
+[33m✻ mkdir -p "${GATE_ROOT}/evidence" || true[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus list -f csv > "${GATE_ROOT}/evidence/incus-instances.csv" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus storage volume list "${POOL}" -f csv > "${GATE_ROOT}/evidence/incus-volumes.csv" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo losetup --list > "${GATE_ROOT}/evidence/losetup-final.txt" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo journalctl -u incus --no-pager -n 400 > "${GATE_ROOT}/evidence/journal-incus.txt" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ df -h / /home > "${GATE_ROOT}/evidence/disk-free-final.txt" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus console "${VM}" --show-log >> "${GATE_ROOT}/evidence/final-console-snapshot.log" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ sudo incus info "${VM}" > "${GATE_ROOT}/evidence/vm-info-final.txt" 2>&1 || true[0m
+[33mexit status: 0[0m
+
+[33m✻ cp -r "${GATE_ROOT}/obs" "${GATE_ROOT}/evidence/observations" 2>/dev/null || true[0m
+[33mexit status: 0[0m
+
+[33m✻ if [ ! -s "${GATE_ROOT}/evidence/gate-result.txt" ]; then
+  {
+    echo "Track C boot-acceptance gate -- INCOMPLETE (job did not reach its own verdict stage)"
+    echo "job: ${SEMAPHORE_JOB_ID:-unknown}  finished-at: $(date -u +%FT%TZ)"
+    for o in O1-install-completion O2-target-seed-cleaned O3-rescue-data-detected O4-recovery-payload; do
+      echo "${o}: $(cat "${GATE_ROOT}/obs/${o}" 2>/dev/null || echo UNKNOWN)"
+    done
+    echo "verdict: FAILED before the verdict stage. The first 'GATE FAIL' line in the job log names the blocking step."
+  } > "${GATE_ROOT}/evidence/gate-result.txt" 2>/dev/null || true
+fi
+sed 's/^/GATE epilogue-result: /' "${GATE_ROOT}/evidence/gate-result.txt" 2>/dev/null || true
+[0m
+GATE epilogue-result: Track C boot-acceptance gate
+GATE epilogue-result: job: a8b16331-fdc2-43f2-ab16-4f7d555b40d0  pipeline: 4c5cc805-c758-4292-bb50-da877dc5fb18
+GATE epilogue-result: branch: chore/semaphore-preflight  sha: c08cef3097c657044a92afda181e89dd6c5da2f7
+GATE epilogue-result: finished-at: 2026-08-17T01:27:41Z
+GATE epilogue-result: builder: incusos-builder dev (none) built unknown
+GATE epilogue-result: upstream-pin: v0.0.0-20260815030500-0f5b8057f2fc
+GATE epilogue-result: O1 install-completion:      MET
+GATE epilogue-result: O2 target-seed-cleaned:     MET
+GATE epilogue-result: O3 rescue-data-detected:    MET
+GATE epilogue-result: O4 recovery-payload:        ACCEPTED-NOT-ADJUDICATED
+GATE epilogue-result: verdict: O1-O3 asserted from pinned upstream strings; O4 signature acceptance asserted, 'took effect' REQUIRES HUMAN ADJUDICATION. This run is not a pass until O4 is adjudicated.
+
+[33mexit status: 0[0m
+
+[33m✻ tar -czf "${GATE_ROOT}/trackc-evidence.tar.gz" -C "${GATE_ROOT}" evidence 2>/dev/null || true[0m
+[33mexit status: 0[0m
+
+[33m✻ artifact push job "${GATE_ROOT}/trackc-evidence.tar.gz" --force && echo "GATE epilogue-artifact-pushed: trackc-evidence.tar.gz" || echo "GATE epilogue-artifact-push-FAILED: trackc-evidence.tar.gz"[0m
+[Aug 17 01:27:45.553] Successfully pushed artifact for current job.
+[Aug 17 01:27:45.553] * Local source: /home/semaphore/trackc-gate/trackc-evidence.tar.gz.
+[Aug 17 01:27:45.553] * Remote destination: artifacts/jobs/a8b16331-fdc2-43f2-ab16-4f7d555b40d0/trackc-evidence.tar.gz.
+[Aug 17 01:27:45.553] Pushed 1 file. Total of 59.0 KB
+GATE epilogue-artifact-pushed: trackc-evidence.tar.gz
+
+[33mexit status: 0[0m
+
+[33m✻ artifact push job "${GATE_ROOT}/evidence" --force >/dev/null 2>&1 && echo "GATE epilogue-artifact-pushed: evidence/" || echo "GATE OBSERVE epilogue-artifact-dir-push: failed; the tarball is the authoritative upload"[0m
+GATE epilogue-artifact-pushed: evidence/
+
+[33mexit status: 0[0m

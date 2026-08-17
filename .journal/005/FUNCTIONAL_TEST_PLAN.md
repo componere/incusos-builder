@@ -10,11 +10,13 @@ status: draft for review
 
 ## 1. Purpose and scope
 
-This plan is the last human gate before the first `incusos-builder` release. An
-operator executes it by hand against real inputs — the live IncusOS update
-server, real YAML configs, real multi-gigabyte artifacts, a real container
-image, and the real GitHub release machinery — and at the end can state, with
-recorded evidence, which promises the project keeps and which it does not.
+This plan is the last functional gate before the first `incusos-builder`
+release. It was designed for an operator working by hand against real inputs —
+the live IncusOS update server, real YAML configs, real multi-gigabyte
+artifacts, a real container image, and the real GitHub release machinery. The
+first accepted Track C execution ran the gate's substance unattended on
+Semaphore Cloud; its result is recorded in `BOOT_10_RECORD.md`. At the end, the
+evidence must still show which promises the project keeps and which it does not.
 
 "Release ready" here means all four of these, separately signed off:
 
@@ -29,15 +31,18 @@ recorded evidence, which promises the project keeps and which it does not.
    runs nonroot, and the release rehearsal is green. Post-tag: signatures,
    attestations, SBOMs, and checksums verify with the exact commands the docs
    hand to consumers.
-4. **The unproven path is named, not hidden.** IncusOS seed consumption and
-   recovery acceptance have never been observed in any environment
-   (`docs/notes/phase-5-boot-probe.md:44,49-54`). The plan either closes that
-   gap on a real Linux host or records it as an accepted, owned risk.
+4. **The previously unproven path is observed and bounded.** On 2026-08-17,
+   Track C observed IncusOS seed consumption, `RESCUE_DATA` detection, and
+   signed recovery acceptance for one run on one Incus venue at the pinned
+   upstream version. `BOOT_10_RECORD.md` records the pass and its residual
+   limits without revising the earlier negative Phase 5.2 result.
 
 ### What this plan is not
 
-- It is not a new automated suite. Every step is typed in a terminal or observed
-  in a browser.
+- It is not an automated-suite specification. Most cases are typed in a
+  terminal or observed in a browser. Track C's accepted run instead executed
+  the same acceptance substance in an unattended pipeline and preserved the
+  mechanism differences in §8.
 - It does not re-implement existing automated coverage. `moon run root:check`
   (testscripts under `internal/cli/testdata/script/`) and the opt-in
   `moon run root:e2e` (`INCUSOS_BUILDER_E2E=1`, `runInCI: false`, `moon.yml:97-107`)
@@ -2780,8 +2785,9 @@ Every DOC case uses `./bin/incusos-builder`, never `go run` — see F-DOC-1.
 
 ### 4.7 Boot acceptance
 
-This is the one surface that has never passed anywhere. Treat BOOT-01 as a
-release-blocking decision, not a formality.
+Track C first passed on 2026-08-17 in the unattended Semaphore Cloud execution
+recorded by `BOOT_10_RECORD.md`. BOOT-01 remains a release-blocking venue
+decision for later runs, not a formality.
 
 Track C transfers about **3.76 GB** for the seeded raw image and rescue artifact
 together. The separate **~15 GB** figure is the build host's local workspace
@@ -2890,7 +2896,7 @@ pool thick-provisions the 50 GiB target and its 50 GiB installed-volume copy.
   or serial** — network traffic is explicitly not success.
 - Pass/Fail: [ ]
 
-#### BOOT-06 — Observation 2: prove the target seed was consumed **(never yet observed)**
+#### BOOT-06 — Observation 2: prove the target seed was consumed **(first observed 2026-08-17)**
 - Promise / Source: `verify-boot-acceptance.md` §5;
   `reference/incus-os/incus-osd/internal/install/install.go:893-894`;
   `reference/incus-os/incus-osd/internal/seed/seed.go:31-36`.
@@ -2948,14 +2954,14 @@ pool thick-provisions the 50 GiB target and its 50 GiB installed-volume copy.
 - Expected: the source baseline contains `install.*`; the target listing lacks
   it; and the source and target partition digests differ. The optional source
   readback is byte-identical to the baseline. Stop the gate if a required
-  assertion fails. **This target-side result has never been observed
-  anywhere.** The Phase 5 probe's target-growth oracle was valid in principle:
-  a successful installer writes a GPT and copies partitions to the target. Its
-  zero target growth means the installer never reached that write path, not that
-  it ran and ignored the seed. In a failed run, no `gpt` in the helper's
-  `PTTYPE` output confirms that writes never began; a GPT without a `seed-data`
-  partition is a different installation failure. Do not accept source-overlay
-  growth, cache growth, or network traffic as a substitute.
+  assertion fails. **This target-side result was first observed by the
+  2026-08-17 Track C run.** The Phase 5 probe's target-growth oracle remains
+  valid in principle: a successful installer writes a GPT and copies partitions
+  to the target. Its zero target growth means the installer never reached that
+  write path, not that it ran and ignored the seed. In a failed run, no `gpt` in
+  the helper's `PTTYPE` output confirms that writes never began; a GPT without a
+  `seed-data` partition is a different installation failure. Do not accept
+  source-overlay growth, cache growth, or network traffic as a substitute.
 - Pass/Fail: [ ]
 
 #### BOOT-07 — Observation 3: copy the installed volume and detect raw `RESCUE_DATA`
@@ -2990,7 +2996,7 @@ pool thick-provisions the 50 GiB target and its 50 GiB installed-volume copy.
   variant does not fail BOOT-07.
 - Pass/Fail: [ ]
 
-#### BOOT-08 — Observation 4: recovery payload accepted and applied **(never yet observed)**
+#### BOOT-08 — Observation 4: recovery payload accepted and applied **(first observed 2026-08-17)**
 - Wave: **Wave 2**
 - Promise / Source: `verify-boot-acceptance.md:236-246`. Cost: minutes after BOOT-07.
 - Commands: observe `recovery-serial.log` and the VGA console; then query the
@@ -3000,9 +3006,10 @@ pool thick-provisions the 50 GiB target and its 50 GiB installed-volume copy.
   matching an invented log line because upstream publishes no stable success
   string. Recovery reads `hotfix.sh.sig` at the root then signed updates under
   `update/`; the builder writes no `hotfix.sh.sig`, so acceptance must come from
-  the `update/` path. **Never observed:** `phase-5-boot-probe.md:49-54` records
-  recovery as "not reachable" with `rescue_data_detected`,
-  `update_sjson_acceptance`, `update_json_acceptance` all false.
+  the `update/` path. Before the accepted Track C run, this had never been
+  observed: `phase-5-boot-probe.md:49-54` records recovery as "not reachable"
+  with `rescue_data_detected`, `update_sjson_acceptance`, and
+  `update_json_acceptance` all false.
 - Pass/Fail: [ ]
 
 #### BOOT-09 — Archive evidence, then clean up
@@ -3193,15 +3200,22 @@ This finding came from reading the pinned source, not from executing BOOT-06.
 
 ---
 
-## 6. Out of scope and cannot verify
+## 6. Observed, out of scope, and cannot verify
 
-Recorded honestly, with the substitute evidence that exists and the risk that
-remains.
+Recorded honestly, with the evidence that exists and the risk that remains.
+
+### Observed by Track C on 2026-08-17
+
+| Claim | Observation | Evidence and limit |
+|---|---|---|
+| IncusOS consumes the spliced seed at boot | **Observed.** The source `/dev/loop0p2` contained `applications.yaml`, `install.yaml`, and `update.yaml`; target `/dev/sdb2` retained `applications.yaml` and `update.yaml` but lacked `install.yaml`. Their digests differed, and the source digest was unchanged after installation. | `TRACK_C_GATE_LOG.txt`; BOOT-06; `BOOT_10_RECORD.md`. One Semaphore Cloud Incus run at upstream pin `v0.0.0-20260815030500-0f5b8057f2fc`, not a guarantee for another pin or venue. |
+| `RESCUE_DATA` detection and signed recovery acceptance | **Observed.** Serial contained `Recovery partition detected`, `Update metadata detected, verifying signature`, `Processing validated update metadata`, `Recovery actions completed`, and `System is starting up`; `Recovery failed:` was absent. The developer adjudicated O4. | `TRACK_C_GATE_LOG.txt`; BOOT-07/08; `BOOT_10_RECORD.md`. The pipeline asserted the pinned source strings; human adjudication completed O4 after the job. |
+
+### Still out of scope or not verified
 
 | Claim | Why it cannot be proven here | Substitute / deferred risk |
 |---|---|---|
-| IncusOS consumes the spliced seed at boot | Never observed in any environment; `phase-5-boot-probe.md:44` records `seed_consumption_observed: false`. macOS arm64 has no KVM and no Incus. | BOOT-06 on a real Linux host is the only proof. ART-08/09 prove the bytes are correct and correctly placed; that is necessary, not sufficient. **This is the largest deferred risk in the release.** |
-| `RESCUE_DATA` detection and signed recovery acceptance | Unreachable because recovery never ran (`phase-5-boot-probe.md:49-54`). | MED-08..MED-13 prove the media is structurally what upstream `recovery.go` looks for. BOOT-07/08 are the real gate. |
+| **N-MEDIA-3:** Linux and IncusOS interpret the NUL-padded ISO volume identifier as `RESCUE_DATA` | Track C ran `image.type: raw`. Recovery matched the GPT `PARTLABEL` and never read the ISO primary volume descriptor. | Keep N-MEDIA-3 open. Only the optional `BOOT-07-ISO` run can close it by observing the exact Linux label and IncusOS detection. |
 | Secure Boot enrollment, vTPM identity, dm-verity on this commit's media | Needs `x86_64` UEFI in setup mode plus a TPM. | The Phase 5 probe observed enrollment once under OVMF secboot; not re-observed for this commit. |
 | Bare-metal install | No doc claims it; the checklist only ever describes an Incus VM. | Out of scope — note it in the release record rather than as a pass. |
 | Real `version`/`commit`/`date` on the `--version` first line of a **released** binary | Only GoReleaser or melange injects them. | SUP-05 proves the melange path locally; re-run CLI-01 against the published binary post-tag (SUP-22). |
@@ -3266,7 +3280,8 @@ own. Waves 1 and 2 may complete in either order; both must be green before a tag
 
 **From Wave 2, track C**
 
-13. **BOOT-10** is written into the release record, whatever the verdict.
+13. **BOOT-10 is satisfied.** `BOOT_10_RECORD.md` records the adjudicated Track
+    C pass from 2026-08-17 and its one-run, one-venue, one-pin limits.
 
 **From Wave P**
 
@@ -3276,8 +3291,6 @@ own. Waves 1 and 2 may complete in either order; both must be green before a tag
 
 ### May ship with a documented caveat
 
-- **BOOT-06 unobserved.** Only if BOOT-10 records it as an accepted risk with a
-  named owner and a follow-up. This is the honest status quo, not a pass.
 - **F-CLI-5** (operands exit 1) and **F-CLI-6** (`init -o ./-`) — contract
   wrinkles. Either fix the code or amend `automation.md`; do not leave the docs
   asserting behavior the binary does not have.
@@ -3300,11 +3313,17 @@ The release is ready when the operator can write, and support with the evidence
 recorded in §8:
 
 > At commit `<sha>`, every documented user-facing promise of incusos-builder was
-> executed by hand and observed, except those listed in §6. Artifacts were
-> verified with tools outside the project. The supply chain verifies with the
-> exact commands the documentation gives consumers. Boot acceptance was
-> `<observed | not observed>`; if not observed, it is an accepted risk owned by
-> `<name>` and tracked in `<issue>`.
+> executed and observed, except those listed in §6. Artifacts were verified
+> with tools outside the project. The supply chain verifies with the exact
+> commands the documentation gives consumers.
+
+The boot clause for this campaign is no longer a placeholder:
+
+> Track C boot acceptance passed at commit
+> `c08cef3097c657044a92afda181e89dd6c5da2f7` on 2026-08-17. This is one
+> observation on Semaphore Cloud under Incus at upstream pin
+> `v0.0.0-20260815030500-0f5b8057f2fc`, not a guarantee for another run, venue,
+> or pin. See `BOOT_10_RECORD.md`.
 
 ---
 
@@ -3461,15 +3480,15 @@ runs days later.
 
 | Case | Result | Evidence | Notes |
 |------|--------|----------|-------|
-| BOOT-02 |  |  |  |
-| BOOT-03 |  |  |  |
-| BOOT-04 |  |  |  |
-| BOOT-05 |  |  |  |
-| BOOT-06 |  |  |  |
-| BOOT-07 |  |  |  |
-| BOOT-08 |  |  |  |
-| BOOT-09 |  |  |  |
-| BOOT-10 |  |  |  |
+| BOOT-02 | pass | TRACK_C_GATE_LOG.txt | Unattended pipeline build; JSON envelope and both on-disk digests matched. |
+| BOOT-03 | pass | TRACK_C_GATE_LOG.txt | The pipeline loop-mapped and hashed both raw artifacts on the build worker instead of transferring them to a separate attended host. |
+| BOOT-04 | pass | TRACK_C_GATE_LOG.txt | The pipeline created the Incus profile, 50 GiB target, vTPM, VM, and asserted the stopped pre-boot topology. |
+| BOOT-05 | pass | TRACK_C_GATE_LOG.txt | Source seed baseline captured; O1 observed over serial. The pipeline polled serial unattended rather than using a human VGA observer. |
+| BOOT-06 | pass | TRACK_C_GATE_LOG.txt | O2 met: source contained `install.yaml`; target lacked it, retained `applications.yaml`, and had a different digest; source readback was unchanged. |
+| BOOT-07 | pass | TRACK_C_GATE_LOG.txt | The pipeline copied the installed volume, attached raw rescue media, and observed O3 `Recovery partition detected` over serial. |
+| BOOT-08 | pass | TRACK_C_GATE_LOG.txt | Pipeline asserted signed metadata acceptance; developer adjudicated O4 from the completion and startup sequence. The raw log correctly retains its pre-adjudication status. |
+| BOOT-09 | pass | TRACK_C_GATE_LOG.txt | All named evidence files were present and 39 files plus the tarball were uploaded. Explicit attended cleanup did not run; **[INFERENCE]** Semaphore's ephemeral worker disposal supplied resource isolation. |
+| BOOT-10 | pass | BOOT_10_RECORD.md | Adjudicated Track C pass, prior evidence state, proof boundary, and residual gaps recorded. |
 
 ### Wave P — post-tag
 
@@ -3489,6 +3508,6 @@ runs days later.
 | Operator |  |
 | Start / end date |  |
 | Blockers open at sign-off |  |
-| Boot acceptance verdict |  |
+| Boot acceptance verdict | pass — `BOOT_10_RECORD.md`; one Semaphore Cloud Incus run at the pinned upstream version |
 | Accepted risks (owner, issue) |  |
 | Decision | ship / hold |
