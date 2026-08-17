@@ -591,3 +591,47 @@ Open items for the developer:
    docs-only pip deps), low cloudflare/circl in go deps.
 3. N-MEDIA-3 still needs an optional ISO-media gate run to close.
 4. Deferred by plan: F-CFG-1, N-ART-5, N-APUB-2.
+
+## 2026-08-17 02:20 - Release version baseline corrected to 0.1.0
+
+Developer rejected 1.0.0 (not ready to promise a stable API) and asked why the
+release PR proposed 0.1.2. Root cause: `.release-please-manifest.json` carried
+`0.1.1` from the initial template commit (424e764) - it is
+`meigma/template-go`'s own release state, copied in wholesale. This repo has
+zero tags and zero releases, so the number was extrapolated from releases that
+never happened.
+
+**I got the fix wrong on the first pass and the developer's pushback caught it.**
+I claimed manifest-`0.0.0` plus `bump-patch-for-minor-pre-major: true` would
+yield 0.0.1. Wrong: `manifest.ts` special-cases `0.0.0` out of the manifest
+backfill, so no `latestRelease` exists, so `base.ts buildNewVersion()` never
+calls the versioning strategy at all - it returns `initialReleaseVersion()`,
+which defaults to `Version.parse('1.0.0')`. My "fix" would have produced exactly
+the version that was rejected. I had read `determineReleaseType` correctly but
+never checked whether it was the code that would run.
+
+Landed (PR #26, 2abe534):
+- manifest `0.1.1` -> `0.0.0`
+- `initial-version: "0.1.0"` added - makes the first release stated, not derived
+- `bump-patch-for-minor-pre-major` -> `false` (post-first-release cadence:
+  features move the minor, not the patch)
+- `bump-minor-pre-major` stays `true` - breaking changes bump the minor, so the
+  project stays in 0.x and never silently promises a stable API
+- melange.yaml / apko.yaml markers -> `0.0.0`
+
+Then PR #29 (6369865) closed the second half of F-REPO-4: `CHANGELOG.md` shipped
+as a `# Changelog` stub, and release-please's updater runs `adjustHeaders()`
+over any pre-existing content when the file has no version heading, demoting the
+H1 and re-appending it as a stray `## Changelog`. Emptying the seed takes the
+clean branch. Confirmed gone in the regenerated PR.
+
+Verified empirically, not by analysis: PR #10 regenerated as
+**`chore(master): release 0.1.0`** with 0.1.0 in all four files and a clean
+changelog.
+
+Also observed: master moved twice under me (#27 dropped the flaky wall-clock
+assertion in internal/testfixture; #25 trimmed comments repo-wide). #26's first
+CI run failed on that pre-existing flake before I rebased.
+
+Next: PR #10 is MERGEABLE/BLOCKED pending review. Merging it tags v0.1.0 and
+triggers the real publish pipeline - the first non-rehearsal run.
