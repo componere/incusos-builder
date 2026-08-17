@@ -1,5 +1,22 @@
 # Phase 5.2 Linux boot experiment
 
+> **Superseded on 2026-08-17.** This negative result stood until Track C
+> passed on a Semaphore Cloud `f1-standard-4` machine with nested KVM
+> (pipeline `4c5cc805`, job `a8b16331`). That run observed install
+> completion, target-seed cleanup, `RESCUE_DATA` detection, and
+> human-adjudicated recovery-payload acceptance. The findings below remain
+> the dated record of the Phase 5.2 experiment.
+>
+> The durable explanation is that this probe's target-disk-growth oracle
+> was correct in principle, but the installer never reached its target
+> write path. Its console was also blind: plain QEMU did not provide
+> `/dev/virtio-ports/org.linuxcontainers.incus`, and the IncusOS TUI adds
+> `/dev/ttyS0` only when that port exists
+> (`internal/tui/tui.go:67-71`). The probe therefore could not distinguish
+> a failed install from an install that produced no serial output. Under
+> Incus, the port exists and the installer TUI mirrors to the serial
+> console.
+
 Completed diagnostic. Classification is **negative**. The v1 boot
 acceptance gate is a manual release checklist, not a CI job. The
 manual checklist runs before every release tag until a CI boot gate
