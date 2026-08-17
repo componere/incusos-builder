@@ -92,7 +92,8 @@ func hasTopLevelSOPS(raw []byte) (bool, error) {
 	return ok, nil
 }
 
-// wrapDecodeError maps yaml strict-decode failures to [ErrConfig] with field paths.
+// wrapDecodeError maps yaml strict-decode failures to [ErrConfig] with
+// field paths.
 func wrapDecodeError(err error) error {
 	var loadErrs *yaml.LoadErrors
 	if errors.As(err, &loadErrs) {
@@ -183,7 +184,7 @@ func yamlPathPrefix(typeName string) string {
 	}
 }
 
-// unknownFieldMessage is the strict-decode wording required by ARCHITECTURE §4.
+// unknownFieldMessage is the required strict-decode wording for unknown fields.
 func unknownFieldMessage(path string) string {
 	return path + ": " + unknownFieldHint
 }

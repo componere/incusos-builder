@@ -11,7 +11,7 @@ import (
 	"github.com/componere/incusos-builder/internal/ux"
 )
 
-// TestNoInputAutoOn covers the ARCHITECTURE §3 auto-on matrix.
+// TestNoInputAutoOn covers the --no-input auto-on matrix.
 func TestNoInputAutoOn(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -170,6 +170,7 @@ func TestVerboseEmitsDebugToStderr(t *testing.T) {
 	require.Empty(t, defaultErr.String())
 }
 
+// mustResolvePolicy runs the root command and returns the resolved policy.
 func mustResolvePolicy(t *testing.T, opts Options, args []string) policy {
 	t.Helper()
 	if opts.Viper == nil {

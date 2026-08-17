@@ -260,6 +260,7 @@ func liveIndex(t *testing.T, cacheDir string) apiimages.Index {
 	return index
 }
 
+// smallestLiveRaw selects the smallest live raw image and returns its index.
 func smallestLiveRaw(t *testing.T, cacheDir string) (liveImage, apiimages.Index) {
 	t.Helper()
 

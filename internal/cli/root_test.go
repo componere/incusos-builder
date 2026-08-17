@@ -146,7 +146,7 @@ func TestViperPrecedenceFlagBeatsEnvBeatsDefault(t *testing.T) {
 }
 
 // TestViperPrecedenceResolvedPolicy asserts flags > INCUSOS_BUILDER_* > defaults
-// on the resolved policy for all six Viper-backed settings (18 rows).
+// on the resolved policy for all six Viper-backed settings.
 func TestViperPrecedenceResolvedPolicy(t *testing.T) {
 	tty := Options{
 		StdinTTY:  func() bool { return true },
@@ -353,6 +353,7 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 	}
 }
 
+// executeViper runs the root command and returns its Viper instance.
 func executeViper(t *testing.T, args []string) *viper.Viper {
 	t.Helper()
 	vp := viper.New()
@@ -370,6 +371,7 @@ func executeViper(t *testing.T, args []string) *viper.Viper {
 	return vp
 }
 
+// ioDiscard returns an empty buffer used as a discarded writer.
 func ioDiscard() *bytes.Buffer {
 	return &bytes.Buffer{}
 }
@@ -381,8 +383,8 @@ func unsetEnv(t *testing.T, key string) {
 	require.NoError(t, os.Unsetenv(key))
 }
 
-// TestEmptyCacheDirEnvMatchesEmptyFlag pins F-CLI-4: an empty
-// INCUSOS_BUILDER_CACHE_DIR is equivalent to --cache-dir "".
+// TestEmptyCacheDirEnvMatchesEmptyFlag treats an empty
+// INCUSOS_BUILDER_CACHE_DIR as equivalent to --cache-dir "".
 func TestEmptyCacheDirEnvMatchesEmptyFlag(t *testing.T) {
 	const (
 		want    = "acquisition failed: cache directory is required"
@@ -426,9 +428,9 @@ func TestEmptyCacheDirEnvMatchesEmptyFlag(t *testing.T) {
 	})
 }
 
-// TestViperEmptyServerEnvIsExplicitValue pins F-CLI-4 for --server: an
-// exported-but-empty INCUSOS_BUILDER_SERVER is an explicit value and fails
-// like --server "", while an absent variable uses the documented default.
+// TestViperEmptyServerEnvIsExplicitValue treats an exported-but-empty
+// INCUSOS_BUILDER_SERVER as an explicit value that fails like --server "",
+// while an absent variable uses the documented default.
 func TestViperEmptyServerEnvIsExplicitValue(t *testing.T) {
 	const want = `usage error: --server "" is neither an https URL nor an existing directory`
 
@@ -463,8 +465,8 @@ func TestViperEmptyServerEnvIsExplicitValue(t *testing.T) {
 	})
 }
 
-// TestOperandAndUnknownCommandExitTwo pins F-CLI-5: extra words and unknown
-// commands are usage errors (exit 2) with a JSON envelope whose code is 2.
+// TestOperandAndUnknownCommandExitTwo treats extra words and unknown
+// commands as usage errors (exit 2) with a JSON envelope whose code is 2.
 func TestOperandAndUnknownCommandExitTwo(t *testing.T) {
 	t.Parallel()
 

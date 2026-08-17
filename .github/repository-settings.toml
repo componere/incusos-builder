@@ -123,7 +123,7 @@ grouped_security_updates = true
 # (github-actions, gomod, and uv ecosystems).
 dependabot_version_updates = true
 
-# General settings not currently handled in v1.
+# General settings the script does not apply.
 code_quality_preview = true
 commit_comments_on_individual_commits = true
 pull_request_creation_permissions = "all_users"

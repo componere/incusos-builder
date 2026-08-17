@@ -10,7 +10,7 @@ import (
 	"github.com/componere/incusos-builder/internal/build"
 )
 
-// seedTarMode is the tar header mode writeSeed uses for every seed file.
+// seedTarMode is the tar header mode for every seed file, matching writeSeed.
 const seedTarMode = 0o600
 
 // Render serializes s into an uncompressed tar of YAML seed files.
@@ -28,7 +28,7 @@ func Render(s build.Seeds) ([]byte, int64, error) {
 	return writeSeedTar(archiveContents)
 }
 
-// collectSeedYAML dumps each non-nil seed section in writeSeed's order.
+// collectSeedYAML serializes each non-nil seed section in archive order.
 func collectSeedYAML(s build.Seeds) ([][]string, error) {
 	archive := [][]string{}
 	if err := appendCustomizerSeeds(&archive, s); err != nil {
@@ -40,7 +40,8 @@ func collectSeedYAML(s build.Seeds) ([][]string, error) {
 	return archive, nil
 }
 
-// appendCustomizerSeeds serializes the nine web-customizer sections in writeSeed order.
+// appendCustomizerSeeds serializes the nine web-customizer sections in
+// archive order.
 func appendCustomizerSeeds(archive *[][]string, s build.Seeds) error {
 	if err := appendIfPresent(archive, "applications.yaml", s.Applications); err != nil {
 		return err
@@ -69,7 +70,8 @@ func appendCustomizerSeeds(archive *[][]string, s build.Seeds) error {
 	return appendIfPresent(archive, "update.yaml", s.Update)
 }
 
-// appendCLISeeds serializes kernel.yaml and security.yaml after the customizer nine.
+// appendCLISeeds serializes kernel.yaml and security.yaml after the
+// customizer nine.
 func appendCLISeeds(archive *[][]string, s build.Seeds) error {
 	if err := appendIfPresent(archive, "kernel.yaml", s.Kernel); err != nil {
 		return err
@@ -85,7 +87,7 @@ func appendIfPresent[T any](archive *[][]string, name string, v *T) error {
 	return appendYAML(archive, name, v)
 }
 
-// appendYAML dumps v with writeSeed's yaml options and records a tar member.
+// appendYAML dumps v with yaml.WithV2Defaults and records a tar member.
 func appendYAML(archive *[][]string, name string, v any) error {
 	yamlContents, err := yaml.Dump(v, yaml.WithV2Defaults())
 	if err != nil {
@@ -95,7 +97,8 @@ func appendYAML(archive *[][]string, name string, v any) error {
 	return nil
 }
 
-// writeSeedTar packs files into an uncompressed tar with writeSeed headers.
+// writeSeedTar packs files into an uncompressed tar. Headers set Name,
+// Mode 0600, and Size only.
 func writeSeedTar(files [][]string) ([]byte, int64, error) {
 	var buf bytes.Buffer
 	wc := &writeCounter{}
@@ -119,9 +122,10 @@ func writeSeedTar(files [][]string) ([]byte, int64, error) {
 	return buf.Bytes(), int64(wc.size), nil
 }
 
-// writeCounter counts bytes written, matching image-customizer writeSeed.
+// writeCounter counts bytes written through the tar writer, including
+// end-of-archive blocks.
 type writeCounter struct {
-	// size is the total number of bytes observed.
+	// size is the running byte count, including end-of-archive blocks.
 	size int
 }
 

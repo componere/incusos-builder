@@ -23,9 +23,10 @@ const (
 // signedSJSON wraps payload in a multipart/signed S/MIME document whose
 // first part is payload and whose second part is a self-signed throwaway
 // certificate generated from a fixed seed. The update adapter validates
-// MIME structure and JSON binding, not the PKCS#7 signature. Ed25519 is
-// used so the certificate DER is deterministic under Go 1.26's
-// cryptocustomrand rules (ECDSA signatures ignore a supplied Reader).
+// MIME structure and the three-way Filename/Sha256/Size binding, not the
+// PKCS#7 signature. Ed25519 is used so the certificate DER is
+// deterministic under Go 1.26's cryptocustomrand rules (ECDSA signatures
+// ignore a supplied Reader).
 func signedSJSON(payload []byte) ([]byte, error) {
 	certPEM, err := fixtureCertPEM()
 	if err != nil {

@@ -50,7 +50,7 @@ func New(color ColorMode, progress ProgressMode, w io.Writer) build.Reporter {
 }
 
 // NewLogger returns a charm log/v2 logger writing to w, styled from
-// [DefaultPalette]. It is the only logger the CLI should use. Color
+// [DefaultPalette]. It is the only logger the CLI uses. Color
 // resolution matches [New]: always forces a TrueColor profile even to a
 // buffer; never/auto-off pin the profile to NoTTY so styling is stripped.
 func NewLogger(color ColorMode, w io.Writer) *log.Logger {

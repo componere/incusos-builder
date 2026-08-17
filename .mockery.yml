@@ -1,5 +1,5 @@
 # mockery v3.7.3 packages config. Mocks live under the adapter that will
-# implement each port (AGENTS.md T3).
+# implement each port.
 template: testify
 formatter: goimports
 pkgname: mocks

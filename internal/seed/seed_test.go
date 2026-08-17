@@ -54,7 +54,8 @@ func TestRenderNineSectionGolden(t *testing.T) {
 	assert.Equal(t, nineEntryNames(), entryNames(entries))
 }
 
-// TestRenderKernelGolden goldens kernel.yaml and strict-decodes it into apiseed.Kernel.
+// TestRenderKernelGolden asserts kernel.yaml matches the committed golden
+// and strict-decodes into apiseed.Kernel.
 func TestRenderKernelGolden(t *testing.T) {
 	t.Parallel()
 
@@ -76,7 +77,8 @@ func TestRenderKernelGolden(t *testing.T) {
 	assert.Equal(t, *kernelSection(), decoded, "strict-decoded kernel.yaml should round-trip")
 }
 
-// TestRenderSecurityGolden goldens security.yaml and strict-decodes it into apiseed.Security.
+// TestRenderSecurityGolden asserts security.yaml matches the committed
+// golden and strict-decodes into apiseed.Security.
 func TestRenderSecurityGolden(t *testing.T) {
 	t.Parallel()
 
@@ -98,7 +100,8 @@ func TestRenderSecurityGolden(t *testing.T) {
 	assert.Equal(t, *securitySection(), decoded, "strict-decoded security.yaml should round-trip")
 }
 
-// TestRenderEmptyAndSingleSection covers a zero-entry tar and a one-section tar.
+// TestRenderEmptyAndSingleSection covers a zero-entry tar and a
+// one-section tar.
 func TestRenderEmptyAndSingleSection(t *testing.T) {
 	t.Parallel()
 
@@ -134,7 +137,8 @@ func TestRenderEmptyAndSingleSection(t *testing.T) {
 	}
 }
 
-// TestRenderKernelSecurityFollowNine asserts CLI-exclusive entries follow writeSeed's nine.
+// TestRenderKernelSecurityFollowNine asserts kernel.yaml and security.yaml
+// follow the nine web sections.
 func TestRenderKernelSecurityFollowNine(t *testing.T) {
 	t.Parallel()
 
@@ -151,11 +155,11 @@ func TestRenderKernelSecurityFollowNine(t *testing.T) {
 
 // tarEntry is one file extracted from a rendered seed tar.
 type tarEntry struct {
-	// Name is the tar header name.
+	// Name is the archive member name, such as applications.yaml.
 	Name string
-	// Mode is the tar header mode.
+	// Mode is the archive member mode. Rendered seeds are 0600.
 	Mode int64
-	// Body is the file contents.
+	// Body is the YAML file contents.
 	Body []byte
 }
 
@@ -401,10 +405,9 @@ func securitySection() *apiseed.Security {
 	}
 }
 
-// writeSeed is a verbatim copy of incus-osd/cmd/image-customizer writeSeed
-// (github.com/lxc/incus-os/incus-osd @ v0.0.0-20260815030500-0f5b8057f2fc,
-// incus-osd/cmd/image-customizer/main.go). It is the byte-compat oracle for
-// the nine web-customizer seed sections.
+// writeSeed is a verbatim copy of upstream image-customizer writeSeed
+// (incus-osd @ v0.0.0-20260815030500-0f5b8057f2fc). It is the byte-compat
+// oracle for the nine web-customizer seed sections.
 //
 //nolint:gocognit // vendored verbatim from upstream image-customizer for golden fidelity
 func writeSeed(writer io.Writer, seeds apicustomizer.ImagesPostSeeds) (int, error) {

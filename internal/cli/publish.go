@@ -32,13 +32,13 @@ const (
 	resourcesMiddle = ".resources."
 	// claimMode is the mode used for O_CREAT|O_EXCL name claims.
 	claimMode = 0o644
-	// stepBakImage is architecture §3 force step 2.
+	// stepBakImage is force step 2.
 	stepBakImage = "2"
-	// stepBakResources is architecture §3 force step 3.
+	// stepBakResources is force step 3.
 	stepBakResources = "3"
-	// stepPublishResources is architecture §3 force step 4.
+	// stepPublishResources is force step 4.
 	stepPublishResources = "4"
-	// stepPublishImage is architecture §3 force step 5.
+	// stepPublishImage is force step 5.
 	stepPublishImage = "5"
 	// rollRemoveImage is a rollback note for a published/claimed image.
 	rollRemoveImage = "removed new image"
@@ -116,7 +116,7 @@ type Session struct {
 	complete bool
 	// cleaned is true after Abort/failure cleanup has run.
 	cleaned bool
-	// failAfter, if non-empty, injects an error after that §3 step ("2"–"5").
+	// failAfter, if non-empty, injects an error after that force step ("2"–"5").
 	failAfter string
 	// rename moves a path; tests inject failures. Nil means [os.Rename].
 	rename func(string, string) error
@@ -210,7 +210,7 @@ func (s *Session) Paths() Paths {
 }
 
 // Publish fsyncs and hashes both temps, then claim-then-renames (resources
-// first, image last). With replace set, it follows the §3 six-step --force
+// first, image last). With replace set, it follows the six-step --force
 // ordering and reverse-order rollback on handled failure. Temps and claims
 // are removed on failure; nothing partial is left at a final path.
 func (s *Session) Publish() (Publication, error) {
@@ -322,9 +322,9 @@ func isStdout(path string) bool {
 	return path == stdoutSentinel || filepath.Clean(path) == stdoutSentinel
 }
 
-// authorize is the pre-work existence check. It is UX, not enforcement:
-// a file appearing later is refused by O_EXCL, never overwritten, unless
-// replacement was authorized (Force or Confirm).
+// authorize is the pre-work existence check, not the overwrite guard.
+// A file appearing later is refused by O_EXCL unless replacement was
+// authorized (Force or Confirm).
 func authorize(paths Paths, req Request) (bool, error) {
 	existing, err := existingFinals(paths)
 	if err != nil {
@@ -486,7 +486,7 @@ func (s *Session) publishNoClobber() error {
 	return s.claimThenRename(&s.image)
 }
 
-// publishForce runs architecture §3 steps 2–5 (step 1 is finish+hash).
+// publishForce runs force steps 2–5 (step 1 is finish+hash).
 func (s *Session) publishForce() error {
 	if err := s.bak(&s.image); err != nil {
 		return err
@@ -585,8 +585,8 @@ func (s *Session) removeBaks() []string {
 }
 
 // fail runs abort cleanup and attaches every rollback step and leftover
-// path to err. Leftovers are the failure-path report channel; they are
-// not returned as Publication.Leftovers.
+// path to err. Leftovers appear only on this failure path, not as
+// Publication.Leftovers.
 func (s *Session) fail(err error) error {
 	s.cleanup()
 	parts := make([]string, 0, len(s.rollback)+1)

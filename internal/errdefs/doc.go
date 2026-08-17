@@ -1,10 +1,10 @@
-// Package errdefs is the leaf home of the E1 sentinel errors shared across
-// the domain core and the adapters. It exists so that packages on both
-// sides of a dependency edge (internal/build ↔ internal/config,
-// internal/build ↔ internal/update) can wrap the same sentinels without
-// import cycles. The owning packages re-export their sentinels under the
-// ARCHITECTURE §6 names (config.ErrConfig, update.ErrFetch, …); [errors.Is]
-// matches through either name because the values are identical.
+// Package errdefs holds the sentinel errors shared across the domain core
+// and the adapters. Packages on both sides of a dependency edge
+// (internal/build ↔ internal/config, internal/build ↔ internal/update)
+// wrap the same sentinels without import cycles. Owning packages re-export
+// the same values under package-local names (config.ErrConfig,
+// update.ErrFetch, and others); [errors.Is] matches through either because
+// the values are identical.
 //
-// internal/cli maps sentinels to process exit codes and nothing else does.
+// internal/cli maps sentinels to process exit codes; no other package does.
 package errdefs

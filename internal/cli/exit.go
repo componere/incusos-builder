@@ -29,9 +29,9 @@ const (
 	exitOutput = 6
 )
 
-// errorEnvelope is the --json failure shape from ARCHITECTURE §3.
+// errorEnvelope is the --json failure document.
 type errorEnvelope struct {
-	// Error is the failure body.
+	// Error is the code and message written under the "error" key.
 	Error errorBody `json:"error"`
 }
 
@@ -39,11 +39,11 @@ type errorEnvelope struct {
 type errorBody struct {
 	// Code is the process exit code that accompanies the envelope.
 	Code int `json:"code"`
-	// Message is the error text.
+	// Message is err.Error(); empty when err is nil.
 	Message string `json:"message"`
 }
 
-// exitCode maps err to the process exit code from ARCHITECTURE §3.
+// exitCode maps err to the process exit code.
 func exitCode(err error) int {
 	if err == nil {
 		return exitSuccess

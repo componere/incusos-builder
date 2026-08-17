@@ -27,7 +27,7 @@ type policy struct {
 	Color ux.ColorMode
 	// Progress is passed to ux; AUTO that fails the both-streams rule is Never.
 	Progress ux.ProgressMode
-	// Verbose enables verbose logging.
+	// Verbose selects DebugLevel on Log.
 	Verbose bool
 	// Quiet suppresses non-error output.
 	Quiet bool
@@ -43,7 +43,7 @@ type policy struct {
 }
 
 // resolvePolicy reads Viper-backed settings plus verbose/quiet flags and
-// applies TTY/CI auto-on rules from ARCHITECTURE §3.
+// applies TTY/CI auto-on rules.
 func resolvePolicy(cmd *cobra.Command, opts Options, vp *viper.Viper) (policy, error) {
 	color, err := parseColor(vp.GetString(flagColor))
 	if err != nil {

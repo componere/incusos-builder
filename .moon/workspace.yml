@@ -1,6 +1,6 @@
-# Shared Moon workspace configuration for the repository template.
-# Keep the current projects explicit, then uncomment the discovery patterns
-# below as the template grows into apps, packages, services, or tools.
+# Moon workspace configuration: project sources, VCS settings, and pipeline
+# defaults. Projects are listed explicitly; uncomment the discovery globs below
+# to pick up apps, packages, services, or tools.
 
 projects:
   globs: []
@@ -8,7 +8,7 @@ projects:
     root: '.'
     docs: 'docs'
 
-  # Uncomment to auto-discover more projects as the repository grows.
+  # Uncomment to auto-discover more projects.
   # globs:
   #   - 'apps/*'
   #   - 'packages/*'
@@ -30,12 +30,11 @@ vcs:
 pipeline:
   installDependencies: false
 
-# Uncomment when you want Moon to aggregate project owners into CODEOWNERS.
+# Uncomment to aggregate project owners into CODEOWNERS.
 # codeowners:
 #   sync: true
 
-# Uncomment after you start tagging and layering projects and want
-# Moon to enforce project boundaries.
+# Uncomment to enforce project boundaries once projects are tagged and layered.
 # constraints:
 #   enforceLayerRelationships: true
 #   tagRelationships:

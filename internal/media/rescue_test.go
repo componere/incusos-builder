@@ -186,8 +186,8 @@ func sha256Sum(b []byte) []byte {
 }
 
 // readBack opens the image read-only, checks labels / fs type / GPT (raw),
-// and returns the update/ tree by walking with unrooted ReadDir paths
-// (gotcha 4). OpenFile uses rooted paths; the two APIs are asymmetric.
+// and returns the update/ tree by walking with unrooted ReadDir paths.
+// OpenFile uses rooted paths; the two APIs are asymmetric.
 func readBack(t *testing.T, tmpPath string, isISO bool) map[string][]byte {
 	t.Helper()
 	d, err := diskfs.Open(tmpPath, diskfs.WithOpenMode(diskfs.ReadOnly))

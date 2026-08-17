@@ -18,7 +18,7 @@ const (
 	appName = "incusos-builder"
 	// envPrefix is the Viper environment prefix (INCUSOS_BUILDER_*).
 	envPrefix = "INCUSOS_BUILDER"
-	// defaultServer is the default --server URL (ARCHITECTURE §6).
+	// defaultServer is the default --server URL.
 	defaultServer = "https://images.linuxcontainers.org/os"
 
 	flagColor    = "color"
@@ -33,7 +33,7 @@ const (
 
 // BuildInfo describes linker-injected build metadata printed by --version.
 type BuildInfo struct {
-	// Version is the release version.
+	// Version is the first --version token.
 	Version string
 	// Commit is the source commit used to build the binary.
 	Commit string
@@ -52,7 +52,7 @@ type Options struct {
 	// Build controls the first --version line.
 	Build BuildInfo
 	// IncusOSPin is printed as-is on the second --version line
-	// (`incus-os API: …`). Phase 4.6 fills it from go.mod.
+	// (`incus-os API: …`).
 	IncusOSPin string
 	// Viper is the configuration instance used by the command tree.
 	Viper *viper.Viper
@@ -146,7 +146,8 @@ func (b BuildInfo) withDefaults() BuildInfo {
 	return b
 }
 
-// registerPersistentFlags installs the global flags from ARCHITECTURE §3.
+// registerPersistentFlags installs the persistent --color, --progress,
+// --no-input, --verbose, -q/--quiet, --server, --cache-dir, and --json flags.
 func registerPersistentFlags(root *cobra.Command) {
 	pf := root.PersistentFlags()
 	pf.String(flagColor, string(ux.ColorModeAuto), "color output: auto, always, or never")
@@ -167,8 +168,8 @@ func registerPersistentFlags(root *cobra.Command) {
 func initializeConfig(cmd *cobra.Command, vp *viper.Viper) error {
 	vp.SetEnvPrefix(envPrefix)
 	vp.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
-	// Empty INCUSOS_BUILDER_* values are equivalent to passing an empty flag
-	// (automation.md). Viper otherwise drops them and falls through to defaults.
+	// Empty INCUSOS_BUILDER_* values are equivalent to passing an empty flag.
+	// Viper otherwise drops them and falls through to defaults.
 	vp.AllowEmptyEnv(true)
 	vp.AutomaticEnv()
 	applyViperDefaults(vp)

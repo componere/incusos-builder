@@ -125,7 +125,7 @@ func TestValidateStdinDashReadsConfig(t *testing.T) {
 	assert.Equal(t, validateOK+"\n", stdout)
 }
 
-// TestValidateDotSlashDashReadsStdin pins F-CLI-6: -f ./- is the stdin sentinel.
+// TestValidateDotSlashDashReadsStdin treats -f ./- as the stdin sentinel.
 func TestValidateDotSlashDashReadsStdin(t *testing.T) {
 	t.Parallel()
 

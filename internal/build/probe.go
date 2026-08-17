@@ -51,8 +51,8 @@ type seedPartition struct {
 
 // probe opens handle (Open #1), gunzips the decompressed head, and locates
 // the GPT seed-data partition. Drift from expectedStart or an unreadable
-// table wraps [errdefs.ErrFetch] (read-side, ARCHITECTURE §6). Production
-// Build passes [productionSeedStart]; tests inject a compact fixture offset.
+// table wraps [errdefs.ErrFetch]. Production Build passes
+// [productionSeedStart]; tests inject a compact fixture offset.
 func probe(ctx context.Context, handle VerifiedAsset, expectedStart int64) (seedPartition, error) {
 	rc, err := handle.Open(ctx)
 	if err != nil {

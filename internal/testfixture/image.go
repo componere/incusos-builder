@@ -124,7 +124,7 @@ func writeZeros(w io.Writer, n int64) error {
 	return nil
 }
 
-// writeApps writes 1–2 tiny application gzip assets and returns their
+// writeApps writes two application gzip assets and returns their
 // UpdateFile entries.
 func writeApps(dir string) ([]apiimages.UpdateFile, error) {
 	specs := []struct {

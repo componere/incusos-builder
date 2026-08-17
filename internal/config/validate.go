@@ -22,7 +22,8 @@ const (
 	checkFrequencyNever              = "never"
 )
 
-// checkVersion requires version: 1. Unknown versions ask for a newer CLI.
+// checkVersion requires version 1. Other versions return an error that a
+// newer CLI is required.
 func checkVersion(doc *document) error {
 	if doc.Version == nil {
 		return fmt.Errorf("%w: %s: required", ErrConfig, fieldVersion)
@@ -33,7 +34,8 @@ func checkVersion(doc *document) error {
 	return nil
 }
 
-// applyDefaults fills channel, per-seed version, and offline update forcing.
+// applyDefaults sets an omitted channel and seed versions, and forces
+// offline update check_frequency to never.
 func applyDefaults(doc *document) {
 	if doc.Image.Channel == "" {
 		doc.Image.Channel = build.DefaultChannel
@@ -101,7 +103,8 @@ func setDefaultVersion(version *string) {
 	}
 }
 
-// validate runs §4 checks. All errors wrap [ErrConfig] and name field paths.
+// validate checks image, install, security, and offline constraints.
+// All errors wrap [ErrConfig] and name field paths.
 func validate(doc *document) error {
 	if err := validateImage(doc.Image); err != nil {
 		return err
@@ -130,7 +133,8 @@ func validateImage(img image) error {
 	return nil
 }
 
-// validateInstall checks install.target.sort_order against upstream InstallTarget.
+// validateInstall accepts an empty, smallest, or largest
+// install.target.sort_order.
 func validateInstall(install *apiseed.Install) error {
 	if install == nil || install.Target == nil {
 		return nil
@@ -152,7 +156,8 @@ func validateSecurity(sec *apiseed.Security) error {
 		ErrConfig, fieldSeedsSecurityRecoveryKeys, upstreamRecoveryKeysRejected, diskEncryptionDocs)
 }
 
-// validateOffline applies the resources-media applications requirement.
+// validateOffline requires a non-empty applications seed when
+// image.offline is true.
 func validateOffline(doc *document) error {
 	if !doc.Image.Offline {
 		return nil

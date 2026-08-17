@@ -8,9 +8,9 @@ import (
 	"github.com/componere/incusos-builder/internal/build"
 )
 
-// validationCase is one row of the §4 parse-validation matrix.
+// validationCase is one row of the parse-validation matrix.
 type validationCase struct {
-	// name is the subtest name.
+	// name is the t.Run label.
 	name string
 	// yaml is the document to parse.
 	yaml string
@@ -26,7 +26,8 @@ type validationCase struct {
 	check func(*testing.T, build.Spec)
 }
 
-// TestParseValidationRules covers every §4 check, positive and negative.
+// TestParseValidationRules covers every parse-validation check, positive
+// and negative.
 func TestParseValidationRules(t *testing.T) {
 	t.Parallel()
 
@@ -200,7 +201,7 @@ image:
 	}
 }
 
-// TestUnknownFieldWording asserts the exact pin string from ARCHITECTURE §4.
+// TestUnknownFieldWording asserts the required strict-decode pin wording.
 func TestUnknownFieldWording(t *testing.T) {
 	t.Parallel()
 
@@ -262,7 +263,7 @@ seeds:
     check_frequency: 6h
 `
 
-// runValidationCase executes one §4 parse-validation matrix row.
+// runValidationCase executes one parse-validation matrix row.
 func runValidationCase(t *testing.T, tt validationCase) {
 	t.Helper()
 	spec, err := Parse([]byte(tt.yaml))
@@ -296,7 +297,8 @@ func runValidationCase(t *testing.T, tt validationCase) {
 	}
 }
 
-// assertISOX8664 checks the iso/x86_64 happy path including the default channel.
+// assertISOX8664 checks the iso/x86_64 happy path including the default
+// channel.
 func assertISOX8664(t *testing.T, spec build.Spec) {
 	t.Helper()
 	if spec.Type != build.ImageTypeISO {

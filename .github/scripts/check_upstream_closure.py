@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fail the build when upstream incus-os internals reach the compiled package closure.
 
-incusos-builder imports the incus-osd API packages for their type declarations only
-(see docs/notes/spike-1d-types.md). This gate is a scoped deny assertion over the
-transitive build closure of the root module: no package under the upstream module's
-`internal/` or `cmd/` trees may be linked into our binary. It deliberately does not
-assert an absolute package count -- the closure grows with our own dependencies.
+incusos-builder imports the incus-osd API packages for their type declarations
+only. This gate is a scoped deny assertion over the transitive build closure of
+the root module: no package under the upstream module's `internal/` or `cmd/`
+trees may be linked into our binary. It does not assert an absolute package
+count, because the closure grows with our own dependencies.
 
 Usage:
   python3 .github/scripts/check_upstream_closure.py
@@ -150,7 +150,7 @@ def upstream_packages(packages: list[str]) -> list[str]:
 
 
 def self_test() -> int:
-    """Check the deny rule against a synthetic closure; return 0 when it behaves."""
+    """Check the deny rule against a synthetic closure; return 0 when it holds."""
     allowed = [
         f"{UPSTREAM_MODULE}/api",
         f"{UPSTREAM_MODULE}/api/seed",

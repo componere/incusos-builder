@@ -29,18 +29,24 @@ const (
 	envEncrypted  = "INCUSOS_ENCRYPTED"
 )
 
+// scriptMirror is the shared local-dir fixture used by every script.
 type scriptMirror struct {
-	dir        string
+	// dir is the generated update-server tree.
+	dir string
+	// sopsAgeKey is the AGE-SECRET-KEY line for encrypted fixtures.
 	sopsAgeKey string
-	encrypted  string
+	// encrypted is the absolute path of the committed encrypted.yaml.
+	encrypted string
 }
 
+// TestMain registers the incusos-builder testscript binary.
 func TestMain(m *testing.M) {
 	testscript.Main(m, map[string]func(){
 		"incusos-builder": runIncusOSBuilder,
 	})
 }
 
+// runIncusOSBuilder is the testscript entry point for incusos-builder.
 func runIncusOSBuilder() {
 	os.Exit(cli.Execute(context.Background(), cli.Options{
 		In:  os.Stdin,
@@ -49,6 +55,7 @@ func runIncusOSBuilder() {
 	}))
 }
 
+// TestScript runs testdata/script against the shared local-dir mirror.
 func TestScript(t *testing.T) {
 	mirror := loadScriptMirror(t)
 
@@ -69,6 +76,7 @@ func TestScript(t *testing.T) {
 	})
 }
 
+// loadScriptMirror writes the shared fixture mirror and locates SOPS testdata.
 func loadScriptMirror(t *testing.T) scriptMirror {
 	t.Helper()
 	dir := t.TempDir()
@@ -91,6 +99,7 @@ func loadScriptMirror(t *testing.T) scriptMirror {
 	}
 }
 
+// ageSecretLine returns the AGE-SECRET-KEY line from an age key file.
 func ageSecretLine(raw []byte) string {
 	for line := range strings.SplitSeq(strings.TrimSpace(string(raw)), "\n") {
 		if strings.HasPrefix(line, "AGE-SECRET-KEY-") {
@@ -100,6 +109,7 @@ func ageSecretLine(raw []byte) string {
 	return strings.TrimSpace(string(raw))
 }
 
+// setupScript injects mirror, cache, and SOPS env vars into one script.
 func setupScript(env *testscript.Env, mirror scriptMirror) error {
 	cache := filepath.Join(env.WorkDir, ".cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
@@ -143,8 +153,10 @@ func cmdExits(ts *testscript.TestScript, neg bool, args []string) {
 	}
 }
 
+// scriptVarsKey stores the script environment on [testscript.Env.Values].
 type scriptVarsKey struct{}
 
+// scriptEnviron returns the env slice captured by setupScript.
 func scriptEnviron(ts *testscript.TestScript) []string {
 	vars, _ := ts.Value(scriptVarsKey{}).([]string)
 	return vars
@@ -190,6 +202,7 @@ func cmdExecStdout(ts *testscript.TestScript, neg bool, args []string) {
 	}
 }
 
+// lookScriptPath resolves name on the script PATH, like testscript exec.
 func lookScriptPath(ts *testscript.TestScript, name string) (string, error) {
 	if filepath.Base(name) != name {
 		return name, nil
@@ -231,6 +244,7 @@ func cmdCmpSHA256(ts *testscript.TestScript, neg bool, args []string) {
 	}
 }
 
+// resolveDigest accepts a 64-hex digest, a digest file, or an artifact path.
 func resolveDigest(abs, raw string) (string, error) {
 	info, err := os.Stat(abs)
 	if err != nil {
@@ -253,6 +267,7 @@ func resolveDigest(abs, raw string) (string, error) {
 	return fileSHA256(abs)
 }
 
+// isHexDigest reports whether s is a 64-character hex SHA-256.
 func isHexDigest(s string) bool {
 	if len(s) != 64 {
 		return false
@@ -265,6 +280,7 @@ func isHexDigest(s string) bool {
 	return true
 }
 
+// fileSHA256 streams path and returns the lowercase hex digest.
 func fileSHA256(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -340,10 +356,12 @@ func cmdJSONLines(ts *testscript.TestScript, neg bool, args []string) {
 	}
 }
 
+// readScriptFile reads a script-relative file as a string.
 func readScriptFile(ts *testscript.TestScript, name string) string {
 	return ts.ReadFile(name)
 }
 
+// jsonPathString returns the dotted JSON path as a string.
 func jsonPathString(raw, path string) (string, error) {
 	var doc any
 	if err := json.Unmarshal([]byte(raw), &doc); err != nil {

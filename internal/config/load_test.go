@@ -15,7 +15,7 @@ const ageKeyPath = "testdata/age.key"
 
 // sopsCase is one row of the SOPS parse matrix.
 type sopsCase struct {
-	// name is the subtest name.
+	// name is the t.Run label.
 	name string
 	// file is the fixture path under testdata/.
 	file string
@@ -132,7 +132,7 @@ func TestLoadMissingFile(t *testing.T) {
 	}
 }
 
-// TestHasTopLevelSOPSDetectsKey is the cheap probe used before decrypt.Data.
+// TestHasTopLevelSOPSDetectsKey treats a top-level sops key as encrypted.
 func TestHasTopLevelSOPSDetectsKey(t *testing.T) {
 	t.Parallel()
 
@@ -196,9 +196,9 @@ func isolateSOPS(t *testing.T) {
 	unsetForTest(t, "SOPS_AGE_KEY_CMD")
 }
 
-// unsetForTest removes key for the rest of the test. [testing.T] has no Unsetenv
-// in this toolchain; [testing.T.Setenv] registers restore of a previously
-// present value, then [os.Unsetenv] drops it for the test body.
+// unsetForTest removes key for the rest of the test. [testing.T] has no
+// Unsetenv in this toolchain; [testing.T.Setenv] registers restore of a
+// previously present value, then [os.Unsetenv] drops it for the test body.
 func unsetForTest(t *testing.T, key string) {
 	t.Helper()
 	if orig, had := os.LookupEnv(key); had {
@@ -242,7 +242,7 @@ func TestParseDecryptStraySOPSSanitizesScalar(t *testing.T) {
 	}
 }
 
-// TestParseDecryptMissingKeyGolden is the missing-key decrypt wording.
+// TestParseDecryptMissingKeyGolden asserts the missing-key decrypt wording.
 func TestParseDecryptMissingKeyGolden(t *testing.T) {
 	isolateSOPS(t)
 	raw, err := os.ReadFile("testdata/encrypted.yaml")

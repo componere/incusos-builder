@@ -13,21 +13,20 @@ const (
 	// Version is the synthetic update version [Generate] writes.
 	Version = "202608160000"
 
-	// Format is the apiimages.Index / Update format string on the live server.
+	// Format is the apiimages.Index / Update format string.
 	Format = "1.0"
 
-	// Origin is the Update.Origin value observed on the live server.
+	// Origin is the Update.Origin value written into the fixture.
 	Origin = "linuxcontainers.org"
 
-	// ChannelStable is the sole channel membership of the fixture update.
+	// ChannelStable is the fixture update's only channel.
 	ChannelStable = "stable"
 
-	// ArchX8664 is the architecture prefix used in fixture filenames.
+	// ArchX8664 is the architecture token in fixture asset paths.
 	ArchX8664 = "x86_64"
 
-	// SeedStart is the seed-data partition start in bytes. Production
-	// [build.Build] probes against this constant (internal/build
-	// productionSeedStart).
+	// SeedStart is the seed-data partition start in bytes.
+	// [build.Build] probes at this offset.
 	SeedStart int64 = 2148532224
 
 	// SeedLength is the seed-data partition length (100 MiB).
@@ -70,7 +69,7 @@ type Mirror struct {
 //
 // Filenames are allowlisted ([A-Za-z0-9._-]+ per slash-separated segment)
 // so [update.LocalSource] will open them. Index, update.json, and the
-// sjson payload share one Files list (three-way Filename+Sha256+Size
+// sjson payload share one Files list (the three-way Filename/Sha256/Size
 // binding).
 func Generate(dir string) (Mirror, error) {
 	if dir == "" {

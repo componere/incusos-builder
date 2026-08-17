@@ -7,7 +7,7 @@ import (
 )
 
 // Execute constructs the root command from options, runs it to completion,
-// and returns the process exit code from ARCHITECTURE §3.
+// and returns the process exit code.
 func Execute(ctx context.Context, options Options) int {
 	root := NewRootCommand(options)
 	err := root.ExecuteContext(ctx)

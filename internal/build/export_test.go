@@ -7,7 +7,7 @@ import (
 )
 
 // RunBuild is Build with an explicit seed-data start so tests can inject a
-// compact fixture offset (ARCHITECTURE §9) without mutating package state.
+// compact fixture offset without mutating package state.
 func RunBuild(
 	ctx context.Context,
 	spec Spec,

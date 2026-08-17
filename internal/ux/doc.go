@@ -13,16 +13,15 @@
 //
 // [ProgressModeAuto] enables progress when w is a TTY; always/never
 // override. Progress output never uses ANSI when progress is resolved off.
-// The CLI (Phase 4) can pass [ProgressModeNever] when stdout is not a TTY
-// to honor ARCHITECTURE §3's both-streams rule; this adapter only observes w.
+// The CLI can pass [ProgressModeNever] when stdout is not a TTY. This
+// adapter only observes w.
 //
 // Plain progress is rate-limited: a percentage line is written at most once
 // per 200ms, plus the first update and the 100% completion line, so piped
 // output is not spammed when a download reports every buffer.
 //
-// All three Charm packages share [DefaultPalette]. Huh forms arrive in
-// Phase 4 and should theme from the same palette. charm.land/log/v2 is
-// the only logger; [NewLogger] styles it from the palette and follows
+// Fancy output, [Summary], [VersionsTable], and [NewLogger] all draw from
+// [DefaultPalette]. [NewLogger] is the only logger the CLI uses and follows
 // [ColorMode].
 //
 // [Summary] and [VersionsTable] take the same [ColorMode] and write to an

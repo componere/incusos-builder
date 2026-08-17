@@ -60,10 +60,7 @@ func TestIncusOSPinFromCoversLookupCases(t *testing.T) {
 }
 
 // TestIncusOSPinOnTestBinaryDocumentsMissingDeps records that `go test`
-// binaries omit the module dep table (`go version -m` shows only `mod`).
-// [IncusOSPin] therefore renders "unknown" here. The real binary is covered
-// by `go run ./cmd/incusos-builder --version`, which prints the go.mod pin
-// on line 2 via the same helper.
+// binaries omit the module dep table, so [IncusOSPin] renders "unknown".
 func TestIncusOSPinOnTestBinaryDocumentsMissingDeps(t *testing.T) {
 	t.Parallel()
 	require.Equal(t, unknownPin, IncusOSPin())

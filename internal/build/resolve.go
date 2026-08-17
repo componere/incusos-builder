@@ -11,15 +11,14 @@ import (
 
 const appSuffix = ".raw.gz"
 
-// Resolve selects a release from index the way upstream filterAssets does
-// (image-customizer main.go:823): channel membership, an exact Release pin
-// or the highest version by string compare of upstream version names, then
-// exactly one image-iso/image-raw for the spec's type and architecture.
-// Application assets are matched only when spec.Offline (sendOSImage never
-// looks at applications; sendRescueImage does). Matching uses [path.Base]
-// so per-arch prefixes (aarch64/incus.raw.gz) still hit. A missing
-// application wraps [ErrVersionNotFound] and lists what the update does
-// carry.
+// Resolve selects a release from index the way upstream filterAssets does:
+// channel membership, an exact Release pin or the highest version by string
+// compare of upstream version names, then exactly one image-iso/image-raw
+// for the spec's type and architecture. Application assets are matched only
+// when spec.Offline (sendOSImage never looks at applications; sendRescueImage
+// does). Matching uses [path.Base] so per-arch prefixes (aarch64/incus.raw.gz)
+// still hit. A missing application wraps [ErrVersionNotFound] and lists what
+// the update does carry.
 func Resolve(spec Spec, index apiimages.Index) (Plan, error) {
 	channel := string(spec.Channel)
 	if channel == "" {
@@ -67,7 +66,7 @@ func Resolve(spec Spec, index apiimages.Index) (Plan, error) {
 
 // selectUpdate returns the pinned update or the highest-version update in
 // channel. Version comparison is a plain string compare, matching
-// filterAssets (main.go:842: `update.Version > highestVersion`).
+// filterAssets (`update.Version > highestVersion`).
 func selectUpdate(index apiimages.Index, channel, pin string) (apiimages.UpdateFull, error) {
 	highestVersion := ""
 	highestIdx := -1
@@ -149,7 +148,7 @@ func matchingFiles(
 }
 
 // matchApplications resolves each requested application to the update file
-// whose basename is <name>.raw.gz (sendRescueImage main.go:619–628).
+// whose basename is <name>.raw.gz, matching sendRescueImage.
 func matchApplications(spec Spec, update apiimages.UpdateFull) ([]apiimages.UpdateFile, error) {
 	if spec.Seeds.Applications == nil {
 		return nil, nil
