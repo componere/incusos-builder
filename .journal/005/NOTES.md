@@ -635,3 +635,47 @@ CI run failed on that pre-existing flake before I rebased.
 
 Next: PR #10 is MERGEABLE/BLOCKED pending review. Merging it tags v0.1.0 and
 triggers the real publish pipeline - the first non-rehearsal run.
+
+## 2026-08-17 02:40 - Dependabot backlog cleared as one batch
+
+Eight open Dependabot PRs, all raised against an older master and all
+`UNKNOWN` mergeable (unrebased). Merging them serially would have cost eight
+rebase-and-rerun cycles, since each merge invalidates the next. Applied them
+together on one branch instead: PR #30, merged as `2e14c9f`.
+
+Security (now **0 open Dependabot alerts**):
+- `pymdown-extensions` 10.21.3 -> 11.0.1 - high (b64 path traversal) + medium
+  (caret/tilde ReDoS). Transitive via `mkdocs-material`, so it lands in
+  `docs/uv.lock`, not `docs/pyproject.toml`.
+- `github.com/cloudflare/circl` 1.6.1 -> 1.6.3 - low, `// indirect` in go.mod.
+
+Action pins - every SHA verified against the upstream tag through the GitHub
+API rather than trusted from Dependabot's trailing comment (all five matched):
+cache 6.0.0->6.1.0, attest-build-provenance 4.1.1->4.2.2, setup-go 6.5.0->7.0.0,
+login-action 4.2.0->4.6.0, goreleaser-action 7.2.2->7.2.3.
+
+**Verification gap found and closed.** `release-dry-run.yml` gates its jobs on
+`workflow_dispatch || startsWith(github.head_ref, 'release-please--')`, so on an
+ordinary PR the release contexts report `skipping` - which counts as passing.
+Plain CI green would therefore not have proven the `setup-go` major bump on the
+release path at all. Dispatched the dry run against the branch: run
+31988148676, all four jobs success, and the logs confirm it downloaded
+`setup-go@b7ad1dad31e0` (v7.0.0) and ran `goreleaser-action@f06c13b6b1a9`
+(v7.2.3) rather than anything cached.
+
+Residual, stated rather than papered over: `actions/attest-build-provenance`
+cannot be exercised before a real release - `attest.yml` is `workflow_call`
+only and is invoked solely by `release.yml`; the dry run just asserts the file
+exists. Since no release has ever been cut, 4.1.1 had no more real-world proof
+than 4.2.2, so no known-good was given up.
+
+`pymdown-extensions` v11 is a major under `mkdocs-material`; `moon run
+docs:build` is green. Its Material "MkDocs 2.0" banner is an upstream advisory
+that also appears on master - checked, not assumed.
+
+Dependabot auto-closed only #1 on its own scan; closed the remaining seven
+explicitly against #30 with branch deletion, rather than leaving stale PRs to
+drift.
+
+State: the only open PR is #10, `chore(master): release 0.1.0`. Merging it tags
+v0.1.0 and runs the first non-rehearsal publish.
