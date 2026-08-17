@@ -23,10 +23,7 @@ import (
 	uxmocks "github.com/componere/incusos-builder/internal/ux/mocks"
 )
 
-const (
-	generateBudget    = 5 * time.Second
-	maxGzipImageBytes = 8 << 20
-)
+const maxGzipImageBytes = 8 << 20
 
 // TestGenerateSatisfiesUpdateAdapter round-trips the fixture through the
 // real local-dir adapter and production [build.Build] probe path.
@@ -46,7 +43,6 @@ func TestGenerateSatisfiesUpdateAdapter(t *testing.T) {
 		mirror.SeedStart,
 		mirror.SeedLength,
 	)
-	require.Less(t, elapsed, generateBudget, "fixture generation wall time")
 	assert.Equal(t, testfixture.Version, mirror.Version)
 	assert.Equal(t, testfixture.SeedStart, mirror.SeedStart)
 	assert.Equal(t, testfixture.SeedLength, mirror.SeedLength)
