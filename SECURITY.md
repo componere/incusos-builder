@@ -2,9 +2,7 @@
 
 ## Supported versions
 
-incusos-builder has no published release yet. Until the first GitHub release exists, there is no supported release line; development happens on the default branch.
-
-After a release is published, only the latest published release receives security fixes. Older tags and arbitrary commits are unsupported.
+Only the latest published release receives security fixes. Older tags and arbitrary commits are unsupported.
 
 ## Reporting a vulnerability
 
