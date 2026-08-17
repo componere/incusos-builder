@@ -551,3 +551,43 @@ Cost: about $0.25 of the $15 recurring credit.
 Outstanding: adjudicate O4; pull the artifact bundle (the `sem` CLI has no
 `artifact` subcommand — fetch from the job page or use the API); then record
 BOOT-10 and update the release record. `N-MEDIA-3` (ISO label) still untested.
+
+## 2026-08-16 22:30 — O4 adjudicated; gate recorded; scaffolding removed
+
+Developer adjudicated O4, making Track C a formal **pass**: O1, O2, O3 observed
+and asserted against pinned upstream strings, O4 accepted by the pipeline and
+adjudicated by a human.
+
+Recorded:
+- `.journal/005/BOOT_10_RECORD.md` — the release-record artifact BOOT-10
+  demands. Verdict, venue, pipeline/job ids, builder commit, upstream pin,
+  per-observation evidence, and the honest limits.
+- `.journal/005/TRACK_C_GATE_LOG.txt` — the raw 2,478-line job log, 361 GATE
+  evidence lines, kept as primary evidence. The Semaphore v1alpha API does not
+  expose job artifacts, so the log is the durable record.
+- `FUNCTIONAL_TEST_PLAN.md` — §1, §6, §7, §8 updated. BOOT-02..BOOT-09 marked
+  pass with a note wherever the unattended pipeline differed in *mechanism* from
+  the attended procedure; blocker 13 satisfied; seed consumption and recovery
+  acceptance moved from cannot-verify to observed; N-MEDIA-3 kept open.
+- PR #24 merged (e02dd1e): product docs now state the observed result.
+  `trust-model.md` corrected, `verify-boot-acceptance.md` records the successful
+  run and replaces VGA/SPICE with the Incus serial console, and the Phase 5.2
+  probe note is superseded — findings unaltered — with the explanation of why it
+  was blind.
+
+Verified the record rather than trusting it: the builder commit it cites
+(c08cef30) is exactly the sha the job logged as its input.
+
+Cleanup done: Semaphore project deleted; repo left with 0 webhooks and 0 deploy
+keys; `chore/semaphore-preflight` branch and worktree removed locally and on the
+remote; `docs/boot-acceptance-observed` merged and removed. Total Semaphore
+spend across preflight and gate: well under $1 of the recurring credit.
+
+Open items for the developer:
+1. **REPO-2** — the release PR is still 0.1.2, not 1.0.0. Needs the deliberate
+   Release-As decision. This is now the main thing between here and a tag.
+2. Three Dependabot alerts surfaced by enabling security features: high
+   pymdown-extensions ReDoS, medium pymdown-extensions path traversal (both
+   docs-only pip deps), low cloudflare/circl in go deps.
+3. N-MEDIA-3 still needs an optional ISO-media gate run to close.
+4. Deferred by plan: F-CFG-1, N-ART-5, N-APUB-2.
