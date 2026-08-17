@@ -721,3 +721,29 @@ call.
 
 Also open: `N-MEDIA-3`, and the `fix-after-v1` deferrals (F-CFG-1, N-ART-5,
 N-APUB-2).
+
+## 2026-08-17 03:25 — Close
+
+Session 005 closed. Nothing was left unlanded: all seven pull requests raised in
+this session are merged and `master` is fast-forwarded to `065b9e8`.
+
+Merged: #21 (campaign remediation), #24 (first observed boot acceptance), #26
+(release version baseline), #29 (changelog seed), #30 (dependency batch), #31
+(README and SECURITY.md release pass), and #10 (`chore(master): release 0.1.0`).
+
+Hand-off state:
+
+- `v0.1.0` is tagged, built, signed, attested, and consumer-verified with
+  falsifiers. Its **GitHub Release is still a draft** — publish with
+  `gh release edit v0.1.0 --draft=false`. The container image at
+  `ghcr.io/componere/incusos-builder:v0.1.0` is already public, so until the
+  draft is published the README's `ghd` path does not work for the public.
+- Dependabot alerts are at zero; `.github/repository-settings.toml` is applied.
+- Still open: `N-MEDIA-3` (untested NUL-padded ISO label), and the
+  `fix-after-v1` deferrals F-CFG-1, N-ART-5, N-APUB-2.
+
+`SUMMARY.md` is the postmortem; `TECH_NOTES.md` gained the durable pieces —
+release versioning mechanics, the corrected boot oracle, the draft/GHCR timing
+split, and the verification falsifier rule.
+
+Session 006 was running concurrently and was not touched by this closeout.
