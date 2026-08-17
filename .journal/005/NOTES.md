@@ -679,3 +679,45 @@ drift.
 
 State: the only open PR is #10, `chore(master): release 0.1.0`. Merging it tags
 v0.1.0 and runs the first non-rehearsal publish.
+
+## 2026-08-17 03:15 - v0.1.0 built and verified; release still a draft
+
+Merged #10 (`03a84f5`). Release Please created tag `v0.1.0` and a **draft**
+GitHub Release, and `release.yml` ran on the tag push: run 31989614368, all
+eight jobs success - including `attest-binaries / Attest` and
+`attest-image / Attest`, neither of which had ever executed before.
+
+Then merged #31 (`065b9e8`), the README/SECURITY.md release pass.
+
+Artifacts: four platform binaries + four SBOMs + `checksums.txt` on the draft
+release; multi-arch image (linux/amd64 + linux/arm64) at
+`ghcr.io/componere/incusos-builder:v0.1.0`, index digest
+`sha256:e3bfe74884acbbd707bccca58e89d66ec542c63f365d0f5f73af45a6284b37de`.
+
+**Verified as a consumer, with falsifiers, not by trusting the green run.**
+This gh build (2.97.0) is silent on success, so a bare exit 0 proves nothing on
+its own; each check was paired with a deliberate negative:
+
+- `gh attestation verify` on the image index -> exit 0. Falsifier with
+  `--source-ref refs/tags/v9.9.9` -> exit 1, `expected SourceRepositoryRef to
+  be refs/tags/v9.9.9, got refs/tags/v0.1.0`. The failure text independently
+  confirms the attested ref.
+- `gh attestation verify` on `incusos-builder_0.1.0_darwin_arm64` -> exit 0;
+  its sha256 matches `checksums.txt` exactly.
+- `cosign verify` on the image -> exit 0, with transparency-log existence
+  verified offline and the certificate chained to a trusted CA. Falsifier with
+  a foreign identity regex -> exit 1, and the error revealed both real signing
+  identities: `.github/workflows/attest.yml@refs/tags/v0.1.0` and
+  `.github/workflows/release.yml@refs/tags/v0.1.0`.
+
+**Not done, deliberately:** the GitHub Release is still a draft. `release.yml`
+gates publication on human inspection ("Publish or reject the draft release
+manually after inspection"), so I did not publish it. Consequence worth
+knowing: the container image is already public - GHCR has no draft state - while
+the binaries are not fetchable by anyone unauthenticated. The README merged in
+#31 documents the `ghd` install path, so that path does not work for the public
+until the draft is published. Window is open now and closes on the developer's
+call.
+
+Also open: `N-MEDIA-3`, and the `fix-after-v1` deferrals (F-CFG-1, N-ART-5,
+N-APUB-2).
