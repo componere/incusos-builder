@@ -1,14 +1,42 @@
 ---
 title: How to verify boot acceptance
-description: Run the manual x86_64 Linux Incus boot-acceptance checklist before a release tag
+description: Run the x86_64 Linux Incus boot-acceptance checklist before a release tag
 ---
 
 # How to verify boot acceptance
 
-Run this checklist on an `x86_64` Linux Incus host before every release
-tag until a CI boot gate succeeds. Phase 5.2 did not observe seed
-consumption or recovery acceptance. Do not treat that probe, network
-traffic, a changed file size, or source-overlay growth as a pass.
+Run this gate on an `x86_64` Linux Incus host before every release tag.
+
+The gate has succeeded once. Track C completed the procedure on
+2026-08-17 on a Semaphore Cloud `f1-standard-4` machine with nested KVM
+(pipeline `4c5cc805`, job `a8b16331`). The archived evidence met all four
+required observations:
+
+1. Serial output reported `IncusOS was successfully installed` and then
+   `Please remove the install media to complete the installation` 45
+   seconds after start (`internal/install/install.go:388-390`).
+2. Source seed `/dev/loop0p2` contained `applications.yaml`,
+   `install.yaml`, and `update.yaml`. Target seed `/dev/sdb2` retained
+   `applications.yaml` and `update.yaml` but not `install.yaml`; their
+   digests differed, and the source digest remained unchanged.
+3. Serial output reported `Recovery partition detected`
+   (`internal/recovery/recovery.go:50`).
+4. Serial output progressed from `Update metadata detected, verifying
+   signature` to `Processing validated update metadata`, which is
+   reachable only after `util.VerifySMIME` succeeds
+   (`internal/recovery/recovery.go:180-212`). It then reported `Recovery
+   actions completed` and `System is starting up`, while `Recovery
+   failed:` was absent. A human adjudicated this observation as met.
+
+That run establishes that this procedure is executable and its assertions
+are satisfiable. It was one run on one venue, for IncusOS release
+`202608102114` and upstream API pin
+`v0.0.0-20260815030500-0f5b8057f2fc`; it does not guarantee later pins.
+Continue to run the gate for every release.
+
+The earlier Phase 5.2 probe did not observe seed consumption or recovery
+acceptance. Do not treat that probe, network traffic, a changed file size,
+or source-overlay growth as a pass.
 
 Pass only when you observe install completion, removal of the install
 seed from the target seed-data partition, `RESCUE_DATA` detection, and
@@ -25,11 +53,17 @@ the detached installed volume; do not clone the gate VM.
   `incusbr0`.
 - An `x86_64` Linux VM image available to Incus for target inspection.
   The commands below use `images:ubuntu/24.04/cloud`.
-- A SPICE client (`remote-viewer` or `spicy`) for VGA.
 - VirtIO-SCSI for every IncusOS disk. VirtIO-BLK does not expose the
   drives IncusOS needs.
 - Keep the built installer raw file unchanged. Run the gate on a
   working copy.
+
+Under Incus, the installer TUI mirrors to `/dev/ttyS0`: it adds that
+device when `/dev/virtio-ports/org.linuxcontainers.incus` exists
+(`internal/tui/tui.go:67-71`). Start the VM with
+`incus start <vm> --console`; no SPICE or VGA client is required. Plain
+QEMU does not provide that virtio port by default, so do not assume the
+same serial behavior outside Incus.
 
 ## 1. Build the release media
 
@@ -160,14 +194,7 @@ sudo dd if="$SEED_PART" bs=4M status=none \
   | tar -tf - >"$EVIDENCE/source-seed.before.list"
 grep -E '(^|/)install\.(json|ya?ml)$' "$EVIDENCE/source-seed.before.list"
 
-incus start "$VM"
-incus console "$VM" --type=vga
-```
-
-In another terminal:
-
-```bash
-incus console "$VM"
+incus start "$VM" --console
 # Detach from serial with Ctrl+A, then Q.
 incus console "$VM" --show-log | tee "$EVIDENCE/install-serial.log"
 ```
@@ -273,14 +300,8 @@ is now installed target `20`, dummy root `10`, rescue data `0`.
 ## 7. Accept recovery
 
 ```bash
-incus start "$VM"
-incus console "$VM" --type=vga
-```
-
-In another terminal:
-
-```bash
-incus console "$VM"
+incus start "$VM" --console
+# Detach from serial with Ctrl+A, then Q.
 incus console "$VM" --show-log | tee "$EVIDENCE/recovery-serial.log"
 ```
 
@@ -289,12 +310,13 @@ A valid recovery disk has a FAT or ISO data partition labeled
 `hotfix.sh.sig` at the root and signed updates under `update/`.
 
 With this guide's `image.type: raw` config, recovery finds the GPT
-`PARTLABEL=RESCUE_DATA` before it considers a filesystem label. This
-run therefore does not exercise the NUL-padded ISO volume identifier.
+`PARTLABEL=RESCUE_DATA` before it considers a filesystem label. The run
+does not exercise the NUL-padded ISO volume identifier, so `N-MEDIA-3`
+remains open.
 
 Require all of the following:
 
-1. VGA or serial evidence that the installed target booted.
+1. Serial evidence that the installed target booted.
 2. Evidence that IncusOS detected `RESCUE_DATA`.
 3. Evidence that the signed recovery payload was accepted and applied:
    the expected post-boot OS or application version or effect. Official

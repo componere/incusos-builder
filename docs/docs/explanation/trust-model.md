@@ -158,15 +158,44 @@ Those sizes are why each metadata document is capped at 1 MiB (~70×
 headroom at the measured 14 KiB) and `index.json` at 64 MiB. The caps
 are DoS bounds, not authenticity.
 
-Boot experiments on the spliced `202608102114` image reached
+Earlier boot experiments on the spliced `202608102114` image reached
 UEFI → systemd-boot → UKI → kernel → systemd PID 1. Secure Boot is a
 hard IncusOS gate: firmware that cannot report Secure Boot state stops
 with `IncusOS will only boot on UEFI systems`. A setup-mode firmware
 with `secure-boot-enroll force` enrolled the shipped keys and continued.
-Seed consumption was not observed in the QEMU spikes or in the
-Phase 5.2 Linux diagnostic. Network frames and source-overlay growth are
-not seed consumption. Signed rescue acceptance was not observed because
-recovery did not run.
+The QEMU spikes and Phase 5.2 Linux diagnostic did not observe seed
+consumption or run recovery.
+
+On 2026-08-17, Track C met all four boot-acceptance observations on a
+Semaphore Cloud `f1-standard-4` machine with nested KVM (pipeline
+`4c5cc805`, job `a8b16331`):
+
+- **O1, install completion:** serial output contained `IncusOS was
+  successfully installed` followed by `Please remove the install media
+  to complete the installation` 45 seconds after start
+  (`internal/install/install.go:388-390`).
+- **O2, seed consumption:** source partition `/dev/loop0p2` contained
+  `applications.yaml`, `install.yaml`, and `update.yaml`; target
+  partition `/dev/sdb2` retained `applications.yaml` and `update.yaml`
+  but not `install.yaml`. The source and target digests differed
+  (`8537e356…` and `84a75f5c…`), while the source digest was unchanged
+  after installation. The surviving application seed is the positive
+  control that the target archive was readable and not blank.
+- **O3, rescue-media detection:** serial output contained `Recovery
+  partition detected` (`internal/recovery/recovery.go:50`).
+- **O4, recovery-payload acceptance (human-adjudicated):** serial output
+  progressed from `Update metadata detected, verifying signature` to
+  `Processing validated update metadata`, which follows successful
+  `util.VerifySMIME` verification
+  (`internal/recovery/recovery.go:180-212`). It then contained `Recovery
+  actions completed` and `System is starting up`; `Recovery failed:`
+  was absent.
+
+This is one observation on one venue, for IncusOS release
+`202608102114` and upstream API pin
+`v0.0.0-20260815030500-0f5b8057f2fc`. It is not a guarantee for later
+pins. The run used raw media, so it did not exercise the NUL-padded ISO
+volume identifier; `N-MEDIA-3` remains open.
 
 ## What this model refuses to claim
 
