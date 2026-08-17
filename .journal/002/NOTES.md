@@ -69,3 +69,6 @@ Next: PR; then Phase 5 (T3 live suite + boot gate attempt on Linux).
 
 ## 2026-08-16 02:10 — Close
 Session closed. All five phase PRs squash-merged: #7 (rename), #8 (spikes), #9 (domain core), #11 (adapters), #12 (CLI); master at c755426; implementation worktrees removed; local master fast-forwarded. SUMMARY.md written; INDEX.md row set complete; TECH_NOTES.md refreshed with phase status, pins, invariants, and tooling gotchas. Hand-off: next session starts Phase 5 (T3 live suite + one time-boxed Linux boot-gate run — command line in docs/notes/spike-1e-boot.md attempt C), then Phase 6 (docs/release/v1).
+
+## 2026-08-16 19:08 — Spike findings relocated into this session folder
+Correction to the closeout entry above: the five Phase 1 spike findings docs no longer live on master. `spike-1{a,b,c,d,e}-*.md` were moved from `docs/notes/` into `.journal/002/`, since session-scoped investigation records belong in the journal rather than the repository. Master keeps the quarantined spike code under `spikes/` and the Phase 5 boot-probe notes (session 003), which the release how-to cites. SUMMARY.md references and TECH_NOTES.md were repointed; the master-side removal is PR #28.
