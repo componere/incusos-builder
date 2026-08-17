@@ -6,7 +6,7 @@
   "force-tag-creation": true,
   "draft": true,
   "bump-minor-pre-major": true,
-  "bump-patch-for-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
   "packages": {
     ".": {
       "package-name": "incusos-builder",
