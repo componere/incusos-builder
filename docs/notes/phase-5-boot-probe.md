@@ -22,9 +22,10 @@ acceptance gate is a manual release checklist, not a CI job. The
 manual checklist runs before every release tag until a CI boot gate
 succeeds.
 
-This is the Phase 5.2 revisit named in
-[`docs/notes/spike-1e-boot.md`](spike-1e-boot.md). Machine evidence is
-committed as
+This is the Phase 5.2 revisit named by the Phase 1 boot spike, whose
+findings live in the session 002 journal folder
+(`.journal/002/spike-1e-boot.md` on the `journal/jmgilman` branch).
+Machine evidence is committed as
 [`docs/notes/phase-5-boot-evidence.json`](phase-5-boot-evidence.json).
 The temporary branch-only workflow and harness that produced the run
 are not kept.

@@ -87,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
         for package in offenders:
             print(f"  {package}", file=sys.stderr)
         print(
-            "hint: incus-osd must be imported for API types only; see docs/notes/spike-1d-types.md",
+            "hint: incus-osd must be imported for API types only",
             file=sys.stderr,
         )
         return 1
