@@ -33,9 +33,10 @@ validation errors name field paths, not secret values.
 export SOPS_AGE_KEY='AGE-SECRET-KEY-...'
 ```
 
-If `SOPS_AGE_KEY_FILE` or `SOPS_AGE_KEY_CMD` is set in the environment,
-unset it for this session. An empty `SOPS_AGE_KEY_FILE` makes SOPS open
-path `""` instead of using `SOPS_AGE_KEY`.
+Unset `SOPS_AGE_KEY_FILE` and `SOPS_AGE_KEY_CMD` for this session so
+the intended key source is explicit. With SOPS 3.11.0, an empty or
+nonexistent `SOPS_AGE_KEY_FILE` does not prevent a valid
+`SOPS_AGE_KEY` from decrypting the file.
 
 ## 2. Encrypt the seed config
 
@@ -101,13 +102,18 @@ incusos-builder validate -f config.enc.yaml --color never
 incusos-builder validate -f - --color never < config.enc.yaml
 ```
 
-Clear the key and repeat the file path:
+With `SOPS_AGE_KEY_FILE` and `SOPS_AGE_KEY_CMD` still unset, clear the
+key and repeat the file path:
 
 ```bash
 env SOPS_AGE_KEY= incusos-builder validate -f config.enc.yaml
 ```
 
-The process exits `4`. stderr contains `decryption failed`.
+The process exits `4`. stderr contains:
+
+```text
+decryption failed: Error getting data key: 0 successful groups required, got 0
+```
 
 ## Troubleshooting
 

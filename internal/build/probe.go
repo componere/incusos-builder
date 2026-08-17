@@ -62,7 +62,7 @@ func probe(ctx context.Context, handle VerifiedAsset, expectedStart int64) (seed
 
 	zr, err := pgzip.NewReader(rc)
 	if err != nil {
-		return seedPartition{}, fmt.Errorf("%w: gzip: %w", errdefs.ErrFetch, err)
+		return seedPartition{}, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 	}
 	defer func() { _ = zr.Close() }()
 

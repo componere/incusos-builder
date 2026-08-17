@@ -38,7 +38,7 @@ func Parse(raw []byte) (build.Spec, error) {
 	if encrypted {
 		decrypted, decErr := decrypt.Data(raw, sopsFormat)
 		if decErr != nil {
-			return build.Spec{}, fmt.Errorf("%w: %w", ErrDecrypt, decErr)
+			return build.Spec{}, fmt.Errorf("%w: %s", ErrDecrypt, sanitizeYAMLMessage(decErr.Error()))
 		}
 		plaintext = decrypted
 	}
@@ -188,7 +188,8 @@ func unknownFieldMessage(path string) string {
 	return path + ": " + unknownFieldHint
 }
 
-// sanitizeYAMLMessage strips quoted literals so secret values never appear in errors.
+// sanitizeYAMLMessage strips quoted literals so secret values never appear in
+// errors, then flattens the diagnostic to a single line.
 func sanitizeYAMLMessage(msg string) string {
 	var b strings.Builder
 	inQuote := byte(0)
@@ -207,5 +208,5 @@ func sanitizeYAMLMessage(msg string) string {
 		}
 		b.WriteByte(c)
 	}
-	return b.String()
+	return strings.Join(strings.Fields(b.String()), " ")
 }

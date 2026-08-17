@@ -48,12 +48,15 @@ type versionImage struct {
 	Type string
 }
 
+// versionsCommandName is the versions subcommand's name.
+const versionsCommandName = "versions"
+
 // newVersionsCommand returns the versions subcommand.
 func newVersionsCommand(opts Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "versions",
+		Use:   versionsCommandName,
 		Short: "List available IncusOS releases from the update server",
-		Args:  cobra.NoArgs,
+		Args:  noArgs(opts),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runVersions(cmd, opts)
 		},

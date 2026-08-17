@@ -25,7 +25,8 @@ func TestLocalSourceParity(t *testing.T) {
 		testVersion + "/" + updateJSONName:  updateJSON,
 		testVersion + "/" + updateSJSONName: sjson,
 	})
-	src, err := NewLocalSource(dir, t.TempDir(), &recordingReporter{})
+	rep := &recordingReporter{}
+	src, err := NewLocalSource(dir, t.TempDir(), rep)
 	require.NoError(t, err)
 
 	idx, err := src.Index(t.Context())
@@ -44,6 +45,9 @@ func TestLocalSourceParity(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, bytes.Equal(updateJSON, meta.UpdateJSON), "verbatim update.json")
 	require.True(t, bytes.Equal(sjson, meta.UpdateSJSON), "verbatim update.sjson")
+	assert.True(t, rep.hasDone(stepIndex))
+	assert.True(t, rep.hasDone(stepDownload))
+	assert.True(t, rep.hasDone(stepMetadata))
 }
 
 func TestLocalAllowlistBeforeFilesystem(t *testing.T) {
@@ -181,4 +185,33 @@ func bytesRepeat(b byte, n int) []byte {
 		out[i] = b
 	}
 	return out
+}
+
+func TestLocalMissingIndexOmitsDone(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	rep := &recordingReporter{}
+	src, err := NewLocalSource(dir, t.TempDir(), rep)
+	require.NoError(t, err)
+	_, err = src.Index(t.Context())
+	require.ErrorIs(t, err, ErrFetch)
+	assert.Equal(t, "acquisition failed: open index.json: no such file or directory", err.Error())
+	assert.NotContains(t, err.Error(), dir)
+	assert.True(t, rep.hasStep(stepIndex))
+	assert.False(t, rep.hasDone(stepIndex))
+}
+
+func TestLocalOpenErrorOmitsAbsolutePath(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	rep := &recordingReporter{}
+	src, err := NewLocalSource(dir, t.TempDir(), rep)
+	require.NoError(t, err)
+	file := testFileNamed([]byte("x"), "aarch64/absent.img.gz")
+	_, err = src.Asset(t.Context(), testVersion, file)
+	require.ErrorIs(t, err, ErrFetch)
+	assert.Equal(t, "acquisition failed: open aarch64/absent.img.gz: no such file or directory", err.Error())
+	assert.NotContains(t, err.Error(), dir)
+	assert.True(t, rep.hasStep(stepDownload))
+	assert.False(t, rep.hasDone(stepDownload))
 }

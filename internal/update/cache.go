@@ -89,12 +89,22 @@ func (c *assetCache) get(
 		return handle, nil
 	}
 	c.warnIfLowSpace(file.Size)
+	if c.reporter != nil {
+		c.reporter.Step(stepDownload)
+	}
 	rc, err := fetch(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rc.Close() }()
-	return c.admit(ctx, file, rc)
+	handle, err := c.admit(ctx, file, rc)
+	if err != nil {
+		return nil, err
+	}
+	if c.reporter != nil {
+		c.reporter.Done(stepDownload)
+	}
+	return handle, nil
 }
 
 // reuse re-hashes an existing cache entry and size-checks it. A corrupt
@@ -217,17 +227,39 @@ func hashFile(path string) ([]byte, int64, error) {
 
 // warnIfLowSpace emits a Reporter warning when free space is below size.
 // Failures and missing space data are ignored; this is never an error.
+// If the cache directory does not exist yet, the probe walks to the nearest
+// existing ancestor so a first-use cache on a too-small volume still warns.
 func (c *assetCache) warnIfLowSpace(size int64) {
 	if c.reporter == nil || c.freeBytes == nil || size <= 0 {
 		return
 	}
-	free, err := c.freeBytes(c.dir)
+	free, err := freeBytesAt(c.dir, c.freeBytes)
 	if err != nil {
 		return
 	}
 	if free < uint64(size) {
 		c.reporter.Step(stepSpaceWarn)
 		c.reporter.Done(stepSpaceWarn)
+	}
+}
+
+// freeBytesAt probes dir for available bytes. When dir does not exist, it
+// walks up to the nearest existing ancestor and probes that filesystem
+// instead. Other probe errors are returned unchanged.
+func freeBytesAt(dir string, probe func(string) (uint64, error)) (uint64, error) {
+	for {
+		free, err := probe(dir)
+		if err == nil {
+			return free, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return 0, err
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return 0, err
+		}
+		dir = parent
 	}
 }
 

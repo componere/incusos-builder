@@ -131,8 +131,21 @@ clear-text payload is an update document for that version. Its
 `Files` list must include every selected application
 `Filename`+`Sha256` pair.
 
-A missing `index.json` fails acquisition (exit status `5`) with
-`open index.json`. A missing asset fails with `open <filename>`.
+A missing `index.json` fails acquisition with exit status `5`:
+
+```text
+acquisition failed: open index.json: no such file or directory
+```
+
+A missing asset uses its mirror-relative name rather than leaking
+the absolute mirror path:
+
+```text
+acquisition failed: open aarch64/absent.img.gz: no such file or directory
+```
+
+A failed index or download step does not print its `done index` or
+`done download` completion line.
 
 List what the mirror actually publishes before building:
 
@@ -145,11 +158,8 @@ incusos-builder versions --json \
 
 An unknown `--channel` prints an empty `result.versions` list and
 exits `0`. A build that pins a version the index does not carry in
-that channel fails with exit status `5`:
-
-```text
-version not found: release "199901010000" not in channel "stable"; available: …
-```
+that channel fails with exit status `5`. The diagnostic names the
+missing release and channel, then lists the available releases.
 
 ## 5. Expect digest checks on every asset
 
@@ -180,7 +190,8 @@ or `update.sjson` that omits a selected `Filename`+`Sha256` pair,
 fails the same way (exit status `5`). Trailing data after the first
 JSON value in `index.json` is rejected.
 
-An empty `--cache-dir` fails with `cache directory is required`.
+An empty `--cache-dir` fails with
+`acquisition failed: cache directory is required`.
 
 ## Related
 

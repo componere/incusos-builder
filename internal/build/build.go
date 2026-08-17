@@ -170,7 +170,7 @@ func splice(
 
 	zr, err := pgzip.NewReader(rc)
 	if err != nil {
-		return 0, fmt.Errorf("%w: gzip: %w", errdefs.ErrFetch, err)
+		return 0, fmt.Errorf("%w: %w", errdefs.ErrFetch, err)
 	}
 	defer func() { _ = zr.Close() }()
 

@@ -34,15 +34,19 @@ fileGroups:
     - 'ghd.toml'
     - 'release-please-config.json'
     - '.release-please-manifest.json'
-    - '.github/workflows.disabled/**/*.yml'
 
 workspace:
   inheritedTasks:
     include: []
 
 tasks:
+  # Both gate commands name the owned packages explicitly, so the commands agree
+  # with the task inputs. A pathless `golangci-lint fmt` walks the whole working
+  # directory instead of the module — including the gitignored `reference/incus-os`
+  # clone from TECH_NOTES.md and any `.wt/` Worktrunk worktrees — which made the
+  # advertised local gate fail on an otherwise clean tree.
   format:
-    command: 'golangci-lint fmt --config .golangci.yml --diff'
+    command: 'golangci-lint fmt --config .golangci.yml --diff ./cmd/... ./internal/...'
     inputs:
       - '@group(goSources)'
       - '@group(lintConfig)'
@@ -50,7 +54,7 @@ tasks:
       cache: false
 
   lint:
-    command: 'golangci-lint run --config .golangci.yml ./... --show-stats=false'
+    command: 'golangci-lint run --config .golangci.yml ./cmd/... ./internal/... --show-stats=false'
     inputs:
       - '@group(goSources)'
       - '@group(lintConfig)'

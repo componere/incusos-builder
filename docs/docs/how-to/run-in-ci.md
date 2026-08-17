@@ -46,7 +46,7 @@ With `--no-input` on, `build` does not prompt. An existing `-o` (or
 rescue-media) file is a usage error unless you pass `--force`:
 
 ```text
-refusing to overwrite out.img; re-run with --force
+usage error: refusing to overwrite out.img; re-run with --force
 ```
 
 There is no `--yes`. `--force` is the non-interactive overwrite path.
@@ -99,7 +99,7 @@ On failure, stdout is one error envelope and stderr reprints the
 error text:
 
 ```json
-{"error":{"code":3,"message":"invalid config: field seeds.install"}}
+{"error":{"code":3,"message":"invalid config: image.type: must be iso or raw"}}
 ```
 
 `error.code` is the same integer as the process exit code. Parse
@@ -115,6 +115,8 @@ In CI, pass `--color never`. `--progress auto` already becomes
 `never` unless both stdout and stderr are TTYs, and `--json` forces
 AUTO progress to `never`. `--progress never` makes that explicit.
 `--progress always` still writes a progress line on stderr.
+A `done <step>` line is success-only. A failed step does not print its
+completion line.
 
 `-q` suppresses human success writers. It does not suppress `--json`
 or error reprints. `--verbose` and `-q` together are a usage error.

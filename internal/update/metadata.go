@@ -39,8 +39,7 @@ func (s *HTTPSSource) ReleaseMetadata(
 		return build.ReleaseMetadata{}, err
 	}
 	s.reporter.Step(stepMetadata)
-	defer s.reporter.Done(stepMetadata)
-	return loadReleaseMetadata(ctx, version, selected, func(ctx context.Context, name string) ([]byte, error) {
+	meta, err := loadReleaseMetadata(ctx, version, selected, func(ctx context.Context, name string) ([]byte, error) {
 		rawURL, err := url.JoinPath(s.base, version, name)
 		if err != nil {
 			return nil, fmt.Errorf("%w: metadata URL: %w", ErrFetch, err)
@@ -52,6 +51,11 @@ func (s *HTTPSSource) ReleaseMetadata(
 		s.reporter.Progress(int64(len(body)), int64(len(body)))
 		return body, nil
 	})
+	if err != nil {
+		return build.ReleaseMetadata{}, err
+	}
+	s.reporter.Done(stepMetadata)
+	return meta, nil
 }
 
 // ReleaseMetadata reads update.json and update.sjson from
@@ -66,8 +70,7 @@ func (s *LocalSource) ReleaseMetadata(
 		return build.ReleaseMetadata{}, err
 	}
 	s.reporter.Step(stepMetadata)
-	defer s.reporter.Done(stepMetadata)
-	return loadReleaseMetadata(ctx, version, selected, func(_ context.Context, name string) ([]byte, error) {
+	meta, err := loadReleaseMetadata(ctx, version, selected, func(_ context.Context, name string) ([]byte, error) {
 		body, err := s.readCapped(version, name, s.metaLimit)
 		if err != nil {
 			return nil, err
@@ -75,6 +78,11 @@ func (s *LocalSource) ReleaseMetadata(
 		s.reporter.Progress(int64(len(body)), int64(len(body)))
 		return body, nil
 	})
+	if err != nil {
+		return build.ReleaseMetadata{}, err
+	}
+	s.reporter.Done(stepMetadata)
+	return meta, nil
 }
 
 // loadReleaseMetadata fetches both documents, structurally validates them,

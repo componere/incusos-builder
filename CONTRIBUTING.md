@@ -49,12 +49,25 @@ moon run root:build
 moon run root:test
 moon run root:check-upstream   # incus-osd must stay a type-only dependency
 moon run root:mocks            # regenerate the mockery mocks in .mockery.yml
+mise run image-local
 moon run docs:build
 moon run docs:serve
 go run ./cmd/incusos-builder --version
 ```
 
+`mise run image-local` builds and loads the container image for the host
+architecture. It leaves gitignored artifacts in `packages/`, `image.tar`,
+`melange.rsa*`, `.melange-vars.local.yaml`, and `*.spdx.json`.
+
+`moon run docs:serve` serves the site at
+http://127.0.0.1:8000/incusos-builder/.
+
 `moon run root:check` is the full local gate: format, lint, build, test, the upstream-closure check, and the docs build. CI runs `moon ci`.
+
+If golangci-lint reports diagnostics for paths that no longer exist, such as a
+removed Worktrunk worktree, its local cache is stale. Run
+`mise x -- golangci-lint cache clean` to recover. This is troubleshooting, not
+a step in every gate run.
 
 `moon run root:e2e` is opt-in. It hits the live update server and is not part of `root:check`.
 

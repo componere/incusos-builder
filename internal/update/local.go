@@ -2,6 +2,7 @@ package update
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -73,7 +74,6 @@ func (s *LocalSource) Index(ctx context.Context) (apiimages.Index, error) {
 		return apiimages.Index{}, fmt.Errorf("%w: %w", ErrFetch, err)
 	}
 	s.reporter.Step(stepIndex)
-	defer s.reporter.Done(stepIndex)
 	body, err := s.readCapped("", indexName, s.indexLimit)
 	if err != nil {
 		return apiimages.Index{}, err
@@ -83,6 +83,7 @@ func (s *LocalSource) Index(ctx context.Context) (apiimages.Index, error) {
 	if err := decodeJSON(body, &index, indexName); err != nil {
 		return apiimages.Index{}, err
 	}
+	s.reporter.Done(stepIndex)
 	return index, nil
 }
 
@@ -110,13 +111,11 @@ func (s *LocalSource) openFile(ctx context.Context, version, filename string) (i
 	if err != nil {
 		return nil, err
 	}
-	s.reporter.Step(stepDownload)
 	f, err := os.Open(path)
 	if err != nil {
-		s.reporter.Done(stepDownload)
-		return nil, fmt.Errorf("%w: open %s: %w", ErrFetch, filename, err)
+		return nil, wrapOpenError(filename, err)
 	}
-	return &doneCloser{inner: f, done: func() { s.reporter.Done(stepDownload) }}, nil
+	return f, nil
 }
 
 // readCapped reads a file under the mirror, optionally namespaced by version.
@@ -133,7 +132,7 @@ func (s *LocalSource) readCapped(version, name string, limit int64) ([]byte, err
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("%w: open %s: %w", ErrFetch, name, err)
+		return nil, wrapOpenError(name, err)
 	}
 	defer func() { _ = f.Close() }()
 	return readCapped(f, limit, name)
@@ -166,4 +165,15 @@ func (s *LocalSource) joinUnderRoot(elem ...string) (string, error) {
 // stringsHasDotDot reports whether rel starts with ".." as a path element.
 func stringsHasDotDot(rel string) bool {
 	return len(rel) >= 2 && rel[0] == '.' && rel[1] == '.' && (len(rel) == 2 || rel[2] == os.PathSeparator)
+}
+
+// wrapOpenError wraps an [os.Open] failure with the public mirror-relative
+// name. *[os.PathError] is unwrapped so the message carries only .Err and not
+// the resolved absolute path.
+func wrapOpenError(name string, err error) error {
+	var pe *os.PathError
+	if errors.As(err, &pe) {
+		err = pe.Err
+	}
+	return fmt.Errorf("%w: open %s: %w", ErrFetch, name, err)
 }

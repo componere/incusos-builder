@@ -117,6 +117,27 @@ func TestProbeUnreadableGzipWrapsErrFetch(t *testing.T) {
 	require.ErrorIs(t, err, errdefs.ErrFetch)
 }
 
+// TestProbeGzipErrorNotDoublePrefixed maps an invalid gzip header to
+// ErrFetch without a second gzip: prefix.
+func TestProbeGzipErrorNotDoublePrefixed(t *testing.T) {
+	t.Parallel()
+
+	handle := staticAsset{gz: []byte(invalidGzipHeader)}
+	_, err := probe(context.Background(), handle, 0)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
+	require.Equal(t, "acquisition failed: gzip: invalid header", err.Error())
+}
+
+// TestSpliceGzipErrorNotDoublePrefixed is the same header wrap on splice.
+func TestSpliceGzipErrorNotDoublePrefixed(t *testing.T) {
+	t.Parallel()
+
+	handle := staticAsset{gz: []byte(invalidGzipHeader)}
+	_, err := splice(context.Background(), handle, io.Discard, 0, nil)
+	require.ErrorIs(t, err, errdefs.ErrFetch)
+	require.Equal(t, "acquisition failed: gzip: invalid header", err.Error())
+}
+
 func TestParseGPTRejectsOverflowingEntryLBA(t *testing.T) {
 	t.Parallel()
 
@@ -140,6 +161,10 @@ func TestParseGPTRejectsOverflowingPartitionRange(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "overflows")
 }
+
+// invalidGzipHeader is long enough for gzip.NewReader to reject the magic
+// bytes with "gzip: invalid header" rather than unexpected EOF.
+const invalidGzipHeader = "not-gzip!!"
 
 // staticAsset is a VerifiedAsset over fixed gzip bytes. Tests use it only as
 // a fixture handle; production mocks are mockery-generated.

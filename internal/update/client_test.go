@@ -181,6 +181,7 @@ func TestAssetDownloadProgressAndHandle(t *testing.T) {
 	assert.Equal(t, first, second)
 	assert.Equal(t, int64(len(payload)), rep.lastProgressTotal())
 	assert.True(t, rep.hasStep(stepDownload))
+	assert.True(t, rep.hasDone(stepDownload))
 }
 
 func TestAssetReuseCorruptEntryRedownloads(t *testing.T) {
@@ -372,6 +373,7 @@ func TestFreeSpaceWarningIsNotError(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, payload, readAll(t, handle))
 	assert.True(t, rep.hasStep(stepSpaceWarn))
+	assert.True(t, rep.hasDone(stepSpaceWarn))
 }
 
 func TestReleaseMetadataAllowlistBeforeRequest(t *testing.T) {
@@ -405,4 +407,27 @@ func TestSHA256RejectedBeforeRequest(t *testing.T) {
 	_, err := src.Asset(t.Context(), testVersion, file)
 	require.ErrorIs(t, err, ErrFetch)
 	assert.Equal(t, int64(0), ts.hits.Load())
+}
+
+func TestIndexFailureOmitsDone(t *testing.T) {
+	t.Parallel()
+	rep := &recordingReporter{}
+	ts := newTestServer(t, map[string][]byte{})
+	src := ts.newHTTPS(t, rep)
+	_, err := src.Index(t.Context())
+	require.ErrorIs(t, err, ErrFetch)
+	assert.True(t, rep.hasStep(stepIndex))
+	assert.False(t, rep.hasDone(stepIndex))
+}
+
+func TestAssetMissingOmitsDone(t *testing.T) {
+	t.Parallel()
+	file := testFile([]byte("missing"))
+	rep := &recordingReporter{}
+	ts := newTestServer(t, map[string][]byte{})
+	src := ts.newHTTPS(t, rep)
+	_, err := src.Asset(t.Context(), testVersion, file)
+	require.ErrorIs(t, err, ErrFetch)
+	assert.True(t, rep.hasStep(stepDownload))
+	assert.False(t, rep.hasDone(stepDownload))
 }
