@@ -499,3 +499,24 @@ The feature-sized follow-up (`release-cli init package-repository` emitting the
 scaffold) remains tracked on `meigma/release#67`. Worktree pruned; branch
 deletion needed `-D` because squash-merge leaves the branch unmerged in git's
 eyes.
+
+## 2026-08-22 12:40 — Close
+Session closed. All work is merged and every local default branch is
+fast-forwarded:
+- componere/incusos-builder: PRs #39 (producer migration), #41 (enable
+  publishers), #40 (release 0.2.0 → tag v0.2.0 at `37a4619`); master at
+  `37a4619`.
+- meigma/release: PRs #64 (release v0.1.17 = release unit `0dee66ff…`), #68
+  (cross-org receiver docs); main at `a05761a`.
+- componere/homebrew-tap #1 and componere/scoop-bucket #1 merged;
+  componere/pkgs received direct pushes (policy repo, local receiver) and its
+  publication run `32589946603` uploaded 36/36 artifacts.
+Session worktrees removed; only master and journal/jmgilman remain.
+
+Handoff state: **v0.2.0 fully published and consumer-verified on all five
+channels.** Open items live in SUMMARY.md's Open Threads — chiefly the v0.1.0
+draft release decision, meigma/release#65–#67 + meigma/pkgs#12, the unfiled
+melange example defect, and the local-receiver re-diff duty on release-unit
+bumps. SUMMARY.md written; INDEX.md row set to complete; TECH_NOTES.md revised
+(release unit, native packages, GoReleaser gotchas, new signer identities,
+ruleset lesson).
