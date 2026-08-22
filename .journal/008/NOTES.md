@@ -440,3 +440,46 @@ still gates publication because the called job selects the environment
 regardless; what is lost is that the aggregate keys become readable by any
 workflow in that repository. Awaiting the developer's decision plus a Touch ID
 approval for `op read`.
+
+## 2026-08-22 12:20 — Native packages published; all five channels live
+The developer chose to fix the root cause rather than relocate secrets. The
+root fix needed no fork:
+
+- The receiver's own setup actions (`setup-release-cli`,
+  `setup-package-repository`) already accept `owner/repo/path@ref` references.
+- `componere/pkgs/.github/workflows/publish.yml` is now a **local** workflow
+  whose job selects `packages-production` itself, mirroring the upstream
+  receiver at `0dee66ff…` step for step. Same-repo job → environment secrets
+  resolve natively; aggregate keys stay environment-only, preserving the trust
+  boundary the reusable path could only achieve intra-org.
+- `local-build: always` is intra-repo-only, so the local receiver uses the
+  default acquisition mode: it downloads the stamped v0.1.17 `release-cli`
+  from the meigma/release GitHub Release with checksum + attestation
+  verification. Stronger provenance than a runner-local source build.
+- Forking meigma/release was considered and rejected: the producer side works
+  cross-org already (explicit named secrets), every `checksum_identity` /
+  `attestation_signer` names meigma/release, and a fork has no releases for
+  `setup-release-cli` to verify. Only the receiver had the defect.
+
+First publication through the local receiver: run `32589946603`, envelope
+`{"state":"published","artifacts":36,"uploaded":36}`. All ten public roots and
+keys return 200.
+
+Client proof, each in a fresh container following the shipped install doc:
+- Debian (`apt-get install incusos-builder`, signed-by aggregate key) → 0.2.0
+- Fedora (`dnf install`, `gpgcheck=1` + `repo_gpgcheck=1`, both keys in
+  `gpgkey=`) → 0.2.0; dnf's "Verify package files" gate passed, so the
+  producer RPM signature verified
+- Alpine (`apk add`, both published keys in `/etc/apk/keys`) → 0.2.0; this one
+  pulled the **amd64** package under emulation, so both architectures were
+  exercised across the three tests
+
+Cleanup complete: `PACKAGE_REPOSITORY_INHERIT_MARKER` deleted, probe workflow
+and temporary pin already removed, `docs/operations.md` in componere/pkgs now
+describes the local receiver. Upstream `meigma/release#67` updated with the
+working shape and a suggestion to ship it as `release-cli init
+package-repository`, matching the tap/bucket initializer pattern.
+
+**v0.2.0 is fully published across all five channels: GitHub Release, GHCR
+image, Homebrew cask, Scoop manifest, and APT/DNF/APK at pkgs.componere.dev —
+each verified from the consumer side.**
