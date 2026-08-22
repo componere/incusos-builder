@@ -86,3 +86,95 @@ Observed live state (via `gh`):
 
 Next: propose the org plan and get decisions on App reuse, package-repository
 tenancy (own componere R2/domain vs reuse `meigma/pkgs`), and macOS signing.
+
+## 2026-08-22 09:10 — Decisions
+Developer chose: reuse `componere-release-please` and rename it to
+`componere-release`; own `componere/pkgs` + `componere-packages` R2 bucket +
+`pkgs.componere.dev`; enable macOS signing/notarization now.
+
+## 2026-08-22 10:05 — Org setup executed
+Release unit pinned: **`0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a` (v0.1.17)**.
+Merged `meigma/release` PR #64 (`chore(main): release 0.1.17`) as `0dee66f`;
+the Release workflow completed successfully, so #63's cross-org support is now
+released. Every componere pin uses that one SHA.
+
+Done and verified:
+- `release-cli` 0.1.17 installed via `mise x github:meigma/release@0.1.17`;
+  mise verified the checksum and GitHub artifact attestations, and
+  `release-cli version --json` reports `commit=0dee66ff…`, matching the pin.
+- Cloudflare: bucket `componere-packages` created (WNAM, standard), custom
+  domain `pkgs.componere.dev` attached to the bucket root with minTLS 1.2 in
+  zone `5a708e9af40df8e2c7bec7d6e8a96732`. `curl https://pkgs.componere.dev/`
+  returns 404 with `ssl_verify_result=0`, so DNS and TLS are live against an
+  empty bucket.
+- **Cloudflare API-token management is out of scope for the local token**
+  (`9109 Unauthorized to access requested resource` on both
+  `/accounts/{id}/tokens/permission_groups` and `/user/tokens/...`), so the
+  bucket-scoped R2 S3 access key must be minted in the dashboard.
+- Signing keys generated locally in a temp `GNUPGHOME`, then **format-verified
+  by decrypting each one with the same primitives the pipeline uses** rather
+  than assumed:
+  - aggregate OpenPGP RSA-4096 `46ED937D27753B5F0180F94DDF46DA94E742C7F9`;
+  - aggregate APK RSA-4096 as an **unencrypted traditional PEM**, because
+    `repogen.generateAPK` runs `abuild-sign -k` inside Alpine;
+  - producer RPM OpenPGP RSA-4096 `9149E2C3CC98D5C162C107F00B8DDE3EA1AE1A9D`;
+  - producer APK RSA-4096 as a **legacy-encrypted PEM** (`Proc-Type: 4,ENCRYPTED`
+    / `DEK-Info: AES-256-CBC`), because nfpm v2.47.0
+    `internal/sign/rsa.go` uses `x509.DecryptPEMBlock` + `ParsePKCS1PrivateKey`.
+    An OpenSSL-3 default PKCS#8 `ENCRYPTED PRIVATE KEY` would not have worked;
+    `openssl rsa -traditional -aes256` is required.
+- 1Password `Development`: new items `Componere Packages Aggregate Signing Keys`
+  and `Componere incusos-builder Package Signing Keys` hold every private key,
+  public key, and passphrase. 1Password assignment syntax rejects field labels
+  containing unescaped periods, so attachment labels use underscores.
+- `componere/pkgs` created (public): policy with `origin:
+  https://pkgs.componere.dev`, producer `componere/incusos-builder` / package
+  `incusos-builder`, post-#63 `checksum_identity` +
+  `attestation_signer` fields, four public keys under `.config/keys/`,
+  receiver `.github/workflows/publish.yml` pinned to the release unit with
+  `secrets: inherit` (mirroring meigma's live receiver, not the doc template),
+  CODEOWNERS, and `docs/operations.md`. Vars `CLOUDFLARE_ACCOUNT_ID` and
+  `PACKAGE_REPOSITORY_R2_BUCKET` set; environment `packages-production` created
+  with required reviewer `jmgilman` (id 2308444), protected-branch policy, and
+  the three aggregate signing secrets.
+- `componere/incusos-builder` producer secrets set: `RPM_SIGNING_KEY`,
+  `RPM_SIGNING_PASSPHRASE`, `APK_SIGNING_KEY`, `APK_SIGNING_PASSPHRASE`.
+- Org variable `COMPONERE_RELEASE_APP_CLIENT_ID` and org secret
+  `COMPONERE_RELEASE_APP_PRIVATE_KEY` created at `selected` visibility scoped to
+  `componere/incusos-builder` only (the tap, bucket, and receiver never need the
+  key). Repo-level duplicates deleted.
+- **Credential migration proven live**: dispatched `release-please.yml` in
+  `incusos-builder` (run `32583533995`); `Create release app token` succeeded
+  against the org-level values and no release PR was opened, so the migration
+  had no side effects.
+- `componere/homebrew-tap` and `componere/scoop-bucket` created from
+  `release-cli init`; both generated CI workflows pin
+  `meigma/release@0dee66ff…`. Active `Default branch` rulesets on each: PR
+  required (0 approvals, squash only), required check
+  `casks / Homebrew cask validation` / `manifests / Scoop manifest validation`
+  (integration 15368), block deletion, block non-fast-forward, admin bypass.
+  **The rulesets API accepted the check contexts before they had ever run**,
+  which sidesteps the chicken-and-egg the how-to describes for the UI. The
+  context strings match `meigma/homebrew-tap`'s live classic protection exactly.
+- Actions policy verified: org `allowed_actions: all`, `sha_pinning_required:
+  false`, default token `read` on the org and all four repos. Nothing needed
+  changing. Do **not** enable `sha_pinning_required`: the copied caller uses a
+  tag-pinned `googleapis/release-please-action`.
+
+Blocked or handed off:
+- Five `MACOS_*` org secrets: **stopped before reading any Apple value.** The
+  candidates are meigma-scoped (`Development/meigma-ghd-apple` has
+  `MACOS_SIGN_P12.txt`, `cert_password`, `MACOS_NOTARY_KEY.txt`,
+  `app_store_connect_key_id`, `app_store_connect_issuer_id`;
+  `Development/Apple Meigma` holds the account-level pair). Copying either into
+  componere spreads one Apple credential set across two orgs; a
+  componere-specific Developer ID cert avoids that. Awaiting the developer.
+- `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` in `packages-production`: needs a
+  dashboard-minted, bucket-scoped R2 S3 token (list/read/write, no delete).
+- UI-only: rename the App to `componere-release`, narrow its installation from
+  *all repositories* to `incusos-builder`, `homebrew-tap`, `scoop-bucket`,
+  `pkgs` (all four are currently covered only because the install is org-wide),
+  and flip the GHCR package `componere/incusos-builder` to public.
+- No standalone policy-validation command exists in `release-cli` 0.1.17
+  (`init`, `stage`, `image`, `plan`, `publish`, `verify`, `version`), so
+  `.config/package-repository.yaml` is first validated by a real receiver run.
