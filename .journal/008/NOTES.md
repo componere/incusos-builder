@@ -262,3 +262,65 @@ Org setup is complete: all 15 items done, nothing blocked. The one thing REST
 cannot confirm is which repositories the `componere-release` installation
 selects; that surfaces as a token-mint failure on the first tap, bucket, or
 dispatch publication rather than as silent breakage.
+
+## 2026-08-22 11:10 — Producer migration merged, v0.2.0 tagged
+Migration PR #39 and publisher-enablement PR #41 merged; release PR #40 merged,
+producing tag **v0.2.0** at `37a4619`. Release run `32586815661` is building.
+
+Sequencing that mattered: release-please did **not** rebase its release branch
+onto the publisher-enablement commit (a `ci:` commit is hidden from the
+changelog, so its 17:06 run saw nothing releasable, and PR #40's head still had
+`publish-*: false`). Squash merge applied only the changelog and manifest diff
+onto master, so the tagged tree carries `publish-*: true`. Verified directly at
+the tag before trusting it:
+`gh api '.../contents/.github/workflows/release.yml?ref=v0.2.0'` shows all five
+inputs `true`. Merging the release PR without checking would have been a coin
+flip.
+
+Chose a single publishing run over the documented rehearse-then-publish flow.
+Rationale: a rehearsal at v0.2.0 would then need the tag moved onto the
+enable-publishers commit, and every publisher is independently re-runnable at
+the same tag, so a failure costs a job re-run rather than a tag move. The
+rehearsal value was recovered locally instead (see below).
+
+Local pre-flight, all before pushing anything:
+- All six `GOOS`/`GOARCH` targets compile. **Windows did not compile at all**:
+  `internal/update` used `unix.Statfs` for the cache free-space check, and the
+  release contract requires Windows amd64/arm64 for Scoop. Split into
+  `space_unix.go` (statfs) and `space_windows.go`
+  (`GetDiskFreeSpaceEx`, whose quota-adjusted result needs no block
+  arithmetic); `space_other.go`'s tag became `!linux && !windows`.
+- `goreleaser check` passes; a full offline `goreleaser release --skip=publish`
+  produced 6 archives, 6 native packages, 12 SBOMs, checksums, the cask, and
+  the Scoop manifest.
+- **`--skip=sign` also clears nfpm package signatures**, not just the Cosign
+  checksum signature (`internal/pipe/nfpm/nfpm.go`: `if skips.Any(ctx,
+  skips.Sign) { info.APK.Signature = nfpm.APKSignature{} ... }`). My first
+  validation run therefore produced unsigned apks and briefly looked like a
+  config defect. Re-running without that skip produced
+  `.SIGN.RSA.incusos-builder-apk-001.rsa.pub`, matching `apk_key.published` in
+  the `componere/pkgs` policy, plus an RSA-signed RPM. Compared against
+  meigma's published v0.1.16 apk, which has the same three-segment layout.
+- `mise run image-local` built the image from the rewritten melange/apko;
+  `docker run --rm incusos-builder:dev --version` printed the banner and
+  `docker inspect` reported user `65532` and entrypoint
+  `/usr/bin/incusos-builder` — the two values `image verify` enforces.
+- **App installation scope closed.** Minted an App JWT from the 1Password PEM
+  and listed `/installation/repositories`: exactly 4 —
+  `incusos-builder`, `pkgs`, `homebrew-tap`, `scoop-bucket`. This was the one
+  item REST could not answer earlier, and it gates every publisher's token.
+
+Config findings worth keeping:
+- melange rejects `vendor`, `homepage`, and `maintainer` under `package:`. The
+  maintained `examples/go-release/melange.yaml` sets all three, so the example
+  cannot build as written; meigma's own `melange.yaml` omits them.
+- `gomod.proxy: true` makes GoReleaser fetch the module from the Go proxy at the
+  tag, so a local stage against an unpushed tag fails with
+  `invalid version: unknown revision`. Local validation needs `proxy: false`.
+- The live branch ruleset still required `Binary Release Dry Run` and
+  `Container Image Dry Run` after those workflows were deleted, which blocked
+  PR #39 permanently. `configure_github_repo.py apply` failed with
+  `PATCH ... 404`, so the ruleset was converged with a direct `PUT`. The
+  declared file and live state now agree on `ci` + `GitHub Pages`.
+- `security-scan.yml` also built the image from source and was rewritten to
+  stage `application` the same way the release does.
