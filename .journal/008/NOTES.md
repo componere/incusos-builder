@@ -233,3 +233,32 @@ package page's Danger Zone, not in org package settings.
 Notarization is load-bearing for the cask path, not optional polish:
 `meigma/release` sets `sign-and-notarize-macos: true` for its own releases, and
 the generated cask carries no `quarantine: false` and no `xattr` postflight.
+
+## 2026-08-22 10:45 — GHCR correction
+Correcting the two earlier entries that reported the GHCR package as private:
+it is now **public**. The earlier failures were real, not caching — the change
+had been applied at the **org** level (package-creation policy) rather than to
+the package itself. Applying it in the package's own Danger Zone took effect
+immediately: `visibility: public`, `updated_at` 2026-08-22T16:31:53Z.
+
+Verified anonymously, with only a `ghcr.io/token` anonymous pull token:
+- `GET /v2/componere/incusos-builder/tags/list` returns
+  `["v0.1.0", "sha256-e3bfe748…"]` (the second is the Cosign signature tag).
+- `GET /v2/componere/incusos-builder/manifests/v0.1.0` returns **200** with
+  `docker-content-digest: sha256:e3bfe74884acbbd707bccca58e89d66ec542c63f365d0f5f73af45a6284b37de`,
+  matching the digest recorded in session 005, media type
+  `application/vnd.oci.image.index.v1+json`, platforms `linux/amd64` and
+  `linux/arm64`.
+
+My first anonymous probe returned 404 because I requested tag `0.1.0`; the
+published tag is `v0.1.0`. A 404 there means "no such tag", not "not public" —
+the 401 in the previous entry was the real private-state signal.
+
+This closes the README's container install path for anonymous users. The v0.1.0
+GitHub Release is still a draft, so the `ghd` path remains broken until that is
+published or superseded by the first meigma/release-driven release.
+
+Org setup is complete: all 15 items done, nothing blocked. The one thing REST
+cannot confirm is which repositories the `componere-release` installation
+selects; that surfaces as a token-mint failure on the first tap, bucket, or
+dispatch publication rather than as silent breakage.
