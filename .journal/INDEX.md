@@ -9,3 +9,4 @@
 | 005 | 2026-08-16 | Functional test campaign, remediation, and the v0.1.0 release | complete | Wrote and executed a 135-case manual test campaign, remediated its findings, observed boot acceptance for the first time, and built v0.1.0 (release still a draft). |
 | 006 | 2026-08-16 | Compose manual functional test plan for incusos-builder release readiness | in-progress | Composing a manual real-world functional test plan proving the public surfaces deliver on every release promise. |
 | 007 | 2026-08-16 | New session | in-progress | Session started; awaiting the developer's stated goal. |
+| 008 | 2026-08-22 | New session | in-progress | Session started; awaiting the developer's stated goal. |
