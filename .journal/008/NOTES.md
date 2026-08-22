@@ -324,3 +324,79 @@ Config findings worth keeping:
   declared file and live state now agree on `ci` + `GitHub Pages`.
 - `security-scan.yml` also built the image from source and was rewritten to
   stage `application` the same way the release does.
+
+## 2026-08-22 11:55 — v0.2.0 published; native packages blocked
+Release run `32586815661` succeeded in **every** job. v0.2.0 is public.
+
+Proven, not assumed:
+- **Assets**: 26 assets. Downloaded four across three formats and both OS
+  families; all match `checksums.txt`. `cosign verify-blob` on
+  `checksums.txt.sigstore.json` returns `Verified OK` against identity
+  `https://github.com/meigma/release/.github/workflows/go-pre-publish.yml@0dee66ff…`.
+  Paired falsifier (claiming our own `release.yml` as signer) fails and names
+  the real SAN — so the signature genuinely binds to the pinned shared workflow.
+- **Attestation**: `gh attestation verify --signer-workflow
+  meigma/release/.github/workflows/publish-github-release.yml` gives
+  `buildSignerURI=…publish-github-release.yml@0dee66ff…`,
+  `sourceRepositoryURI=https://github.com/componere/incusos-builder`,
+  `sourceRepositoryRef=refs/tags/v0.2.0`,
+  `sourceRepositoryDigest=37a4619`. Two falsifiers (foreign signer workflow,
+  wrong `--source-ref`) both fail. Bare success prints nothing, as expected.
+- **macOS**: the darwin/arm64 binary reports
+  `Authority=Developer ID Application: Joshua Gilman (7MN6B2QY4W)`, hardened
+  runtime, timestamped, and `spctl -a -t install` says
+  `source=Notarized Developer ID`. `codesign --test-requirement="=notarized"`
+  passes. Apple notarization works with the new componere credentials.
+- **Image**: anonymous pull of `0.2.0` → index
+  `sha256:4f19971c…`, `linux/amd64` + `linux/arm64`, annotations carry
+  `revision=37a4619` and `version=0.2.0` (both injected, as designed). Channel
+  tags `0.2.0`, `0.2`, `0`, `latest` all present. `docker run` prints
+  `incusos-builder 0.2.0 (37a4619…)`; config user `65532`, entrypoint
+  `/usr/bin/incusos-builder`. `cosign verify` returns both a
+  `cosign/sign/v1` and a `slsa.dev/provenance/v1` claim (recursive signing).
+  Index provenance and the amd64 platform SPDX SBOM attestation both verify
+  against the pinned `publish-oci-image.yml`.
+- **Homebrew**: `brew tap` + `brew install --cask componere/tap/incusos-builder`
+  installed 0.2.0 on this machine and `incusos-builder --version` ran. Notable:
+  the installed binary carries `com.apple.quarantine` and still executes —
+  which is only true because it is notarized. That settles the earlier question
+  about whether notarization was load-bearing for the cask path: it is.
+  Uninstalled and untapped afterward.
+- **Destinations**: tap PR #1 and bucket PR #1 both passed validation on real
+  runners (`macos-26`, `windows-2025`, `windows-11-arm`) and were merged. The
+  required check contexts registered before they had ever run reported exactly
+  as predicted, which closes the loop on `meigma/release#66`.
+
+**Blocked: native packages.** Three receiver runs in `componere/pkgs` fail at
+`setup-package-repository` with `GPG_PASSPHRASE is empty`; the GPG and APK key
+secrets are empty too. Diagnosis, in order:
+1. A temporary direct job in `componere/pkgs` selecting the same environment
+   printed `gpg_passphrase_len=32`, `gpg_private_key_len=4756`,
+   `apk_private_key_len=4324`, `r2_key_id_len=32`. **The secrets are correct at
+   rest**; the reusable workflow is not receiving them.
+2. Removing `secrets: inherit` (matching the doc template) did not help.
+   Restoring it did not help. `meigma/pkgs` commit `3193b8a5`
+   ("fix(release): inherit publication secrets") proves it is required there.
+3. Adding a dummy repo-level secret, to rule out an empty inherited set, did not
+   help.
+4. The two callers differ by **one line**: meigma pins v0.1.16 and publishes
+   successfully; we pin v0.1.17. `git diff v0.1.16 v0.1.17` over
+   `publish-package-repository.yml` and `setup-package-repository/` is empty —
+   byte-identical files.
+
+So it is either a v0.1.17 regression outside those files or a GitHub platform
+change today. `meigma/pkgs` has a `repository_dispatch` run from 15:59Z still
+`waiting`; approving it settles which, but that publishes into the other org, so
+it is the developer's call. Filed as `meigma/release#67` with all of the above.
+
+Workaround available but not taken unilaterally: move the five values to
+repository-level secrets in `componere/pkgs` so `secrets: inherit` delivers
+them. The `packages-production` required reviewer still applies because the
+called job selects the environment regardless; what is lost is that the
+aggregate keys become readable by any workflow in that repo, contradicting the
+guide's stated boundary. Needs a decision, and `op read` needs Touch ID
+approval (it timed out twice with `authorization timeout`).
+
+Leftovers in `componere/pkgs`: the probe workflow is removed; the diagnostic
+secret `PACKAGE_REPOSITORY_INHERIT_MARKER` and the revert commits stay until
+this is resolved.
