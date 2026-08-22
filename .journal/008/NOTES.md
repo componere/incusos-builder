@@ -483,3 +483,19 @@ package-repository`, matching the tap/bucket initializer pattern.
 **v0.2.0 is fully published across all five channels: GitHub Release, GHCR
 image, Homebrew cask, Scoop manifest, and APT/DNF/APK at pkgs.componere.dev —
 each verified from the consumer side.**
+
+## 2026-08-22 12:25 — Cross-org receiver documented upstream
+The developer asked whether the local-receiver finding should go upstream.
+Answer: yes, as docs, not just the #67 comment — the how-to is what the next
+cross-org adopter reads before their first publication fails. Merged
+`meigma/release#68` ("docs(packages): document the cross-organization receiver
+shape"):
+- `operate-a-native-package-repository.md` now has two receiver variants:
+  the reusable call (same-org only) and the step-for-step local workflow
+  (cross-org), with the `local-build: always` limitation called out.
+- `release-system.md` states the same-organization constraint on
+  `publish-package-repository.yml` next to its interface table.
+The feature-sized follow-up (`release-cli init package-repository` emitting the
+scaffold) remains tracked on `meigma/release#67`. Worktree pruned; branch
+deletion needed `-D` because squash-merge leaves the branch unmerged in git's
+eyes.
