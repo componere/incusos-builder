@@ -400,3 +400,43 @@ approval (it timed out twice with `authorization timeout`).
 Leftovers in `componere/pkgs`: the probe workflow is removed; the diagnostic
 secret `PACKAGE_REPOSITORY_INHERIT_MARKER` and the revert commits stay until
 this is resolved.
+
+## 2026-08-22 12:00 — Correction: the package blocker is cross-organization
+Correcting the previous entry's two candidate causes. Both are wrong.
+
+Pinned `componere/pkgs` temporarily to **v0.1.16** — the exact SHA `meigma/pkgs`
+published with successfully at 04:22Z today — and it failed identically with
+empty `GPG_PRIVATE_KEY` / `GPG_PASSPHRASE` / `APK_PRIVATE_KEY` (run
+`32588946064`). Pin reverted. So it is neither a v0.1.17 regression nor a
+platform change, and approving meigma's pending run is unnecessary.
+
+The distinguishing factor is the only remaining difference between the callers:
+
+| Caller | Callee | Same org | Environment secrets |
+|---|---|---|---|
+| `meigma/pkgs` | `meigma/release` | yes | delivered |
+| `componere/pkgs` | `meigma/release` | **no** | **empty** |
+
+GitHub does not surface a caller's **environment** secrets to a reusable
+workflow owned by a different organization. Only secrets that cross the
+boundary explicitly — passed by name, or inherited from the caller's repository
+and organization scopes — arrive. That explains every observation: the same
+secrets resolve in a direct job in the same repo, `secrets: inherit` is
+necessary but insufficient because environment scope is not something `inherit`
+can reach, and the receiver's own files are irrelevant.
+
+This is a genuine gap in the release unit, not an adopter mistake: #63 shipped
+cross-org support, but `publish-package-repository.yml` reads its aggregate keys
+from `secrets.*` while declaring `environment: packages-production`, which only
+works intra-org. The guide's stated boundary — aggregate private keys only in
+the central protected environment — is **not achievable cross-organization**
+with the current receiver. Reported on `meigma/release#67` with a suggested fix
+(declare them as `workflow_call` secrets, or document the trade-off).
+
+Consequence for componere: the only way to publish native packages today is to
+hold the five values in `componere/pkgs` repository or organization secrets so
+`secrets: inherit` delivers them. The `packages-production` required reviewer
+still gates publication because the called job selects the environment
+regardless; what is lost is that the aggregate keys become readable by any
+workflow in that repository. Awaiting the developer's decision plus a Touch ID
+approval for `op read`.
