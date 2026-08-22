@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/componere/incusos-builder/compare/v0.1.0...v0.2.0) (2026-08-22)
+
+
+### Features
+
+* publish native packages, Homebrew cask, and Scoop manifest ([#39](https://github.com/componere/incusos-builder/issues/39)) ([26a6b2b](https://github.com/componere/incusos-builder/commit/26a6b2b1c3b73de47d5387e4956cf27b28049d5e))
+
 ## 0.1.0 (2026-08-17)
 
 
