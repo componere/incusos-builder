@@ -178,3 +178,58 @@ Blocked or handed off:
 - No standalone policy-validation command exists in `release-cli` 0.1.17
   (`init`, `stage`, `image`, `plan`, `publish`, `verify`, `version`), so
   `.config/package-repository.yaml` is first validated by a real receiver run.
+
+## 2026-08-22 10:35 — Handoffs closed, upstream issues filed
+Filed three issues rather than keeping the findings local:
+- `meigma/release#65` — the PEM encoding required for each native signing key is
+  undocumented, and neither wrong encoding fails before a tag exists.
+- `meigma/release#66` — required destination checks can be created through the
+  rulesets API before their first run, so the how-to's "enable the publisher for
+  one real release first" ordering needlessly leaves the destination unprotected.
+  Includes both created ruleset IDs and the context-string derivation.
+- `meigma/pkgs#12` — that policy still uses pre-#63 `checksum_workflow` /
+  `attestation_workflow` and will fail at dispatch time once its receiver pin
+  moves past v0.1.16.
+
+R2 credentials (`Componere Packages R2 Production Credentials`) set as
+`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` in `packages-production`; all five
+environment secrets now present. Verified with a SigV4 list against the live
+bucket: `http=200`, `<Name>componere-packages</Name>`, `KeyCount 0`. Write was
+deliberately **not** probed — the token has no delete permission, so any test
+object would be permanent in the production bucket.
+
+Apple: developer created `Development/Apple Componere` (raw `Componere.p12`,
+`App Store Connect Auth Key.p8`, `passphrase`, `connect_key_id`,
+`connect_issuer_id`) rather than copying the meigma credentials — the
+recommended option. Pre-flight verified before wiring anything:
+- certificate is `Developer ID Application: Joshua Gilman (7MN6B2QY4W)`, issued
+  by `Developer ID Certification Authority G2`, valid to 2031-08-23, private key
+  present. This is the correct type; an `Apple Development` or
+  `Developer ID Installer` certificate would have failed at notarization.
+- `openssl pkcs12` needs **`-legacy`** to read the Keychain export under
+  OpenSSL 3; without it the extraction silently produces nothing.
+- ASC key parses as a 256-bit EC private key (ES256, as Apple requires);
+  `connect_key_id` is 10 chars and `connect_issuer_id` is a 36-char UUID.
+
+Five `MACOS_*` org secrets set at `selected` visibility scoped to
+`componere/incusos-builder` only. `MACOS_SIGN_P12` and `MACOS_NOTARY_KEY` are
+base64 of the raw files (this item stores raw files, unlike
+`meigma-ghd-apple`, which stores pre-encoded `.txt` blobs). Temp Apple material
+removed.
+
+App changes confirmed: slug `componere-release`, installation `selected`,
+permissions unchanged, integration id still `4551177`, so the `incusos-builder`
+tag-ruleset bypass still resolves. REST cannot enumerate an installation's
+selected repositories without app auth, so tap/bucket/pkgs coverage is unproven
+until the first token mint against each.
+
+**Still open: the GHCR package is private.** Reported twice as done, but
+`orgs/componere/packages/container/incusos-builder` reports
+`visibility: private` with `updated_at` unchanged at 2026-08-17T03:06:46Z, and
+an anonymous pull fails: a `ghcr.io/token` scope request followed by a manifest
+GET returns **401**. That is not an API cache artifact. The control is on the
+package page's Danger Zone, not in org package settings.
+
+Notarization is load-bearing for the cask path, not optional polish:
+`meigma/release` sets `sign-and-notarize-macos: true` for its own releases, and
+the generated cask carries no `quarantine: false` and no `xattr` postflight.
