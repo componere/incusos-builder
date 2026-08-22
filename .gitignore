@@ -28,6 +28,7 @@ melange*.rsa
 melange*.rsa.pub
 melange-vars.yaml
 .melange-vars.local.yaml
+.image-local/
 image.tar
 *.oci
 *.spdx.json

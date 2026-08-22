@@ -1,10 +1,19 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+#
+# Staged by `release-cli stage --profile go --dist dist`, which runs exactly
+# `goreleaser release --clean --skip=publish`. The release pipe stays disabled:
+# Release Please owns the tag, notes, and initial draft, and the reusable
+# publishers in .github/workflows/release.yml own every remote mutation.
 version: 2
 
 project_name: incusos-builder
 
-before:
-  hooks:
-    - go test ./...
+gomod:
+  proxy: true
+  env:
+    - GOTOOLCHAIN=local
+    - GOPROXY=https://proxy.golang.org,direct
+    - GOSUMDB=sum.golang.org
 
 builds:
   - id: incusos-builder
@@ -15,6 +24,7 @@ builds:
     goos:
       - darwin
       - linux
+      - windows
     goarch:
       - amd64
       - arm64
@@ -25,23 +35,106 @@ builds:
       - -X main.version={{ .Version }}
       - -X main.commit={{ .FullCommit }}
       - -X main.date={{ .CommitDate }}
-    mod_timestamp: '{{ .CommitTimestamp }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+notarize:
+  macos:
+    - enabled: '{{ eq .Env.MACOS_NOTARIZE_ENABLED "true" }}'
+      ids:
+        - incusos-builder
+      sign:
+        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"
+        wait: true
+        timeout: 20m
 
 archives:
   - id: incusos-builder
     ids:
       - incusos-builder
     formats:
-      - binary
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+nfpms:
+  - id: release
+    ids:
+      - incusos-builder
+    vendor: Componere
+    homepage: https://github.com/componere/incusos-builder
+    maintainer: Joshua Gilman <joshuagilman@gmail.com>
+    description: Build seeded IncusOS installation media from a YAML config
+    license: Apache-2.0 OR MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+    rpm:
+      signature:
+        key_file: "{{ .Env.RELEASE_RPM_SIGNING_KEY_FILE }}"
+    apk:
+      signature:
+        key_file: "{{ .Env.RELEASE_APK_SIGNING_KEY_FILE }}"
+        key_name: incusos-builder-apk-001
+
+homebrew_casks:
+  - name: incusos-builder
+    ids:
+      - incusos-builder
+    binaries:
+      - incusos-builder
+    repository:
+      owner: componere
+      name: homebrew-tap
+    homepage: https://github.com/componere/incusos-builder
+    description: Build seeded IncusOS installation media from a YAML config
+    license: Apache-2.0 OR MIT
+    url:
+      template: "https://github.com/componere/incusos-builder/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    skip_upload: true
+
+scoops:
+  - name: incusos-builder
+    ids:
+      - incusos-builder
+    repository:
+      owner: componere
+      name: scoop-bucket
+    homepage: https://github.com/componere/incusos-builder
+    description: Build seeded IncusOS installation media from a YAML config
+    license: Apache-2.0 OR MIT
+    url_template: "https://github.com/componere/incusos-builder/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    skip_upload: true
 
 checksum:
   name_template: checksums.txt
 
 sboms:
-  - id: binary
-    artifacts: binary
+  - id: archives
+    artifacts: archive
+  - id: packages
+    artifacts: package
+
+signs:
+  - id: checksums
+    cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - --yes
 
 changelog:
   disable: true

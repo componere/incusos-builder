@@ -11,8 +11,7 @@
   "packages": {
     ".": {
       "package-name": "incusos-builder",
-      "changelog-path": "CHANGELOG.md",
-      "extra-files": ["melange.yaml", "apko.yaml"]
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "changelog-sections": [

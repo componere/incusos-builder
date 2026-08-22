@@ -28,12 +28,19 @@ python = "3.14.3"
 "aqua:astral-sh/uv" = "0.11.0"
 
 # Build, CI, release, and supply-chain CLIs. CI installs moon through mise.
-# melange/apko/cosign are used by the container build and image signing in the
-# release workflow.
-"aqua:moonrepo/moon"          = "2.3.5"
-"aqua:chainguard-dev/melange" = "0.54.0"
-"aqua:chainguard-dev/apko"    = "1.2.19"
-"aqua:sigstore/cosign"        = "3.1.1"
+#
+# The pinned meigma/release workflows install their release tools from THIS
+# file: `go-pre-publish.yml` installs go, goreleaser, syft, and cosign, and
+# `go-oci-build.yml` installs gh, melange, and apko. Removing or unpinning any
+# of them breaks the release, and `settings.locked` means an unlocked platform
+# fails closed rather than resolving something newer.
+"aqua:moonrepo/moon"           = "2.3.5"
+"aqua:goreleaser/goreleaser"   = "2.17.1"
+"aqua:anchore/syft"            = "1.51.0"
+"aqua:cli/cli"                 = "2.97.0"
+"aqua:chainguard-dev/melange"  = "0.59.1"
+"aqua:chainguard-dev/apko"     = "1.2.37"
+"aqua:sigstore/cosign"         = "3.1.3"
 
 [env]
 # Pin the Go toolchain: never auto-download a toolchain other than the one above.
@@ -46,23 +53,36 @@ GOTOOLCHAIN = "local"
 lockfile = true
 locked = true
 
-# Local container image for testing the release build. CI builds the release image
-# via the melange/apko jobs in .github/workflows/release.yml; this task is the local
-# equivalent. melange needs Linux, so `--runner docker` makes `image-local` work on
-# macOS too (Docker Desktop runs the Linux build container).
+# Local container image for testing the release build. In CI, `release-cli image
+# build` stages the GoReleaser binary as `application`, writes the version vars
+# file, and appends the local apk repository and ephemeral keyring; this task is
+# the local equivalent of that sequence. melange needs Linux, so
+# `--runner docker` makes it work on macOS too.
+#
+# melange compiles nothing: it packages the binary built here, exactly as the
+# release packages the binary GoReleaser already produced.
 [tasks.image-local]
 description = "Build the apko image for the host arch and load it into Docker as incusos-builder:dev"
 run = '''
 set -euo pipefail
 arch="$(go env GOARCH)"
-rm -rf packages image.tar
+case "$arch" in
+  amd64) apkarch=x86_64 ;;
+  arm64) apkarch=aarch64 ;;
+  *) echo "unsupported host arch $arch" >&2; exit 1 ;;
+esac
+work=".image-local"
+rm -rf "$work" packages image.tar
+mkdir -p "$work"
+CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath \
+  -ldflags "-s -w -buildid= -X main.version=0.0.0 -X main.commit=$(git rev-parse --short HEAD 2>/dev/null || echo none) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o "$work/application" ./cmd/incusos-builder
+printf 'version: "0.0.0"\n' > "$work/vars.yaml"
 melange keygen melange.rsa
-printf 'version: "dev"\ncommit: "%s"\ndate: "%s"\n' \
-  "$(git rev-parse --short HEAD 2>/dev/null || echo none)" \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .melange-vars.local.yaml
-melange build melange.yaml --arch "$arch" --signing-key melange.rsa --runner docker \
-  --source-dir . --vars-file .melange-vars.local.yaml
-apko build apko.yaml incusos-builder:dev image.tar --arch "$arch" --keyring-append ./melange.rsa.pub
+melange build melange.yaml --arch "$apkarch" --signing-key melange.rsa --runner docker \
+  --source-dir "$work" --vars-file "$work/vars.yaml"
+apko build apko.yaml incusos-builder:dev image.tar --arch "$arch" \
+  --repository-append ./packages --keyring-append ./melange.rsa.pub
 docker load < image.tar
 docker tag "incusos-builder:dev-$arch" incusos-builder:dev
 echo "loaded incusos-builder:dev (host arch $arch)"

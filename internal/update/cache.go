@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	apiimages "github.com/lxc/incus-os/incus-osd/api/images"
-	"golang.org/x/sys/unix"
 
 	"github.com/componere/incusos-builder/internal/build"
 )
@@ -271,17 +270,4 @@ func (c *assetCache) entryPath(digest string) string {
 // digestDir returns <dir>/sha256.
 func (c *assetCache) digestDir() string {
 	return filepath.Join(c.dir, digestDirName)
-}
-
-// statfsFree returns available bytes on the filesystem containing dir.
-// Bavail is uint64 on every supported platform; the block size goes
-// through the platform-specific statfsBlockSize helper (Bsize is signed
-// on Linux, unsigned elsewhere).
-func statfsFree(dir string) (uint64, error) {
-	var st unix.Statfs_t
-	if err := unix.Statfs(dir, &st); err != nil {
-		return 0, err
-	}
-
-	return st.Bavail * statfsBlockSize(&st), nil
 }

@@ -1,15 +1,26 @@
-# Builds the incusos-builder binary into a signed Wolfi apk; apko.yaml assembles it
-# into the minimal multi-arch runtime image. version/commit/date are stamped into
-# the binary via -ldflags, matching the stamps GoReleaser applies to the binaries.
+# Packages the canonical Linux binary that GoReleaser already staged into a
+# Wolfi apk; apko.yaml then assembles it into the minimal multi-arch runtime
+# image.
 #
-# package.version is bumped by release-please (extra-files in release-please-config.json).
-# The build-time version/commit/date are injected via --vars-file (see the release
-# workflow and the `image-local` mise task), so no date math runs inside the sandbox.
+# This configuration compiles nothing. `release-cli image build` stages the
+# reviewed binary as `application` in each per-architecture source tree and
+# writes the release version into a vars file, so the image and the GitHub
+# Release assets are the same bytes. Do not reintroduce a `go/build` pipeline:
+# that would produce a second, unattested binary.
 package:
   name: incusos-builder
-  version: "0.1.0" # x-release-please-version
+  version: ${{vars.version}}
   epoch: 0
   description: Build seeded IncusOS installation media from a YAML config
+  target-architecture:
+    - x86_64
+    - aarch64
+  copyright:
+    - license: Apache-2.0 OR MIT
+
+# Overridden at build time by the vars file the CLI writes from the release tag.
+vars:
+  version: 0.0.0
 
 environment:
   contents:
@@ -18,24 +29,8 @@ environment:
     keyring:
       - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     packages:
-      - go-1.26
-  environment:
-    CGO_ENABLED: "0"
-
-# Defaults; overridden at build time via `--vars-file` with the real release values.
-vars:
-  version: "0.0.0"
-  commit: "none"
-  date: "unknown"
+      - busybox
 
 pipeline:
-  # go/build auto-adds -trimpath and installs to /usr/bin/<output>.
-  - uses: go/build
-    with:
-      packages: ./cmd/incusos-builder
-      output: incusos-builder
-      go-package: go-1.26
-      modroot: .
-      strip: "-s -w"
-      ldflags: "-buildid= -X main.version=${{vars.version}} -X main.commit=${{vars.commit}} -X main.date=${{vars.date}}"
-      extra-args: "-mod=readonly -buildvcs=false"
+  - runs: |
+      install -Dm755 -o 0 -g 0 application "${{targets.destdir}}/usr/bin/incusos-builder"

@@ -28,7 +28,6 @@ jobs:
         id: scan
         run: |
           {
-            echo "version=security-scan-${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
             echo "commit=${GITHUB_SHA}"
             echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
@@ -39,19 +38,27 @@ jobs:
           version: 2026.6.14
           cache: true
 
+      # melange packages an already-built binary; it compiles nothing. This
+      # mirrors what `release-cli image build` does in the release, so the
+      # scanned image has the same contents as a published one.
       - name: Build local scan image (melange + apko)
         env:
-          VERSION: ${{ steps.scan.outputs.version }}
           COMMIT: ${{ steps.scan.outputs.commit }}
           DATE: ${{ steps.scan.outputs.date }}
         run: |
           set -euo pipefail
-          printf 'version: "%s"\ncommit: "%s"\ndate: "%s"\n' "$VERSION" "$COMMIT" "$DATE" > melange-vars.yaml
+          work=".image-scan"
+          rm -rf "$work" packages scan.tar
+          mkdir -p "$work"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+            -ldflags "-s -w -buildid= -X main.version=0.0.0 -X main.commit=${COMMIT} -X main.date=${DATE}" \
+            -o "$work/application" ./cmd/incusos-builder
+          printf 'version: "0.0.0"\n' > "$work/vars.yaml"
           melange keygen melange.rsa
-          melange build melange.yaml --arch amd64 --runner docker \
-            --signing-key melange.rsa --source-dir . --vars-file melange-vars.yaml
+          melange build melange.yaml --arch x86_64 --runner docker \
+            --signing-key melange.rsa --source-dir "$work" --vars-file "$work/vars.yaml"
           apko build apko.yaml incusos-builder:security-scan scan.tar \
-            --arch amd64 --keyring-append ./melange.rsa.pub
+            --arch amd64 --repository-append ./packages --keyring-append ./melange.rsa.pub
           docker load < scan.tar
           docker tag incusos-builder:security-scan-amd64 incusos-builder:security-scan
 
