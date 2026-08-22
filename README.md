@@ -4,44 +4,29 @@ incusos-builder builds seeded IncusOS installation media from a YAML config. It 
 
 ## Install
 
-### From a GitHub release
-
-[ghd](https://github.com/meigma/ghd) installs the release binary and verifies its build provenance attestation. Install `ghd` from that project's [getting started](https://github.com/meigma/ghd/blob/master/docs/docs/getting-started.md) guide, then:
+### Homebrew cask (macOS)
 
 ```sh
-ghd install componere/incusos-builder/incusos-builder \
-  --store-dir "$HOME/.local/share/ghd/store" \
-  --bin-dir "$HOME/.local/bin"
-```
-
-Pin a version with `componere/incusos-builder/incusos-builder@x.y.z`. To download one asset without installing it:
-
-```sh
-ghd download componere/incusos-builder/incusos-builder@x.y.z --output "$PWD/out"
+brew install --cask componere/tap/incusos-builder
+incusos-builder --version
 ```
 
 ### Container image
 
-```sh
-docker pull ghcr.io/componere/incusos-builder:vX.Y.Z
-docker run --rm ghcr.io/componere/incusos-builder:vX.Y.Z --version
-```
-
-Replace `vX.Y.Z` with a published release tag. Each release publishes a single image tag; there is no `latest` tag.
-
-### From source
-
-Install [mise](https://mise.jdx.dev/), then:
+The OCI image supports Linux containers on `amd64` and `arm64`. Set `DIGEST`
+to the published manifest digest, then pull and run that exact image:
 
 ```sh
-git clone https://github.com/componere/incusos-builder.git
-cd incusos-builder
-mise install
-mise x -- moon run root:build
-"$PWD/bin/incusos-builder" --version
+DIGEST='sha256:<published-manifest-digest>'
+IMAGE="ghcr.io/componere/incusos-builder@${DIGEST}"
+docker pull "$IMAGE"
+docker run --rm "$IMAGE" --version
 ```
 
-`mise install` provisions the pinned toolchain from `mise.toml` and `mise.lock`, including Go 1.26.4. `moon run root:build` writes `bin/incusos-builder`.
+Pin the digest when the image must be repeatable.
+
+For Scoop, native Linux repositories, direct archive downloads, and `ghd`, see
+[How to install incusos-builder](docs/docs/how-to/install.md).
 
 ## Quick start
 

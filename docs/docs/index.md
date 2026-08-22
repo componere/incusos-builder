@@ -14,7 +14,8 @@ To learn the workflow, [build your first seeded ISO](tutorials/first-seeded-iso.
 
 When you already know the tool:
 
-- Task guides: [encrypt secrets with SOPS](how-to/sops-encryption.md),
+- Task guides: [install incusos-builder](how-to/install.md),
+  [encrypt secrets with SOPS](how-to/sops-encryption.md),
   [build offline media](how-to/build-offline-media.md),
   [run in CI](how-to/run-in-ci.md),
   [use a local mirror](how-to/use-local-mirror.md),

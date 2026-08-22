@@ -38,6 +38,7 @@ nav:
   - Tutorials:
       - Build your first seeded ISO: tutorials/first-seeded-iso.md
   - How-to guides:
+      - Install incusos-builder: how-to/install.md
       - Encrypt secrets with SOPS: how-to/sops-encryption.md
       - Build offline media: how-to/build-offline-media.md
       - Run in CI: how-to/run-in-ci.md
