@@ -1,9 +1,9 @@
 # Melange Command Map
 
-Curated operator reference for `melange v0.54.0`. Prefer local `melange --help` /
-`melange <cmd> --help` output and the official docs (https://github.com/chainguard-dev/melange)
-if anything here drifts. Every flag below is copied from the pinned version's `--help`; flags
-not used by this repo are marked so.
+Curated operator reference for `melange v0.59.1`, pinned in `mise.toml`. Prefer local
+`melange --help` / `melange <cmd> --help` output and the official docs
+(https://github.com/chainguard-dev/melange) if anything here drifts. Repo-specific notes
+below describe the current install-only package build.
 
 ## Global flags
 
@@ -25,15 +25,16 @@ melange build [config.yaml] [flags]
 
 Flags that matter here:
 
-- `--arch strings`: architectures to build for (e.g. `x86_64,arm64`). The repo passes a single
-  Go-style arch per invocation (`amd64` or `arm64`); default is all arches in the config.
+- `--arch strings`: architectures to build for. The repo passes one melange architecture per
+  invocation: `x86_64` or `aarch64`. The local task maps from Go's `amd64` or `arm64`.
 - `--runner string`: runner used to execute build steps — `bubblewrap`, `docker`, or `qemu`.
-  The repo always passes `docker` (required on macOS; needs Docker running).
+  The repo passes `docker` (required on macOS; needs Docker running).
 - `--signing-key string`: key used to sign the produced apk.
-- `--source-dir string`: directory of included sources mounted into the build (the repo passes
-  `.` so the module source compiles in).
-- `--vars-file string`: file of preloaded build vars; overrides `vars:` in the config. The repo
-  injects `version` / `commit` / `date` this way.
+- `--source-dir string`: directory mounted as the package source. The local task passes
+  `.image-local`, whose root contains the staged `application`; release CLI passes a separate
+  source tree for each architecture. The repository source is not compiled by melange.
+- `--vars-file string`: file of preloaded build vars; overrides `vars:` in the config. The
+  repo supplies only `version`.
 - `-k`, `--keyring-append strings`: extra keys to include in the build environment keyring (for
   pulling from signed repositories; the apko keyring handoff is a separate concern).
 - `--out-dir string`: directory packages are written to (default `./packages/`). The apk lands
@@ -41,25 +42,38 @@ Flags that matter here:
 - `-r`, `--repository-append strings`: extra repositories for the build environment.
 - `--package-append strings`: extra packages to install into the build environment.
 - `--namespace string`: namespace for package URLs in the generated apk SBOM (default `unknown`).
+  release CLI supplies the release repository namespace.
 - `--generate-index`: whether to generate `APKINDEX.tar.gz` (default `true`).
 - `--cache-dir string`: cached inputs directory (default `./melange-cache/`).
 - `--debug`: enable debug logging of build pipelines.
 - `--debug-runner`: keep the builder container after success/failure for inspection.
 - `-i`, `--interactive`: attach a tty to the builder pod on failure.
-
-Not used by this repo (do not add without reason):
-
-- `--generate-provenance`: emits SLSA provenance as a separate `.attest.tar.gz` next to the apk.
-  This repo produces image-level provenance via `attest.yml` instead, so this stays off.
-- `--build-date string`: timestamp for files inside the image (reproducibility). Distinct from
-  the ldflag `date`, which comes from `--vars-file`. The repo leaves this at default.
+- `--build-date string`: package build timestamp. The reusable OCI workflow supplies the
+  tagged commit's committer date.
+- `--git-repo-url string` and `--git-commit string`: source identity recorded for the package.
+  release CLI supplies both from the tagged GitHub build.
+- `--generate-provenance`: emit package provenance. release CLI enables it for the reusable
+  OCI build; the local `image-local` task does not.
 
 Notes:
 
-- Canonical repo invocation: `melange build melange.yaml --arch <arch> --runner docker
-  --signing-key <key>.rsa --source-dir . --vars-file <vars>.yaml`.
-- The output public key (the `.rsa.pub` matching `--signing-key`) is handed to `apko build` /
-  `apko publish` via `--keyring-append` so apko trusts the `@local` apk.
+- The local task's invocation is:
+
+  ```bash
+  melange build melange.yaml --arch "$apkarch" --signing-key melange.rsa --runner docker \
+    --source-dir "$work" --vars-file "$work/vars.yaml"
+  ```
+- The matching public key is handed to apko with `--keyring-append`; the generated package
+  repository is handed over separately with `--repository-append`.
+
+## `melange compile`
+
+Purpose: decode and compile the YAML configuration into melange's build plan. This is a
+configuration preflight, not compilation of the staged application.
+
+The reusable `release-cli image build` path runs this preflight with the first package
+architecture and the generated version vars file before it creates a key or builds either
+apk. A decode error stops the release before package construction.
 
 ## `melange keygen`
 
@@ -77,8 +91,9 @@ Flags:
 
 Notes:
 
-- Writes `<name>.rsa` (private) and `<name>.rsa.pub` (public). In this repo keys are ephemeral
-  and gitignored; CI uses per-arch names (`melange-amd64.rsa`, `melange-arm64.rsa`).
+- Writes `<name>.rsa` (private) and `<name>.rsa.pub` (public). The local task creates
+  `melange.rsa` and uses `melange.rsa.pub` for apko. release CLI creates its key inside the
+  isolated scratch workspace and copies only the public key into the OCI build output.
 
 ## `melange sign`
 
@@ -140,12 +155,12 @@ Purpose: update a melange YAML to a new package version.
 
 Notes:
 
-- Do NOT use in this repo. `package.version` carries `# x-release-please-version` and is owned
-  by release-please. Flags are not captured here; run `melange bump --help` if ever needed
-  outside this repo.
+- Do NOT use in this repo. `package.version` is `${{vars.version}}`; release CLI writes the
+  release version to its vars file and the local task writes `0.0.0`. Change the supplying
+  vars file rather than mutating `melange.yaml`.
 
 ## Other subcommands (present, unused here)
 
-`compile`, `index`, `initramfs`, `license-check`, `lint` (experimental), `query`, `scan`,
-`source`, `test`, `update-cache`, `version`, `completion`. None are part of the repo's build
-path; consult `melange <cmd> --help` before relying on any of them.
+`index`, `initramfs`, `license-check`, `lint` (experimental), `query`, `scan`, `source`,
+`test`, `update-cache`, `version`, and `completion` are not part of the repo's build path.
+Consult `melange <cmd> --help` before relying on any of them.

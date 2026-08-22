@@ -1,6 +1,6 @@
 ---
 title: About the trust model
-description: Why incusos-builder treats HTTPS, hash binding, and S/MIME structure as build-time checks, and leaves signature authentication to the booted system
+description: Why incusos-builder separates media checks, boot acceptance, and release-distribution trust
 ---
 
 # About the trust model
@@ -38,6 +38,71 @@ of linking `incus-osd` recovery code. It also means a successful build is
 not evidence that a host will install or recover. The manual
 [boot-acceptance checklist](../how-to/verify-boot-acceptance.md) is the
 procedure for that observation.
+
+## Release distribution is a separate trust boundary
+
+The checks above describe what the builder does to IncusOS inputs. A second
+boundary applies to the builder's own release artifacts. This repository pins
+every reusable release workflow and checksum-signer reference to
+`meigma/release` commit
+`0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a` (tag `v0.1.17`). That one reviewed
+revision is the release unit: its reusable workflows, sibling setup action, and
+`release-cli` build, verify, sign, and publish together. The pinned workflows
+load the setup action at the same commit, and the action selects the matching
+CLI.
+
+The artifact signer identities belong to `meigma/release`, not to a workflow in
+this repository:
+
+- GitHub Release assets are attested by
+  `meigma/release/.github/workflows/publish-github-release.yml`.
+- The OCI image is signed and attested by
+  `meigma/release/.github/workflows/publish-oci-image.yml`.
+- `checksums.txt` is signed with the keyless identity for
+  `meigma/release/.github/workflows/go-pre-publish.yml` at the pinned release
+  unit commit.
+
+The release contains Darwin and Linux `tar.gz` archives, Windows ZIP archives,
+and Linux DEB, RPM, and APK packages for `amd64` and `arm64`. Each archive and
+package has an SPDX SBOM. `checksums.txt.sigstore.json` is the keyless Cosign
+bundle for `checksums.txt`. The macOS archives are Developer ID signed and
+notarized. The signed checksum manifest and GitHub attestations cover every
+native package; RPM and APK also carry producer-native signatures.
+
+The multi-platform image is published at
+`ghcr.io/componere/incusos-builder` by digest. Its recursive Cosign signatures
+cover the index and platform manifests. One provenance attestation and one SPDX
+SBOM attestation for each platform are attached to the image. Published DEB,
+RPM, and APK packages are also admitted to the signed `stable` repositories at
+`https://pkgs.componere.dev`. Repository metadata has separate aggregate APT,
+RPM, and APK index signatures.
+
+A consumer must bind verification to all of the expected values:
+
+- producer repository `componere/incusos-builder`;
+- source ref `refs/tags/<tag>`;
+- the applicable shared signer workflow in `meigma/release`; and
+- signer digest `0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a`.
+
+For a release asset, verify its entry in `checksums.txt`, verify the keyless
+Cosign bundle for that manifest, and run `gh attestation verify` with
+`--repo componere/incusos-builder`,
+`--signer-workflow meigma/release/.github/workflows/publish-github-release.yml`,
+the signer digest, and the source ref. For the image, resolve the exact digest,
+verify the recursive Cosign signatures, and verify the OCI attestations with
+`--repo componere/incusos-builder`, `--bundle-from-oci`, and
+`--signer-workflow meigma/release/.github/workflows/publish-oci-image.yml`.
+
+A successful bare `gh attestation verify` exits `0` and prints nothing. Do not
+use silence as the only evidence that the constraints were exercised. Pair the
+real check with a deliberate falsifier: rerun it against the same subject with
+an intentionally wrong `--source-ref` or `--signer-digest`, and require that
+second command to exit nonzero.
+
+These controls authenticate the builder's distributed artifacts and their
+release context. They do not prove that media produced by the builder will boot,
+consume its seed, or accept rescue data. The manual boot-acceptance gate remains
+the evidence for those properties.
 
 ## Why HTTPS, and why a redirect still has to be HTTPS
 

@@ -1,11 +1,14 @@
 ---
 title: How to verify boot acceptance
-description: Run the x86_64 Linux Incus boot-acceptance checklist before a release tag
+description: Run the manual x86_64 Linux Incus boot-acceptance gate before a release candidate tag
 ---
 
 # How to verify boot acceptance
 
-Run this gate on an `x86_64` Linux Incus host before every release tag.
+Run this manual gate on an `x86_64` Linux Incus host before each release
+candidate tag is first pushed. The tag-triggered `meigma/release` unit does not
+run this procedure, and a successful release workflow cannot replace the four
+observations below.
 
 The gate has succeeded once. Track C completed the procedure on
 2026-08-17 on a Semaphore Cloud `f1-standard-4` machine with nested KVM
@@ -32,7 +35,7 @@ That run establishes that this procedure is executable and its assertions
 are satisfiable. It was one run on one venue, for IncusOS release
 `202608102114` and upstream API pin
 `v0.0.0-20260815030500-0f5b8057f2fc`; it does not guarantee later pins.
-Continue to run the gate for every release.
+Continue to run the gate for every release candidate.
 
 The earlier Phase 5.2 probe did not observe seed consumption or recovery
 acceptance. Do not treat that probe, network traffic, a changed file size,
@@ -342,7 +345,8 @@ ISO-media run establishes that behavior on the release host.
 
 ## 8. Archive evidence, then clean up
 
-Keep with the release record:
+Keep with the release record and inspect alongside the rehearsal draft and
+workflow artifacts:
 
 - `incus-version.txt`
 - `loop-devices.txt`

@@ -15,7 +15,7 @@ the [automation reference](../reference/automation.md).
 
 ## Prerequisites
 
-- `incusos-builder` on `PATH`.
+- An immutable incusos-builder release input, as described below.
 - A [seed config](../reference/configuration.md) file, or YAML on
   stdin for `-f -`.
 - A writable directory for `-o`. Do not combine `--json` with `-o -`.
@@ -27,6 +27,29 @@ the [automation reference](../reference/automation.md).
 - For an encrypted seed config, `SOPS_AGE_KEY` in the job
   environment. Absence of every SOPS key source is exit `4`. See
   [How to encrypt a seed config with age and SOPS](./sops-encryption.md).
+
+## Pin the incusos-builder release input
+
+Use the digest-pinned OCI image from
+`ghcr.io/componere/incusos-builder` as the job's preferred executable
+reference. Keep the full `sha256` digest in the CI configuration. Do not use
+`latest`, a `MAJOR` tag, a `MAJOR.MINOR` tag, or even an exact version tag as
+the final runtime reference because tags are names, not content identities.
+
+If the job installs a binary instead, download the archive for one exact
+`vMAJOR.MINOR.PATCH` release and the job's operating system and architecture.
+Pin the release tag, the complete archive filename, and the archive SHA-256 in
+the CI configuration. Releases contain archives rather than bare binaries; do
+not use a moving latest-release URL.
+
+Before updating either pin, verify the release checksum and keyless Cosign
+bundle. Also verify the GitHub artifact attestation against repository
+`componere/incusos-builder`, source ref `refs/tags/<tag>`, signer digest
+`0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a`, and the applicable signer workflow
+in `meigma/release`. For an OCI input, verify the recursive Cosign signatures
+and the registry-backed provenance and platform SBOM attestations before
+recording the digest. See [About the trust model](../explanation/trust-model.md)
+for the signer identities and the required falsifier check.
 
 ## 1. Disable prompts
 

@@ -1,12 +1,12 @@
 ---
 title: Automation reference
-description: Exit codes, JSON envelopes, environment variables, and non-interactive I/O for incusos-builder
+description: CLI automation contracts and the release workflow, artifacts, publication controls, and signer identities
 ---
 
 # Automation reference
 
-Machine contract for `incusos-builder`. Command and flag names are in
-[CLI](cli.md). Cache paths are in [Cache](cache.md).
+Machine contracts for using and releasing `incusos-builder`. Command and flag
+names are in [CLI](cli.md). Cache paths are in [Cache](cache.md).
 
 ## Exit codes
 
@@ -263,3 +263,118 @@ When no-input is false:
 - `build` prompts on stderr before replacing existing finals.
 
 There is no `--yes`. `--force` is the non-interactive overwrite path.
+
+## Release automation
+
+`.github/workflows/release.yml` is the tag-triggered caller. Every reusable
+workflow reference and every checksum-signer reference in that caller is pinned
+to `meigma/release` commit
+`0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a` (tag `v0.1.17`). The reusable
+workflows, their sibling setup action, and the matching `release-cli` are one
+release unit. Mixed revisions are not supported.
+
+Release Please creates a stable `vMAJOR.MINOR.PATCH` tag and the matching draft
+release after its reviewed release pull request is merged. The tag-triggered
+caller then invokes the pinned release unit in this order:
+
+1. `go-pre-publish.yml` builds, verifies, signs, and stages release assets.
+2. `go-oci-build.yml` builds the OCI layout from the verified Linux binaries.
+3. `publish-oci-image.yml` verifies, signs, attests, and optionally publishes
+   the image.
+4. `publish-github-release.yml` verifies and fills the existing draft, attests
+   its payloads, and optionally makes the draft public.
+5. The Homebrew, Scoop, and native package-repository publishers run after the
+   GitHub Release publisher when their publication inputs are enabled.
+
+The manual [boot-acceptance gate](../how-to/verify-boot-acceptance.md) remains a
+required pre-tag check. The reusable release unit does not perform or replace
+that gate.
+
+### Rehearsal and publication controls
+
+A release rehearsal uses a real candidate tag. It is not a separate workflow.
+For the rehearsal commit, all remote publication inputs are `false`:
+
+```yaml
+publish-image: false
+publish-release: false
+publish-homebrew: false
+publish-scoop: false
+publish-package-repository: false
+```
+
+The run still builds and validates the release bundle and OCI layout. It fills
+and verifies the existing draft without making it public. Homebrew, Scoop, and
+package-repository requests remain disabled. The operator inspects the draft,
+the `release-assets` Actions artifact, the `oci-image` Actions artifact, SBOMs,
+signatures, generated package-manager controls, and job logs. Publication is
+enabled only in a later reviewed commit.
+
+### Published artifacts and destinations
+
+For version `<version>`, the GitHub Release contains:
+
+| Kind | Names and platforms |
+|------|---------------------|
+| Archives | `incusos-builder_<version>_<os>_<arch>.tar.gz` for Darwin and Linux; `incusos-builder_<version>_windows_<arch>.zip` for Windows; `amd64` and `arm64` |
+| Native packages | DEB, RPM, and APK for Linux `amd64` and `arm64` |
+| SBOMs | One SPDX SBOM for each archive and each native package |
+| Integrity controls | `checksums.txt` and its keyless Cosign bundle, `checksums.txt.sigstore.json` |
+
+The Darwin archives are signed with
+`Developer ID Application: Joshua Gilman (7MN6B2QY4W)` and notarized by Apple.
+RPM and APK packages carry producer signatures. The signed checksum manifest
+and GitHub artifact attestations cover all six native packages.
+
+The OCI publisher publishes `ghcr.io/componere/incusos-builder` for
+`linux/amd64` and `linux/arm64`. Consumers can select the immutable digest or
+the exact `<version>` tag. Eligible releases also update the `MAJOR.MINOR`,
+`MAJOR`, and `latest` tags. The index and its platform manifests have
+recursive Cosign signatures. The image has one provenance attestation and two
+platform SPDX SBOM attestations.
+
+The Homebrew publisher opens a pull request for cask `incusos-builder` in
+`componere/homebrew-tap`. The Scoop publisher opens a pull request for root
+manifest `incusos-builder.json` in `componere/scoop-bucket`.
+
+The native package publisher admits the release to the `stable` channel at
+`https://pkgs.componere.dev` for `amd64` and `arm64`:
+
+| Format | Repository | Repository signing key |
+|--------|------------|------------------------|
+| APT | `https://pkgs.componere.dev/apt`, roots under `dists/stable/` | `https://pkgs.componere.dev/keys/apt-repository-001.asc` |
+| RPM | `https://pkgs.componere.dev/rpm/stable/<architecture>`; `x86_64` or `aarch64` | `https://pkgs.componere.dev/keys/rpm-repository-001.asc` |
+| APK | `https://pkgs.componere.dev/apk/stable/main/<architecture>`; `x86_64` or `aarch64` | `https://pkgs.componere.dev/keys/apk-index-001.rsa.pub` |
+
+RPM and APK are checked against their producer-native signatures before
+repository publication. The APK producer key is named
+`incusos-builder-apk-001.rsa.pub`. The central repository signs its APT, RPM,
+and APK index metadata with the keys listed above.
+
+### Release verification identities
+
+GitHub Release asset attestations are signed by
+`meigma/release/.github/workflows/publish-github-release.yml`. OCI signatures
+and attestations are signed by
+`meigma/release/.github/workflows/publish-oci-image.yml`. These identities
+belong to `meigma/release`; no release signer workflow in this repository is
+part of the verification identity.
+
+Consumer verification binds an artifact to all of these values:
+
+| Constraint | Value |
+|------------|-------|
+| Producer repository | `componere/incusos-builder` |
+| Source ref | `refs/tags/<tag>` |
+| Signer digest | `0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a` |
+| Release-asset signer workflow | `meigma/release/.github/workflows/publish-github-release.yml` |
+| OCI signer workflow | `meigma/release/.github/workflows/publish-oci-image.yml` |
+
+`gh attestation verify` therefore uses
+`--repo componere/incusos-builder`, the applicable shared signer workflow,
+the full signer digest, and the source ref. OCI verification also reads the
+registry bundle and operates on a digest-pinned image reference. Checksum
+verification separately validates `checksums.txt` against
+`checksums.txt.sigstore.json` and the keyless
+`meigma/release/.github/workflows/go-pre-publish.yml` identity at the same
+release-unit commit.
