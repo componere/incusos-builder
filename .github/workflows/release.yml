@@ -111,7 +111,7 @@ jobs:
       actions: read
       attestations: read
       contents: read
-    uses: meigma/release/.github/workflows/publish-homebrew.yml@0dee66ff6c4cc7e28d7bb65e97a37d701e0eff4a
+    uses: meigma/release/.github/workflows/publish-homebrew.yml@09d6be776ca4a9d533101bae1fbc790fb42050a8
     with:
       artifact-id: ${{ needs.release-assets.outputs.artifact-id }}
       artifact-digest: ${{ needs.release-assets.outputs.artifact-digest }}
